@@ -17,6 +17,7 @@ router.use(validateQuery);
 router.get('/active', orderController.getActiveOrders);
 router.get('/', orderController.getOrders);
 router.get('/:id', orderController.getOrderById);
+router.post('/validate-cart', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.RECEPTIONIST), orderController.validateCart);
 router.post('/', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.RECEPTIONIST), validateRequest(validateCreateOrder), orderController.createOrder);
 router.post('/:id/items', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.addItemsToOrder);
 router.post('/:id/request-bill', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.requestBill);

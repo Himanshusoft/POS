@@ -14,8 +14,11 @@ import {
   X,
   History,
   UtensilsCrossed,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
+import { getItemAvailability, validateCumulativeCartInventory } from '../utils/inventoryValidation';
 
 /**
  * MenuItemImage helper:
@@ -140,14 +143,36 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
     }
   };
 
-  // Cart operations
+  // Cart operations with inventory availability validation
   const addToCart = (item) => {
-    if (!item.isAvailable) {
-      addToast(`${item.name} is currently out of stock`, 'warning');
+    const availability = getItemAvailability(item, 1);
+    if (!availability.isOrderable) {
+      addToast(`⚠ ${availability.reasonTitle}: ${availability.reasonMessage}`, 'warning');
       return;
     }
+
+    const existing = cart.find((c) => c.menuItemId === item.id);
+    const targetQty = existing ? existing.quantity + 1 : 1;
+
+    // Multi-quantity check for this specific dish
+    const multiAvail = getItemAvailability(item, targetQty);
+    if (!multiAvail.isOrderable) {
+      addToast(`⚠ ${multiAvail.reasonTitle}: ${multiAvail.reasonMessage}`, 'warning');
+      return;
+    }
+
+    // Cumulative inventory check across all cart items
+    const proposedCart = existing
+      ? cart.map((c) => (c.menuItemId === item.id ? { ...c, quantity: targetQty } : c))
+      : [...cart, { menuItemId: item.id, quantity: 1 }];
+
+    const cumulativeCheck = validateCumulativeCartInventory(proposedCart, menuItems);
+    if (!cumulativeCheck.isValid) {
+      addToast(`⚠ ${cumulativeCheck.errorTitle}: ${cumulativeCheck.errorMessage}`, 'warning');
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((c) => c.menuItemId === item.id);
       if (existing) {
         return prev.map((c) =>
           c.menuItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c
@@ -167,6 +192,32 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   };
 
   const updateQuantity = (menuItemId, delta) => {
+    if (delta > 0) {
+      const existing = cart.find((c) => c.menuItemId === menuItemId);
+      if (!existing) return;
+      const targetQty = existing.quantity + delta;
+      const menuItem = menuItems.find((m) => m.id === menuItemId);
+
+      if (menuItem) {
+        // Multi-quantity validation for this specific dish
+        const multiAvail = getItemAvailability(menuItem, targetQty);
+        if (!multiAvail.isOrderable) {
+          addToast(`⚠ ${multiAvail.reasonTitle}: ${multiAvail.reasonMessage}`, 'warning');
+          return;
+        }
+
+        // Cumulative inventory check across all cart items
+        const proposedCart = cart.map((c) =>
+          c.menuItemId === menuItemId ? { ...c, quantity: targetQty } : c
+        );
+        const cumulativeCheck = validateCumulativeCartInventory(proposedCart, menuItems);
+        if (!cumulativeCheck.isValid) {
+          addToast(`⚠ ${cumulativeCheck.errorTitle}: ${cumulativeCheck.errorMessage}`, 'warning');
+          return;
+        }
+      }
+    }
+
     setCart((prev) =>
       prev
         .map((c) => {
@@ -188,7 +239,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
   const clearCart = () => setCart([]);
 
-  // Submit Order
+  // Submit Order with pre-flight check and authoritative backend validation
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
       addToast('Your order ticket is empty', 'warning');
@@ -196,6 +247,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
     }
     if (orderType === 'DINE_IN' && !selectedTableId) {
       addToast('Please select a dining table for Dine-In orders', 'warning');
+      return;
+    }
+
+    // Pre-flight validation against latest client state
+    const cartCheck = validateCumulativeCartInventory(cart, menuItems);
+    if (!cartCheck.isValid) {
+      addToast(`⚠ ${cartCheck.errorTitle}: ${cartCheck.errorMessage}`, 'error');
       return;
     }
 
@@ -225,7 +283,17 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         if (onOrderPlaced) onOrderPlaced(res.data);
       }
     } catch (err) {
-      addToast(err.message || 'Failed to submit order', 'error');
+      if (err.data?.code === 'INSUFFICIENT_INVENTORY') {
+        const missingList = Array.isArray(err.data.items) && err.data.items.length > 0
+          ? '\nMissing ingredients:\n' + err.data.items.map((m) => `• ${m.ingredient} — Required ${m.required} ${m.unit} | Available ${m.available} ${m.unit}`).join('\n')
+          : '';
+        const mainMsg = err.data.message || 'Inventory is no longer sufficient for this item.';
+        addToast(`⚠ Insufficient Inventory: ${mainMsg}${missingList}`, 'error');
+        // Refresh catalog immediately to display fresh real-time stock
+        loadData();
+      } else {
+        addToast(err.message || 'Failed to submit order', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -337,16 +405,19 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               {filteredItems.map((item) => {
                 const categoryObj = categories.find((c) => c.id === item.categoryId);
                 const categoryName = categoryObj?.name || 'General';
+                const availability = getItemAvailability(item, 1);
+                const isOrderable = availability.isOrderable;
 
                 return (
                   <div
                     key={item.id}
                     onClick={() => addToCart(item)}
-                    className={`bg-white border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-200 select-none group shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 ${
-                      !item.isAvailable
-                        ? 'opacity-60 border-[#E5D8C6] bg-slate-50/80 cursor-not-allowed'
-                        : 'border-[#E5D8C6] hover:border-[#92400E]'
+                    className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none group shadow-sandstone ${
+                      !isOrderable
+                        ? 'opacity-75 border-[#E5D8C6] bg-slate-50/90 cursor-not-allowed hover:border-amber-400/60'
+                        : 'bg-white border-[#E5D8C6] hover:border-[#92400E] hover:shadow-sandstone-md hover:-translate-y-0.5 cursor-pointer'
                     }`}
+                    title={!isOrderable ? availability.reasonMessage : undefined}
                   >
                     <div>
                       {/* Image / Visual */}
@@ -357,7 +428,9 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                       />
 
                       <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="font-bold text-[#1F2937] text-sm group-hover:text-[#92400E] transition-colors line-clamp-1">
+                        <span className={`font-bold text-sm line-clamp-1 transition-colors ${
+                          !isOrderable ? 'text-[#5B6470]' : 'text-[#1F2937] group-hover:text-[#92400E]'
+                        }`}>
                           {item.name}
                         </span>
                         {(item.dietary || item.isVeg !== undefined) && (
@@ -383,6 +456,17 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                           </span>
                         )}
                       </div>
+
+                      {/* Prominent Warning Callout when not orderable */}
+                      {!isOrderable && (
+                        <div className="bg-amber-50/90 border border-amber-200 rounded-lg p-1.5 mb-2 text-[11px] text-amber-900 leading-snug flex items-start gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <span className="line-clamp-2 font-medium">
+                            {availability.reasonMessage}
+                          </span>
+                        </div>
+                      )}
+
                       {item.description && (
                         <p className="text-xs text-[#5B6470] line-clamp-2 mb-3 leading-relaxed">
                           {item.description}
@@ -394,14 +478,37 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                       <span className="font-extrabold text-[#92400E] text-sm font-mono tabular-nums">
                         {currency}{Number(item.price).toFixed(2)}
                       </span>
-                      {!item.isAvailable ? (
-                        <span className="text-[10px] uppercase font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                          86 Out
-                        </span>
+                      {!isOrderable ? (
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                              !item.isAvailable
+                                ? 'text-rose-800 bg-rose-50 border-rose-200'
+                                : 'text-amber-900 bg-amber-50 border-amber-300'
+                            }`}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            {!item.isAvailable
+                              ? '86 Out'
+                              : availability.reasonCode === 'NO_RECIPE'
+                              ? 'No Recipe'
+                              : 'Insufficient Inventory'}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#5B6470] bg-[#FAF7F2] px-2 py-0.5 rounded-md border border-[#E5D8C6]">
+                            Unavailable
+                          </span>
+                        </div>
                       ) : (
-                        <span className="w-8 h-8 rounded-xl bg-amber-100 group-hover:bg-[#92400E] text-[#92400E] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
-                          <Plus className="w-4 h-4 stroke-[2.5]" />
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {availability.maxOrderableQuantity <= 5 && availability.maxOrderableQuantity > 0 && (
+                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              {availability.maxOrderableQuantity} left
+                            </span>
+                          )}
+                          <span className="w-8 h-8 rounded-xl bg-amber-100 group-hover:bg-[#92400E] text-[#92400E] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>

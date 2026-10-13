@@ -53,7 +53,11 @@ export const errorHandler = (err, req, res, next) => {
     ? (err.errors || [])
     : (statusCode >= 500 && process.env.NODE_ENV !== 'production' ? [err.message] : []);
 
-  return sendError(res, statusCode, message, errors);
+  const extra = {};
+  if (err.code) extra.code = err.code;
+  if (err.items !== undefined) extra.items = err.items;
+
+  return sendError(res, statusCode, message, errors, extra);
 };
 
 export default errorHandler;

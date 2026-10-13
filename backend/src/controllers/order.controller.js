@@ -110,6 +110,15 @@ export const cancelBillRequest = async (req, res, next) => {
   }
 };
 
+export const validateCart = async (req, res, next) => {
+  try {
+    const result = await orderService.validateCartAvailability(req.user.restaurantId, req.body.items || []);
+    return sendSuccess(res, 200, 'Inventory is sufficient for all requested items', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   createOrder,
   getOrders,
@@ -123,4 +132,5 @@ export default {
   markServed,
   sendToKitchen,
   updateOrderStatus,
+  validateCart,
 };

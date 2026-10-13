@@ -16,8 +16,16 @@ export const sendSuccess = (res, statusCode = 200, message = 'Operation successf
   return res.status(statusCode).json(payload);
 };
 
-export const sendError = (res, statusCode = 500, message = 'Something went wrong', error = {}) => {
+export const sendError = (res, statusCode = 500, message = 'Something went wrong', error = {}, extra = {}) => {
   let errorsList = [];
+  let code = extra?.code;
+  let items = extra?.items;
+
+  if (error && typeof error === 'object' && !Array.isArray(error)) {
+    if (error.code && !code) code = error.code;
+    if (error.items !== undefined && items === undefined) items = error.items;
+  }
+
   if (Array.isArray(error)) {
     errorsList = error;
   } else if (error?.validationErrors && Array.isArray(error.validationErrors)) {
@@ -28,11 +36,20 @@ export const sendError = (res, statusCode = 500, message = 'Something went wrong
     errorsList = [error];
   }
 
-  return res.status(statusCode).json({
+  const payload = {
     success: false,
     message,
     errors: errorsList,
-  });
+  };
+
+  if (code) {
+    payload.code = code;
+  }
+  if (items !== undefined) {
+    payload.items = items;
+  }
+
+  return res.status(statusCode).json(payload);
 };
 
 export default {
