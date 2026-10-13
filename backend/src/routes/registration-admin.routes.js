@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import * as adminController from '../controllers/registration-admin.controller.js';
 import * as planController from '../controllers/plan.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -10,8 +10,9 @@ const router = Router();
 router.use(authenticate);
 router.use(authorizeRoles(ROLES.RESTAURANT_REGISTRATION_ADMIN));
 
-// Platform Overview Stats
+// Platform Overview Stats & Consolidated Analytics
 router.get('/overview', adminController.getPlatformOverview);
+router.get('/analytics', adminController.getPlatformAnalytics);
 
 // Platform Plans Management
 router.get('/plans', planController.getPlans);

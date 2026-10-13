@@ -228,6 +228,10 @@ export const posService = {
   // Level 1: Platform Super Admin / Registration Administration
   registrationAdmin: {
     getOverview: () => api.get('/super-admin/overview'),
+    getAnalytics: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return api.get(`/super-admin/analytics${q ? `?${q}` : ''}`);
+    },
     getRestaurants: (params = {}) => {
       const q = new URLSearchParams(params).toString();
       return api.get(`/super-admin/restaurants${q ? `?${q}` : ''}`);

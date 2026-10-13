@@ -363,6 +363,154 @@ export const getPlatformOverview = async () => {
   };
 };
 
+export const getPlatformAnalytics = async (range = '30D') => {
+  const rangeDaysMap = {
+    '30D': 30,
+    '3M': 90,
+    '6M': 180,
+    '1Y': 365,
+  };
+  const days = rangeDaysMap[String(range).toUpperCase()] || 30;
+  const now = new Date();
+  const rangeStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const prevStart = new Date(now.getTime() - 2 * days * 24 * 60 * 60 * 1000);
+
+  const [restaurants, subscriptions, users] = await Promise.all([
+    prisma.restaurant.findMany({
+      select: { id: true, createdAt: true, isActive: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.subscription.findMany({
+      select: {
+        id: true,
+        restaurantId: true,
+        planId: true,
+        status: true,
+        startDate: true,
+        createdAt: true,
+        plan: { select: { price: true, name: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.user.findMany({
+      select: { id: true, createdAt: true, role: true, isActive: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
+
+  const totalTenants = restaurants.length;
+  const activeTenants = restaurants.filter((r) => r.isActive).length;
+  const suspendedTenants = restaurants.filter((r) => !r.isActive).length;
+  const activeSubscriptions = subscriptions.filter((s) => s.status === 'ACTIVE').length;
+  const totalUsers = users.length;
+  const totalContractARR = subscriptions
+    .filter((s) => s.status === 'ACTIVE')
+    .reduce((sum, s) => sum + Number(s.plan?.price || 0), 0);
+
+  // Determine interval step in days for clean charting
+  let stepDays = 1;
+  if (days <= 30) stepDays = 2;
+  else if (days <= 90) stepDays = 5;
+  else if (days <= 180) stepDays = 10;
+  else stepDays = 20;
+
+  // Generate bucket timestamps from rangeStart to now
+  const buckets = [];
+  let currentMs = rangeStart.getTime();
+  const nowMs = now.getTime();
+  while (currentMs < nowMs) {
+    buckets.push(new Date(currentMs));
+    currentMs += stepDays * 24 * 60 * 60 * 1000;
+  }
+  buckets.push(now);
+
+  const tenantPoints = buckets.map((b) => {
+    const label = b.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const count = restaurants.filter((r) => new Date(r.createdAt) <= b).length;
+    return { label, value: count, date: b.toISOString() };
+  });
+
+  const subPoints = buckets.map((b) => {
+    const label = b.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const count = subscriptions.filter((s) => new Date(s.createdAt) <= b && s.status === 'ACTIVE').length;
+    return { label, value: count, date: b.toISOString() };
+  });
+
+  const userPoints = buckets.map((b) => {
+    const label = b.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const count = users.filter((u) => new Date(u.createdAt) <= b).length;
+    return { label, value: count, date: b.toISOString() };
+  });
+
+  const revPoints = buckets.map((b) => {
+    const label = b.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const rev = subscriptions
+      .filter((s) => new Date(s.createdAt) <= b && s.status === 'ACTIVE')
+      .reduce((sum, s) => sum + Number(s.plan?.price || 0), 0);
+    return { label, value: rev, date: b.toISOString() };
+  });
+
+  // Calculate real growth/change if previous period data exists (never fabricate percentages)
+  const newTenantsCurrent = restaurants.filter((r) => new Date(r.createdAt) >= rangeStart && new Date(r.createdAt) <= now).length;
+  const newTenantsPrev = restaurants.filter((r) => new Date(r.createdAt) >= prevStart && new Date(r.createdAt) < rangeStart).length;
+
+  const newSubsCurrent = subscriptions.filter((s) => new Date(s.createdAt) >= rangeStart && new Date(s.createdAt) <= now).length;
+  const newSubsPrev = subscriptions.filter((s) => new Date(s.createdAt) >= prevStart && new Date(s.createdAt) < rangeStart).length;
+
+  const newUsersCurrent = users.filter((u) => new Date(u.createdAt) >= rangeStart && new Date(u.createdAt) <= now).length;
+  const newUsersPrev = users.filter((u) => new Date(u.createdAt) >= prevStart && new Date(u.createdAt) < rangeStart).length;
+
+  const calcChange = (curr, prev) => {
+    if (prev > 0) {
+      return Number((((curr - prev) / prev) * 100).toFixed(1));
+    }
+    return null; // Return null when no historical comparison exists so no fake % is shown
+  };
+
+  return {
+    range,
+    summary: {
+      registeredTenants: totalTenants,
+      activeTenants,
+      suspendedTenants,
+      activeSubscriptions,
+      platformUsers: totalUsers,
+      totalRevenue: totalContractARR,
+    },
+    metrics: {
+      tenants: {
+        label: 'Registered Tenants',
+        current: totalTenants,
+        changePct: calcChange(newTenantsCurrent, newTenantsPrev),
+        data: tenantPoints,
+        unit: 'tenants',
+      },
+      subscriptions: {
+        label: 'Active Subscriptions',
+        current: activeSubscriptions,
+        changePct: calcChange(newSubsCurrent, newSubsPrev),
+        data: subPoints,
+        unit: 'subscriptions',
+      },
+      users: {
+        label: 'Platform Users',
+        current: totalUsers,
+        changePct: calcChange(newUsersCurrent, newUsersPrev),
+        data: userPoints,
+        unit: 'users',
+      },
+      revenue: {
+        label: 'Subscription ARR',
+        current: totalContractARR,
+        currency: '₹',
+        changePct: null,
+        data: revPoints,
+        unit: 'ARR',
+      },
+    },
+  };
+};
+
 export default {
   onboardRestaurant,
   getRestaurants,
@@ -371,4 +519,5 @@ export default {
   updateRestaurantSubscription,
   resetOwnerCredentials,
   getPlatformOverview,
+  getPlatformAnalytics,
 };

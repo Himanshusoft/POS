@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
-import { StatCard, ChartCard, AreaChart, LineChart, VerticalBarChart, DonutChart, HorizontalBarChart } from '../components/ui';
+import { StatCard } from '../components/ui';
+import PlatformPerformanceAnalytics from '../components/PlatformPerformanceAnalytics';
 import {
   Building2,
   Plus,
@@ -34,6 +35,10 @@ export default function RegistrationAdminDashboard() {
   const [restaurants, setRestaurants] = useState([]);
   const [plans, setPlans] = useState([]);
   const [overview, setOverview] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsRange, setAnalyticsRange] = useState('30D');
+  const [activeMetric, setActiveMetric] = useState('tenants');
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -91,14 +96,15 @@ export default function RegistrationAdminDashboard() {
 
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = async (range = analyticsRange) => {
     setLoading(true);
     setError(null);
     try {
-      const [overviewRes, restRes, plansRes] = await Promise.all([
+      const [overviewRes, restRes, plansRes, analyticsRes] = await Promise.all([
         posService.superAdmin.getOverview(),
         posService.superAdmin.getRestaurants(),
         posService.superAdmin.getPlans(),
+        posService.superAdmin.getAnalytics({ range }),
       ]);
 
       if (overviewRes.success && overviewRes.data) {
@@ -113,11 +119,29 @@ export default function RegistrationAdminDashboard() {
           setOnboardForm((prev) => ({ ...prev, planId: plansRes.data[0].id }));
         }
       }
+      if (analyticsRes.success && analyticsRes.data) {
+        setAnalyticsData(analyticsRes.data);
+      }
     } catch (err) {
       setError(err.message || 'Unable to load platform data');
       addToast(err.message || 'Failed to load platform data', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRangeChange = async (newRange) => {
+    setAnalyticsRange(newRange);
+    setAnalyticsLoading(true);
+    try {
+      const res = await posService.superAdmin.getAnalytics({ range: newRange });
+      if (res.success && res.data) {
+        setAnalyticsData(res.data);
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to load analytics for range', 'error');
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -376,69 +400,15 @@ export default function RegistrationAdminDashboard() {
     return matchQuery && matchStatus;
   });
 
-  const totalTenants = overview?.totalRestaurants ?? restaurants.length;
-  const activeSubscriptions = overview?.activeSubscriptions ?? restaurants.filter((r) => r.subscription?.status === 'ACTIVE' || r.isActive).length;
-  const suspendedTenants = overview?.inactiveRestaurants ?? restaurants.filter((r) => !r.isActive).length;
-  const activeTenants = overview?.activeRestaurants ?? restaurants.filter((r) => r.isActive).length;
-  const totalUsers = overview?.totalPlatformUsers ?? 0;
-
-  const planDistribution = useMemo(() => {
-    const pList = overview?.plans || plans || [];
-    const colors = ['#92400E', '#D97706', '#16A34A', '#2563EB', '#7C3AED', '#EC4899'];
-    return pList.map((p, idx) => ({
-      label: p.name,
-      value: p.activeSubscribers || p._count?.subscriptions || 0,
-      color: colors[idx % colors.length],
-      sublabel: `₹${Number(p.price || 0).toLocaleString()}/yr`,
-    }));
-  }, [overview, plans]);
-
-  const tenantHealthData = useMemo(() => [
-    { label: 'Active', value: activeTenants, color: '#16A34A' },
-    { label: 'Suspended', value: suspendedTenants, color: '#EF4444' },
-  ], [activeTenants, suspendedTenants]);
-
-  const tenantGrowthData = useMemo(() => {
-    if (!restaurants || restaurants.length === 0) return [];
-    const sorted = [...restaurants].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-    const dateMap = {};
-    let cumulative = 0;
-    sorted.forEach((r) => {
-      const d = r.createdAt ? new Date(r.createdAt) : new Date();
-      const monthKey = d.toLocaleDateString([], { month: 'short', year: '2-digit' });
-      cumulative += 1;
-      dateMap[monthKey] = cumulative;
-    });
-    return Object.entries(dateMap).map(([label, value]) => ({ label, value }));
-  }, [restaurants]);
-
-  const subscriptionRevenueData = useMemo(() => {
-    if (!restaurants || restaurants.length === 0) return [];
-    const sorted = [...restaurants].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-    const revMap = {};
-    let cumulativeRevenue = 0;
-    sorted.forEach((r) => {
-      const d = r.createdAt ? new Date(r.createdAt) : new Date();
-      const monthKey = d.toLocaleDateString([], { month: 'short', year: '2-digit' });
-      const planPrice = Number(r.subscription?.plan?.price || 5000);
-      cumulativeRevenue += planPrice;
-      revMap[monthKey] = cumulativeRevenue;
-    });
-    return Object.entries(revMap).map(([label, value]) => ({ label, value }));
-  }, [restaurants]);
-
-  const userRoleDistribution = useMemo(() => {
-    return [
-      { label: 'Active Tenants', value: activeTenants, color: '#16A34A', sublabel: 'Operating' },
-      { label: 'Suspended', value: suspendedTenants, color: '#EF4444', sublabel: 'Inactive' },
-      { label: 'Active Subs', value: activeSubscriptions, color: '#D97706', sublabel: 'Paid Licenses' },
-      { label: 'Platform Users', value: totalUsers, color: '#2563EB', sublabel: 'Staff Roster' },
-    ];
-  }, [activeTenants, suspendedTenants, activeSubscriptions, totalUsers]);
+  const totalTenants = overview?.totalRestaurants ?? analyticsData?.summary?.registeredTenants ?? restaurants.length;
+  const activeSubscriptions = overview?.activeSubscriptions ?? analyticsData?.summary?.activeSubscriptions ?? restaurants.filter((r) => r.subscription?.status === 'ACTIVE' || r.isActive).length;
+  const suspendedTenants = overview?.inactiveRestaurants ?? analyticsData?.summary?.suspendedTenants ?? restaurants.filter((r) => !r.isActive).length;
+  const activeTenants = overview?.activeRestaurants ?? analyticsData?.summary?.activeTenants ?? restaurants.filter((r) => r.isActive).length;
+  const totalUsers = overview?.totalPlatformUsers ?? analyticsData?.summary?.platformUsers ?? 0;
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] text-[#1F2937] dark:text-[#F7F3EC]">
-      {/* Header */}
+      {/* 1. HEADER / PLATFORM OVERVIEW */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
@@ -452,17 +422,17 @@ export default function RegistrationAdminDashboard() {
               <span className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium">• Multi-Tenant SaaS Governance</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight mt-1">
-              Platform Governance & Tenant Subscriptions
+              Platform Overview
             </h1>
             <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
-              Manage restaurant customer tenants, provision owner credentials, govern subscription plans, and monitor platform-wide metrics.
+              Manage restaurant tenants, subscriptions, platform access and overall platform performance.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="flex items-center gap-2 px-3.5 py-2.5 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl text-xs font-semibold border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone hover:shadow-sandstone-md active:scale-95 transition-all cursor-pointer"
             title="Refresh Platform Data"
           >
@@ -484,14 +454,14 @@ export default function RegistrationAdminDashboard() {
               className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Onboard Restaurant Tenant</span>
+              <span>Onboard Restaurant</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Error Banner with Retry */}
-      {error && !overview && restaurants.length === 0 && (
+      {error && !overview && !analyticsData && restaurants.length === 0 && (
         <div className="bg-white dark:bg-[#1C1815] border border-rose-200 dark:border-rose-900 rounded-2xl p-8 text-center shadow-sandstone max-w-md mx-auto my-6">
           <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-[#EF4444] flex items-center justify-center mx-auto mb-3">
             <AlertCircle className="w-6 h-6" />
@@ -499,7 +469,7 @@ export default function RegistrationAdminDashboard() {
           <h3 className="text-base font-bold text-[#1F2937] dark:text-[#F7F3EC]">Unable to load platform data</h3>
           <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">{error}</p>
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="mt-4 px-4 py-2 bg-[#92400E] hover:bg-[#78350F] text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
           >
             Retry
@@ -507,130 +477,54 @@ export default function RegistrationAdminDashboard() {
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* 2. KPI SUMMARY */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          title="Registered Tenants"
-          value={loading && !overview ? '...' : totalTenants}
-          subtitle="Platform tenant accounts"
+          title="Registered Restaurants"
+          value={loading && !overview && !analyticsData ? '...' : totalTenants}
+          subtitle="Total registered tenants"
           icon={Building2}
           iconColor="text-[#92400E] dark:text-[#D97706]"
           iconBg="bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30"
         />
 
         <StatCard
-          title="Active Subscriptions"
-          value={loading && !overview ? '...' : activeSubscriptions}
-          subtitle="Operational with active plan"
+          title="Active Restaurants"
+          value={loading && !overview && !analyticsData ? '...' : activeTenants}
+          subtitle="Currently operational tenants"
           icon={ShieldCheck}
           iconColor="text-[#16A34A] dark:text-emerald-400"
           iconBg="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
         />
 
         <StatCard
-          title="Suspended Tenants"
-          value={loading && !overview ? '...' : suspendedTenants}
-          subtitle="Blocked from terminal access"
-          icon={ShieldAlert}
-          iconColor="text-[#EF4444] dark:text-rose-400"
-          iconBg="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800"
+          title="Active Subscriptions"
+          value={loading && !overview && !analyticsData ? '...' : activeSubscriptions}
+          subtitle="Currently active subscriptions"
+          icon={CreditCard}
+          iconColor="text-[#D97706] dark:text-amber-400"
+          iconBg="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
         />
 
         <StatCard
           title="Platform Users"
-          value={loading && !overview ? '...' : totalUsers}
-          subtitle="Owners, chefs, waiters, cashiers"
+          value={loading && !overview && !analyticsData ? '...' : totalUsers}
+          subtitle="Users across all restaurants"
           icon={Users}
           iconColor="text-[#2563EB] dark:text-blue-400"
           iconBg="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
         />
       </div>
 
-      {/* Analytics Visualization Section (Real SaaS Platform Data) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* Restaurant Growth Over Time (Line Chart) */}
-        <div className="lg:col-span-2">
-          <ChartCard
-            title="Platform Tenant Growth"
-            subtitle="Cumulative customer restaurants onboarded to the ApexPOS platform"
-            badge="Tenant Scale"
-            empty={tenantGrowthData.length === 0}
-            emptyMessage="No restaurant tenants onboarded yet. Newly created accounts will plot growth here."
-          >
-            <div className="pt-2">
-              <LineChart
-                data={tenantGrowthData}
-                color="#92400E"
-                height={200}
-                valueLabel="tenants"
-              />
-              <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-                <span>Active Commercial Tenants: <strong className="text-[#16A34A] dark:text-emerald-400 font-bold">{activeTenants} active</strong></span>
-                <span>Total Onboarded: <strong className="font-mono text-[#1F2937] dark:text-[#F7F3EC]">{totalTenants} organizations</strong></span>
-              </div>
-            </div>
-          </ChartCard>
-        </div>
-
-        {/* Subscription Plan Distribution (Donut Chart) */}
-        <ChartCard
-          title="Subscription Plan Distribution"
-          subtitle="Active tenant subscriptions across tiers"
-          badge="Live Plans"
-        >
-          <div className="py-1">
-            <DonutChart
-              data={planDistribution}
-              centerLabel="Active Subscriptions"
-              centerValue={activeSubscriptions}
-            />
-          </div>
-        </ChartCard>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        {/* Subscription ARR Revenue (Area Chart) */}
-        <ChartCard
-          title="Subscription Annual Run Rate (ARR)"
-          subtitle="Cumulative platform licensing contract value across active tenant tiers"
-          badge="Platform Revenue"
-          empty={subscriptionRevenueData.length === 0}
-          emptyMessage="No commercial subscriptions active."
-        >
-          <div className="pt-2">
-            <AreaChart
-              data={subscriptionRevenueData}
-              color="#16A34A"
-              gradientColor="#10B981"
-              currency="₹"
-              height={195}
-            />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>Licensed Tenants: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{activeSubscriptions} subscriptions</strong></span>
-              <span>Total Contract ARR: <strong className="font-mono text-[#16A34A] dark:text-emerald-400 font-bold">₹{(activeSubscriptions * 5000).toLocaleString()}</strong></span>
-            </div>
-          </div>
-        </ChartCard>
-
-        {/* Platform Governance & User Matrix (Vertical Bar Chart) */}
-        <ChartCard
-          title="Platform Governance & Role Matrix"
-          subtitle="Tenant operational statuses, paid subscriptions, and staff users"
-          badge="Governance"
-        >
-          <div className="pt-2">
-            <VerticalBarChart
-              data={userRoleDistribution}
-              height={195}
-              valueLabel="accounts"
-            />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>System Health: <strong className="text-[#16A34A] dark:text-emerald-400 font-bold">{suspendedTenants === 0 ? 'Optimal' : `${suspendedTenants} suspended`}</strong></span>
-              <span>Total Platform Users: <strong className="font-mono text-[#1F2937] dark:text-[#F7F3EC]">{totalUsers}</strong></span>
-            </div>
-          </div>
-        </ChartCard>
-      </div>
+      {/* 3. ONE CONSOLIDATED PLATFORM ANALYTICS GRAPH */}
+      <PlatformPerformanceAnalytics
+        analyticsData={analyticsData}
+        loading={analyticsLoading || (loading && !analyticsData)}
+        timeRange={analyticsRange}
+        onTimeRangeChange={handleRangeChange}
+        activeMetric={activeMetric}
+        onMetricChange={setActiveMetric}
+      />
 
       {/* Tabs Switcher */}
       <div className="flex items-center gap-2 border-b border-[#E5D8C6] dark:border-[#382F26] pb-3">

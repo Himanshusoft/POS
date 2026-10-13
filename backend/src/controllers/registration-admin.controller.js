@@ -1,4 +1,4 @@
-﻿import * as adminService from '../services/registration-admin.service.js';
+import * as adminService from '../services/registration-admin.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
 export const onboardRestaurant = async (req, res, next) => {
@@ -88,6 +88,16 @@ export const getPlatformOverview = async (req, res, next) => {
   }
 };
 
+export const getPlatformAnalytics = async (req, res, next) => {
+  try {
+    const { range = '30D' } = req.query;
+    const analytics = await adminService.getPlatformAnalytics(range);
+    return sendSuccess(res, 200, 'Platform analytics retrieved successfully', analytics);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   onboardRestaurant,
   getRestaurants,
@@ -96,4 +106,5 @@ export default {
   updateRestaurantSubscription,
   resetOwnerCredentials,
   getPlatformOverview,
+  getPlatformAnalytics,
 };
