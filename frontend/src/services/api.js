@@ -1,12 +1,14 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api';
+const rawBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api';
+const cleanBase = (rawBase || '/api').replace(/\/+$/, '');
+const BASE_URL = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
 
 export const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
     return path;
   }
-  const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const origin = apiBase.replace(/\/api\/?$/, '');
+  const rawApi = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
+  const origin = rawApi ? rawApi.replace(/\/api\/?$/, '') : (typeof window !== 'undefined' ? window.location.origin : '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${origin}${cleanPath}`;
 };
