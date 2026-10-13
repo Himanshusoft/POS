@@ -50,8 +50,35 @@ export const deleteCategory = async (req, res, next) => {
 // Menu Items
 export const createMenuItem = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.imageUrl = `/uploads/menu/${req.file.filename}`;
+    }
+    if (req.body.price !== undefined) {
+      req.body.price = Number(req.body.price);
+    }
+    if (typeof req.body.isAvailable === 'string') {
+      req.body.isAvailable = req.body.isAvailable === 'true';
+    }
+    if (req.body.categoryId === '' || req.body.categoryId === 'null') {
+      req.body.categoryId = null;
+    }
     const item = await menuService.createMenuItem(req.user.restaurantId, req.body);
     return sendSuccess(res, 201, 'Menu item created successfully', item);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadMenuItemImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file uploaded. Please select an image.',
+      });
+    }
+    const imageUrl = `/uploads/menu/${req.file.filename}`;
+    return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
   } catch (error) {
     next(error);
   }
@@ -77,6 +104,21 @@ export const getMenuItemById = async (req, res, next) => {
 
 export const updateMenuItem = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.imageUrl = `/uploads/menu/${req.file.filename}`;
+    }
+    if (req.body.price !== undefined) {
+      req.body.price = Number(req.body.price);
+    }
+    if (typeof req.body.isAvailable === 'string') {
+      req.body.isAvailable = req.body.isAvailable === 'true';
+    }
+    if (req.body.categoryId === '' || req.body.categoryId === 'null') {
+      req.body.categoryId = null;
+    }
+    if (req.body.removeImage === 'true' || req.body.removeImage === true) {
+      req.body.imageUrl = null;
+    }
     const item = await menuService.updateMenuItem(req.user.restaurantId, req.params.id, req.body);
     return sendSuccess(res, 200, 'Menu item updated successfully', item);
   } catch (error) {

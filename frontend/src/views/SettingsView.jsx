@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { Button, Badge } from '../components/ui';
 import {
   Settings,
   Building2,
@@ -8,27 +9,13 @@ import {
   Lock,
   Sliders,
   Save,
-  CheckCircle2,
-  DollarSign,
   ShieldCheck,
-  Mail,
-  Phone,
-  MapPin,
-  Percent,
-  FileText,
   Volume2,
-  Printer,
   ChefHat,
-  RotateCcw,
   RefreshCw,
-  Clock,
-  Sparkles,
-  Layers,
-  AlertTriangle,
   Receipt,
   Boxes,
   Server,
-  Eye
 } from 'lucide-react';
 
 export default function SettingsView({ initialTab = 'profile', onTabChange }) {
@@ -470,7 +457,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#E5D8C6] p-5 rounded-2xl shadow-sm">
         <div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
               <Settings className="w-6 h-6 text-[#92400E]" />
               <span>
@@ -481,40 +468,43 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                     : 'Station Preferences & Account Settings'}
               </span>
             </h1>
-            <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
+            <Badge variant="success" size="sm">
+              <ShieldCheck className="w-3 h-3 mr-1" />
               <span>Real-Time Database Persistence</span>
-            </span>
+            </Badge>
           </div>
-          <p className="text-xs text-[#5B6470] mt-1">
+          <p className="text-xs text-[#5B6470] mt-1 font-medium">
             Dynamic, persistent settings engine synchronized with PostgreSQL database tables across tenant, platform, and user scopes.
           </p>
         </div>
 
-        <button
+        <Button
+          variant="outline"
           onClick={fetchAllSettings}
           disabled={loading}
-          className="flex items-center gap-1.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] text-xs font-semibold px-3 py-2 rounded-xl border border-[#E5D8C6] transition-colors cursor-pointer shadow-sm"
           title="Reload Settings from Database"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#92400E]' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#92400E]' : ''}`} />
           <span>Reload</span>
-        </button>
+        </Button>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto">
+      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => handleTabClick(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${isActive
-                  ? 'bg-[#92400E] text-white shadow-sm'
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+                isActive
+                  ? 'bg-[#92400E] text-white shadow-sm font-bold'
                   : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
-                }`}
+              }`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -544,7 +534,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 required
                 value={profileForm.name}
                 onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
             </div>
 
@@ -555,7 +545,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 required
                 value={profileForm.email}
                 onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
             </div>
 
@@ -565,24 +555,24 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 type="text"
                 value={profileForm.phone}
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="+91 9876543210"
               />
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'profile'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'profile' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Profile Changes</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -593,7 +583,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
           <div className="border-b border-[#E5D8C6] pb-4">
             <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#2563EB]" />
+              <Lock className="w-5 h-5 text-[#92400E]" />
               <span>Security & Password Protection</span>
             </h3>
             <p className="text-xs text-[#5B6470] mt-1">
@@ -609,7 +599,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 required
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -622,7 +612,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 minLength={6}
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -635,24 +625,24 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 minLength={6}
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="Repeat new password"
               />
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'security'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'security' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Update Password</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -679,7 +669,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 required
                 value={restForm.name}
                 onChange={(e) => setRestForm({ ...restForm, name: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold transition-all"
               />
             </div>
 
@@ -689,7 +679,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 type="text"
                 value={restForm.address}
                 onChange={(e) => setRestForm({ ...restForm, address: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="104 MG Road, Indiranagar, Bangalore"
               />
             </div>
@@ -701,7 +691,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="text"
                   value={restForm.phone}
                   onChange={(e) => setRestForm({ ...restForm, phone: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                   placeholder="+91 80 12345678"
                 />
               </div>
@@ -712,7 +702,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="email"
                   value={restForm.email}
                   onChange={(e) => setRestForm({ ...restForm, email: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                   placeholder="billing@restaurant.com"
                 />
               </div>
@@ -724,7 +714,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <select
                   value={restForm.currency}
                   onChange={(e) => setRestForm({ ...restForm, currency: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono transition-all"
                 >
                   <option value="INR">INR (₹) - Indian Rupee</option>
                   <option value="USD">USD ($) - US Dollar</option>
@@ -745,24 +735,24 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   required
                   value={restForm.taxRate}
                   onChange={(e) => setRestForm({ ...restForm, taxRate: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono tabular-nums transition-all"
                 />
               </div>
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'restaurant'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'restaurant' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Restaurant Brand Info</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -789,7 +779,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="text"
                   value={operationsForm.invoicePrefix}
                   onChange={(e) => setOperationsForm({ ...operationsForm, invoicePrefix: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                   placeholder="INV-"
                 />
               </div>
@@ -800,7 +790,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="text"
                   value={operationsForm.gstNumber}
                   onChange={(e) => setOperationsForm({ ...operationsForm, gstNumber: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                   placeholder="29AAAAA0000A1Z5"
                 />
               </div>
@@ -816,7 +806,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   step="0.5"
                   value={operationsForm.serviceChargeRate}
                   onChange={(e) => setOperationsForm({ ...operationsForm, serviceChargeRate: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 />
               </div>
 
@@ -825,7 +815,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <select
                   value={operationsForm.defaultPaymentMethod}
                   onChange={(e) => setOperationsForm({ ...operationsForm, defaultPaymentMethod: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI / Digital QR</option>
@@ -840,7 +830,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 type="text"
                 value={operationsForm.footerMessage}
                 onChange={(e) => setOperationsForm({ ...operationsForm, footerMessage: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 placeholder="Thank you! Please visit again."
               />
             </div>
@@ -874,18 +864,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'operations'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'operations' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Billing & Operational Policies</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -896,7 +886,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
           <div className="border-b border-[#E5D8C6] pb-4">
             <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <ChefHat className="w-5 h-5 text-[#D97706]" />
+              <ChefHat className="w-5 h-5 text-[#92400E]" />
               <span>Kitchen Display & Production Workflow Policies</span>
             </h3>
             <p className="text-xs text-[#5B6470] mt-1">
@@ -917,7 +907,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 onChange={(e) =>
                   setKitchenPolicyForm({ ...kitchenPolicyForm, alertCookingTimeMinutes: Number(e.target.value) })
                 }
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
               <span className="text-[10px] text-[#5B6470] mt-1 block">
                 Tickets in preparation longer than this will flash amber on kitchen display
@@ -932,7 +922,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setKitchenPolicyForm({ ...kitchenPolicyForm, autoAcceptOrders: e.target.checked })
                   }
-                  className="w-4 h-4 rounded text-[#D97706] focus:ring-[#D97706] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Auto-Accept Incoming Orders to Kitchen Queue</div>
@@ -947,7 +937,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setKitchenPolicyForm({ ...kitchenPolicyForm, soundOnNewOrder: e.target.checked })
                   }
-                  className="w-4 h-4 rounded text-[#D97706] focus:ring-[#D97706] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Chime on New Kitchen Ticket Arrival</div>
@@ -957,18 +947,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'kitchen'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'kitchen' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Kitchen Workflow Rules</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1003,7 +993,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                     lowStockThresholdDefault: Number(e.target.value),
                   })
                 }
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
               <span className="text-[10px] text-[#5B6470] mt-1 block">
                 Ingredients with stock below this level trigger amber badges on dashboard
@@ -1051,18 +1041,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'inventory'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'inventory' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Stock Policies</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1088,7 +1078,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 type="text"
                 value={platformForm.platformName}
                 onChange={(e) => setPlatformForm({ ...platformForm, platformName: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
             </div>
 
@@ -1099,7 +1089,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="email"
                   value={platformForm.supportEmail}
                   onChange={(e) => setPlatformForm({ ...platformForm, supportEmail: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 />
               </div>
 
@@ -1109,7 +1099,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="text"
                   value={platformForm.supportPhone}
                   onChange={(e) => setPlatformForm({ ...platformForm, supportPhone: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 />
               </div>
             </div>
@@ -1127,7 +1117,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setPlatformForm({ ...platformForm, defaultPlanDurationDays: Number(e.target.value) })
                   }
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 />
               </div>
 
@@ -1143,7 +1133,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setPlatformForm({ ...platformForm, sessionTimeoutMinutes: Number(e.target.value) })
                   }
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 />
               </div>
             </div>
@@ -1177,18 +1167,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'platform'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'platform' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Platform Governance</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1199,7 +1189,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
           <div className="border-b border-[#E5D8C6] pb-4">
             <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <ChefHat className="w-5 h-5 text-[#D97706]" />
+              <ChefHat className="w-5 h-5 text-[#92400E]" />
               <span>Kitchen Station Terminal Preferences</span>
             </h3>
             <p className="text-xs text-[#5B6470] mt-1">
@@ -1213,7 +1203,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               <select
                 value={userPrefForm.density}
                 onChange={(e) => setUserPrefForm({ ...userPrefForm, density: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               >
                 <option value="comfortable">Comfortable (Larger text, kitchen readability)</option>
                 <option value="compact">Compact (Show more tickets simultaneously)</option>
@@ -1226,7 +1216,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#D97706] focus:ring-[#D97706] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Chime on Incoming Kitchen Tickets</div>
@@ -1239,7 +1229,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#D97706] focus:ring-[#D97706] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Show Toast Alerts for Expedited Dishes</div>
@@ -1249,18 +1239,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'preferences'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'preferences' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Station Preferences</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1271,7 +1261,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
           <div className="border-b border-[#E5D8C6] pb-4">
             <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#2563EB]" />
+              <Sliders className="w-5 h-5 text-[#92400E]" />
               <span>Waiter Service Station Preferences</span>
             </h3>
             <p className="text-xs text-[#5B6470] mt-1">
@@ -1285,7 +1275,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               <select
                 value={userPrefForm.defaultScreen}
                 onChange={(e) => setUserPrefForm({ ...userPrefForm, defaultScreen: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               >
                 <option value="dashboard">Shift Overview Dashboard</option>
                 <option value="tables">Floor Map & Table Grid</option>
@@ -1299,7 +1289,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Audio Alert on "Order Ready to Serve"</div>
@@ -1312,7 +1302,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#2563EB] focus:ring-[#2563EB] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Visual Popup Alerts</div>
@@ -1322,18 +1312,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'preferences'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'preferences' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Waiter Preferences</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1344,7 +1334,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
           <div className="border-b border-[#E5D8C6] pb-4">
             <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#16A34A]" />
+              <Receipt className="w-5 h-5 text-[#92400E]" />
               <span>Cashier Terminal Preferences</span>
             </h3>
             <p className="text-xs text-[#5B6470] mt-1">
@@ -1359,7 +1349,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.quickCash}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, quickCash: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Enable Quick-Cash Tender Shortcut Pills</div>
@@ -1372,7 +1362,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
                 />
                 <div>
                   <div className="text-xs font-semibold text-[#1F2937]">Payment Settlement Confirmation Chime</div>
@@ -1382,18 +1372,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'preferences'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'preferences' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Save Cashier Preferences</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -1419,7 +1409,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <select
                   value={userPrefForm.theme}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, theme: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 >
                   <option value="sandstone">Sandstone Warm Elegance (Default)</option>
                   <option value="dark">POS Dark Mode</option>
@@ -1431,7 +1421,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <select
                   value={userPrefForm.density}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, density: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
                 >
                   <option value="comfortable">Comfortable Touch (Default)</option>
                   <option value="compact">Compact High-Density</option>
@@ -1468,18 +1458,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={savingSection === 'preferences'}
-                className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-[#92400E]/20"
               >
                 {savingSection === 'preferences' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 mr-2" />
                 )}
                 <span>Persist Preferences to Database</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>

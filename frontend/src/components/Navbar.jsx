@@ -1,19 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import NotificationDropdown from './NotificationDropdown';
 import {
   UtensilsCrossed,
-  Clock,
   LogOut,
   Sparkles,
-  Settings,
   User,
-  Shield,
-  Sliders,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Menu
+  Menu,
+  Sun,
+  Moon
 } from 'lucide-react';
+
+function ThemeToggle() {
+  const { isDark, toggleTheme } = useTheme();
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="p-2 rounded-xl transition-all duration-200 border cursor-pointer text-[#4B5563] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border-[#E5D8C6] dark:border-[#382F26] bg-white dark:bg-[#1C1815] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+      title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      aria-label="Toggle light or dark theme"
+    >
+      {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#4B5563]" />}
+    </button>
+  );
+}
 
 export default function Navbar({
   activeTab,
@@ -25,20 +41,8 @@ export default function Navbar({
   setMobileSidebarOpen,
 }) {
   const { user, restaurant, logout, role } = useAuth();
-  const [time, setTime] = useState(
-    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      );
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
@@ -63,31 +67,31 @@ export default function Navbar({
   const roleBadges = {
     RESTAURANT_REGISTRATION_ADMIN: {
       label: 'Platform Super Admin',
-      color: 'bg-[#92400E]/10 text-[#92400E] border-[#92400E]/25',
+      color: 'bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border-[#92400E]/25 dark:border-[#92400E]/40',
       settingsLabel: 'Platform Settings',
       settingsSubTab: 'platform',
     },
     RESTAURANT_OWNER: {
       label: 'Restaurant Admin',
-      color: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
+      color: 'bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#92400E] dark:text-[#D97706] border-[#D97706]/25 dark:border-[#D97706]/40',
       settingsLabel: 'Restaurant Settings',
       settingsSubTab: 'restaurant',
     },
     KITCHEN_ADMIN: {
       label: 'Kitchen Chef',
-      color: 'bg-[#D97706]/10 text-[#B45309] border-[#D97706]/25',
+      color: 'bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#B45309] dark:text-[#FBBF24] border-[#D97706]/25 dark:border-[#D97706]/40',
       settingsLabel: 'Kitchen Preferences',
       settingsSubTab: 'kitchen_view',
     },
     WAITER: {
       label: 'Service Waiter',
-      color: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
+      color: 'bg-[#2563EB]/10 dark:bg-[#2563EB]/20 text-[#2563EB] dark:text-[#60A5FA] border-[#2563EB]/25 dark:border-[#2563EB]/40',
       settingsLabel: 'Service Station Settings',
       settingsSubTab: 'waiter_view',
     },
     RECEPTIONIST: {
       label: 'Reception / Cashier',
-      color: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
+      color: 'bg-[#16A34A]/10 dark:bg-[#16A34A]/20 text-[#16A34A] dark:text-[#34D399] border-[#16A34A]/25 dark:border-[#16A34A]/40',
       settingsLabel: 'Cashier Terminal Settings',
       settingsSubTab: 'cashier_view',
     },
@@ -95,7 +99,7 @@ export default function Navbar({
 
   const currentBadge = roleBadges[role] || {
     label: role,
-    color: 'bg-[#FAF7F2] text-[#5B6470] border-[#E5D8C6]',
+    color: 'bg-[#FAF7F2] dark:bg-[#201C18] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26]',
     settingsLabel: 'Preferences',
     settingsSubTab: 'preferences',
   };
@@ -111,13 +115,13 @@ export default function Navbar({
   };
 
   return (
-    <header className="h-16 bg-white/95 backdrop-blur-sm border-b border-[#E5D8C6] px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(41,35,31,0.04)]">
+    <header className="h-16 bg-white/95 dark:bg-[#161310]/95 backdrop-blur-sm border-b border-[#E5D8C6] dark:border-[#382F26] px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(41,35,31,0.04)] dark:shadow-none transition-colors duration-200">
       {/* Left: Brand & Sidebar Toggle */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Sidebar Hamburger Toggle */}
         <button
           onClick={() => setMobileSidebarOpen && setMobileSidebarOpen((prev) => !prev)}
-          className="lg:hidden p-2 rounded-xl text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6] transition-colors cursor-pointer"
+          className="lg:hidden p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
           title="Toggle Navigation Menu"
         >
           <Menu className="w-5 h-5" />
@@ -126,13 +130,13 @@ export default function Navbar({
         {/* Desktop Sidebar Collapse Toggle */}
         <button
           onClick={toggleSidebar}
-          className="hidden lg:flex p-2 rounded-xl text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6] transition-colors cursor-pointer"
+          className="hidden lg:flex p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
           title={sidebarCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
         >
           {sidebarCollapsed ? (
-            <PanelLeftOpen className="w-4 h-4 text-[#92400E]" />
+            <PanelLeftOpen className="w-4 h-4 text-[#92400E] dark:text-[#D97706]" />
           ) : (
-            <PanelLeftClose className="w-4 h-4 text-[#5B6470]" />
+            <PanelLeftClose className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C]" />
           )}
         </button>
 
@@ -142,14 +146,14 @@ export default function Navbar({
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="font-bold text-[#1F2937] text-lg tracking-tight shrink-0">POS</span>
+            <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-lg tracking-tight shrink-0">POS</span>
             {role === 'RESTAURANT_REGISTRATION_ADMIN' ? (
               <div className="flex items-center gap-2 min-w-0">
-                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[#E5D8C6] shrink-0" />
-                <span className="text-xs sm:text-sm font-semibold text-[#5B6470] truncate max-w-[120px] sm:max-w-none">
+                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[#E5D8C6] dark:bg-[#382F26] shrink-0" />
+                <span className="text-xs sm:text-sm font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[120px] sm:max-w-none">
                   Platform Super Admin
                 </span>
-                <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-[#92400E]/10 text-[#92400E] border border-[#92400E]/25 shrink-0 shadow-xs">
+                <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/25 dark:border-[#92400E]/40 shrink-0 shadow-xs">
                   SUPER ADMIN
                 </span>
               </div>
@@ -157,12 +161,12 @@ export default function Navbar({
               <div className="flex flex-col justify-center min-w-0">
                 <div className="flex items-center gap-2">
                   {restaurant?.name && (
-                    <span className="text-xs sm:text-sm font-semibold text-[#5B6470] truncate max-w-[140px] sm:max-w-xs">
+                    <span className="text-xs sm:text-sm font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[140px] sm:max-w-xs">
                       {restaurant.name}
                     </span>
                   )}
                   {planName && (
-                    <span className="text-[10px] sm:text-[11px] bg-[#D97706]/10 text-[#92400E] font-bold px-2 py-0.5 rounded-full border border-[#D97706]/25 flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] sm:text-[11px] bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#92400E] dark:text-[#D97706] font-bold px-2 py-0.5 rounded-full border border-[#D97706]/25 dark:border-[#D97706]/40 flex items-center gap-1 shrink-0">
                       <Sparkles className="w-3 h-3 text-[#D97706]" />
                       <span>{planName}</span>
                     </span>
@@ -174,59 +178,51 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Right: User, Quick Settings & Live Clock */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Live Clock */}
-        <div className="hidden sm:flex items-center gap-2 text-[#1F2937] text-xs font-mono bg-[#FAF7F2] px-3 py-1.5 rounded-xl border border-[#E5D8C6] shadow-sm">
-          <Clock className="w-3.5 h-3.5 text-[#92400E]" />
-          <span className="font-semibold">{time}</span>
-        </div>
+      {/* Right: Notification Bell, Theme Toggle & Profile Dropdown */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* 1. Notification Bell */}
+        <NotificationDropdown />
 
-        {/* Quick Settings Action Button */}
-        <button
-          onClick={() => handleNavigate('profile')}
-          title="Open Settings & Preferences"
-          className={`p-2 rounded-xl transition-all duration-200 border cursor-pointer ${
-            activeTab === 'settings'
-              ? 'bg-[#92400E] text-white border-[#92400E] shadow-sm'
-              : 'text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border-[#E5D8C6]'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        {/* 2. Light / Dark Mode Toggle */}
+        <ThemeToggle />
 
-        {/* User Card with Interactive Profile Dropdown */}
-        <div className="relative pl-2 sm:pl-3 border-l border-[#E5D8C6] shrink-0" ref={dropdownRef}>
+        {/* 3. User Card with Interactive Profile Dropdown */}
+        <div className="relative pl-1 sm:pl-2 border-l border-[#E5D8C6] dark:border-[#382F26] shrink-0" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((prev) => !prev)}
-            className="flex items-center gap-2 sm:gap-2.5 p-1.5 rounded-xl hover:bg-[#F1E8DB] transition-colors cursor-pointer text-left shrink-0"
+            aria-expanded={dropdownOpen}
+            aria-haspopup="true"
+            aria-label="User Account Menu"
+            className="flex items-center gap-2 sm:gap-2.5 p-1.5 rounded-xl hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors cursor-pointer text-left shrink-0"
             title="Account Menu"
           >
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-[#1F2937] leading-tight truncate max-w-[130px] lg:max-w-none">{user?.name || 'Staff User'}</div>
+              <div className="text-sm font-semibold text-[#1F2937] dark:text-[#F7F3EC] leading-tight truncate max-w-[130px] lg:max-w-none">
+                {user?.name || 'Staff User'}
+              </div>
               <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border inline-block mt-0.5 ${currentBadge.color}`}>
                 {currentBadge.label}
               </div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FAF7F2] to-[#E7DCCB] border border-[#E5D8C6] flex items-center justify-center font-bold text-[#92400E] text-sm shadow-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FAF7F2] to-[#E7DCCB] dark:from-[#25201A] dark:to-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center font-bold text-[#92400E] dark:text-[#D97706] text-sm shadow-sm shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-[#5B6470] hidden sm:block shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#5B6470] dark:text-[#A89B8C] hidden sm:block shrink-0" />
           </button>
 
           {/* Floating Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white border border-[#E5D8C6] rounded-2xl shadow-xl p-2 z-50 animate-scale-in">
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-xl p-2 z-50 animate-scale-in">
               {/* User Identity Header */}
-              <div className="p-3 bg-[#FAF7F2] rounded-xl border border-[#E5D8C6] mb-2">
-                <div className="font-semibold text-[#1F2937] text-sm truncate">{user?.name || 'Staff User'}</div>
-                <div className="text-xs text-[#5B6470] truncate">{user?.email || 'user@pos.com'}</div>
+              <div className="p-3 bg-[#FAF7F2] dark:bg-[#201C18] rounded-xl border border-[#E5D8C6] dark:border-[#382F26] mb-2">
+                <div className="font-semibold text-[#1F2937] dark:text-[#F7F3EC] text-sm truncate">{user?.name || 'Staff User'}</div>
+                <div className="text-xs text-[#5B6470] dark:text-[#A89B8C] truncate">{user?.email || 'user@pos.com'}</div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${currentBadge.color}`}>
                     {currentBadge.label}
                   </span>
                   {restaurant?.name && (
-                    <span className="text-[10px] text-[#5B6470] font-medium truncate max-w-[120px]">
+                    <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-medium truncate max-w-[120px]">
                       {restaurant.name}
                     </span>
                   )}
@@ -238,13 +234,13 @@ export default function Navbar({
                 {/* 1. My Profile & Account */}
                 <button
                   onClick={() => handleNavigate('profile')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#1F2937] hover:bg-[#F1E8DB] transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors text-left cursor-pointer"
                 >
-                  <User className="w-4 h-4 text-[#92400E]" />
+                  <User className="w-4 h-4 text-[#92400E] dark:text-[#D97706]" />
                   <span>My Profile & Account</span>
                 </button>
 
-                <div className="h-px bg-[#E5D8C6] my-1" />
+                <div className="h-px bg-[#E5D8C6] dark:bg-[#382F26] my-1" />
 
                 {/* 2. Sign Out */}
                 <button

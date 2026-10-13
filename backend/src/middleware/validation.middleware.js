@@ -35,7 +35,17 @@ export const validateQuery = (req, res, next) => {
     if (req.query.startDate && req.query.endDate && Date.parse(req.query.startDate) > Date.parse(req.query.endDate)) {
       return sendError(res, 400, 'Invalid date range', ['startDate must be on or before endDate']);
     }
-    if (req.query.status && !['AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE', 'PENDING', 'IN_PREPARATION', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED', 'UNPAID', 'PAID', 'PARTIALLY_PAID', 'VOID', 'ORDERED', 'RECEIVED'].includes(req.query.status)) {
+    if (req.query.status) {
+      const s = String(req.query.status).trim().toUpperCase();
+      if (s === 'ALL') {
+        delete req.query.status;
+      } else if (s === 'COOKING') {
+        req.query.status = 'IN_PREPARATION';
+      } else {
+        req.query.status = s;
+      }
+    }
+    if (req.query.status && !['AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE', 'PENDING', 'ACCEPTED', 'IN_PREPARATION', 'COOKING', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED', 'UNPAID', 'PAID', 'PARTIALLY_PAID', 'VOID', 'ORDERED', 'RECEIVED'].includes(req.query.status)) {
       return sendError(res, 400, 'Invalid status filter', ['status is not supported']);
     }
     if (req.query.unit && !['KG', 'GRAM', 'LITER', 'MILLILITER', 'PIECE', 'PACKET', 'CAN', 'BOTTLE'].includes(req.query.unit)) {

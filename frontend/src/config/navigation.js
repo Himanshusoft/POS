@@ -127,9 +127,9 @@ export const ROLE_CONFIG = {
     name: 'Reception / Cashier',
     badge: 'CASHIER',
     color: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    defaultTab: 'billing',
+    defaultTab: 'dashboard',
     defaultPath: '/receptionist-dashboard',
-    allowedTabs: ['billing', 'dashboard', 'floor', 'pos', 'settings'],
+    allowedTabs: ['dashboard', 'billing', 'floor', 'pos', 'settings'],
   },
 };
 
@@ -143,8 +143,8 @@ const ROUTE_MAP = {
   '/kitchen-dashboard': { tab: 'dashboard', role: ROLES.KITCHEN_ADMIN },
   '/kitchen': { tab: 'dashboard', role: ROLES.KITCHEN_ADMIN },
   '/restaurant-dashboard': { tab: 'dashboard', role: ROLES.RESTAURANT_OWNER },
-  '/receptionist-dashboard': { tab: 'billing', role: ROLES.RECEPTIONIST },
-  '/reception': { tab: 'billing', role: ROLES.RECEPTIONIST },
+  '/receptionist-dashboard': { tab: 'dashboard', role: ROLES.RECEPTIONIST },
+  '/reception': { tab: 'dashboard', role: ROLES.RECEPTIONIST },
   '/super-admin-dashboard': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
   '/governance': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
   '/admin': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },

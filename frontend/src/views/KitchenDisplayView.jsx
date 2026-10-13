@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { Button, Badge, Skeleton } from '../components/ui';
 import {
   ChefHat,
   Clock,
   CheckCircle2,
-  AlertCircle,
   RefreshCw,
   Flame,
   ArrowRight,
-  PackageCheck
+  PackageCheck,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function KitchenDisplayView() {
@@ -102,100 +103,123 @@ export default function KitchenDisplayView() {
   });
 
   const getStatusColor = (status, mins) => {
-    if (status === 'READY') return 'border-emerald-300 bg-emerald-50/30';
-    if (status === 'SERVED') return 'border-blue-300 bg-blue-50/30';
-    if (mins > 20) return 'border-rose-300 bg-rose-50/30';
-    if (mins > 10) return 'border-amber-300 bg-amber-50/30';
+    if (status === 'READY') return 'border-emerald-300 bg-emerald-50/20';
+    if (status === 'SERVED') return 'border-blue-300 bg-blue-50/20';
+    if (mins > 20) return 'border-red-300 bg-red-50/25';
+    if (mins > 10) return 'border-amber-300 bg-amber-50/25';
     return 'border-[#E5D8C6] bg-white';
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC]">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
-            <ChefHat className="w-6 h-6 text-[#92400E]" />
-            <span>Kitchen Display System (KDS)</span>
-          </h1>
-          <p className="text-sm text-[#5B6470]">
-            Real-time kitchen order tickets, prep stations, and automated inventory depletion
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/40 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-xs">
+            <ChefHat className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+                Kitchen Display System (KDS)
+              </h1>
+              <Badge variant="warning" size="sm">
+                Station Active
+              </Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+              Real-time kitchen order tickets, prep stations, and automated inventory depletion
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+          <Button
+            variant="outline"
             onClick={fetchOrders}
-            className="p-2.5 bg-white hover:bg-[#F1E8DB] text-[#1F2937] rounded-xl border border-[#E5D8C6] shadow-sandstone transition-colors cursor-pointer"
             title="Refresh Tickets"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
-          </button>
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
+            <span>Refresh</span>
+          </Button>
         </div>
       </div>
 
       {/* Stage Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
         {[
-          { id: 'ALL', label: `All Tickets (${orders.length})` },
-          { id: 'PENDING', label: `New (${orders.filter((o) => o.status === 'PENDING').length})` },
-          { id: 'IN_PREPARATION', label: `Cooking (${orders.filter((o) => o.status === 'IN_PREPARATION').length})` },
-          { id: 'READY', label: `Ready (${orders.filter((o) => o.status === 'READY').length})` },
-          { id: 'SERVED', label: `Served (${orders.filter((o) => o.status === 'SERVED').length})` },
+          { id: 'ALL', label: 'All Tickets', count: orders.length },
+          { id: 'PENDING', label: 'New', count: orders.filter((o) => o.status === 'PENDING').length },
+          { id: 'IN_PREPARATION', label: 'Cooking', count: orders.filter((o) => o.status === 'IN_PREPARATION').length },
+          { id: 'READY', label: 'Ready', count: orders.filter((o) => o.status === 'READY').length },
+          { id: 'SERVED', label: 'Served', count: orders.filter((o) => o.status === 'SERVED').length },
         ].map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={filterStage === tab.id}
             onClick={() => setFilterStage(tab.id)}
-            className={`text-xs font-semibold px-4 py-2 rounded-xl border transition-all cursor-pointer ${
+            className={`text-xs font-semibold px-4 py-2.5 rounded-xl border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
               filterStage === tab.id
-                ? 'bg-[#92400E] text-white border-[#92400E] font-bold shadow-sandstone'
-                : 'bg-white text-[#5B6470] border-[#E5D8C6] hover:bg-[#F1E8DB] hover:text-[#1F2937]'
+                ? 'bg-[#92400E] text-white border-[#92400E] font-bold shadow-sm'
+                : 'bg-white text-[#5B6470] border-[#E5D8C6] hover:bg-[#FAF7F2] hover:text-[#1F2937]'
             }`}
           >
-            {tab.label}
+            <span>{tab.label}</span> <span className="tabular-nums">({tab.count})</span>
           </button>
         ))}
       </div>
 
       {/* Tickets Grid */}
       {loading && orders.length === 0 ? (
-        <div className="h-64 flex flex-col items-center justify-center gap-3">
-          <RefreshCw className="w-8 h-8 text-[#92400E] animate-spin" />
-          <span className="text-sm text-[#5B6470]">Loading active tickets...</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="bg-white border border-[#E5D8C6] rounded-2xl p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <Skeleton className="w-24 h-6 rounded-md" />
+                <Skeleton className="w-16 h-6 rounded-full" />
+              </div>
+              <Skeleton className="w-full h-24 rounded-xl" />
+              <Skeleton className="w-full h-11 rounded-xl" />
+            </div>
+          ))}
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-16 text-center shadow-sandstone">
-          <ChefHat className="w-12 h-12 text-[#9CA3AF] mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-[#1F2937]">All Clear, Chef!</h3>
-          <p className="text-sm text-[#5B6470] mt-1">No active food orders in this stage.</p>
+        <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-16 text-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center mx-auto mb-4 text-[#9CA3AF]">
+            <ChefHat className="w-8 h-8 text-[#92400E] dark:text-[#D97706]" />
+          </div>
+          <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC]">All Clear, Chef!</h3>
+          <p className="text-sm text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">No active food orders in this stage.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredOrders.map((order) => {
             const mins = getElapsedMinutes(order.createdAt);
             const isCritical = mins > 20 && order.status !== 'READY' && order.status !== 'SERVED';
+            const isWarning = mins > 10 && order.status !== 'READY' && order.status !== 'SERVED';
             const cardBg = getStatusColor(order.status, mins);
 
             return (
               <div
                 key={order.id}
-                className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 ${cardBg}`}
+                className={`border rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-200 shadow-sm hover:shadow-md ${cardBg}`}
               >
                 <div>
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between mb-2">
+                  {/* Card Header: Table Number & Timer */}
+                  <div className="flex items-start justify-between mb-2">
                     <div>
-                      <span className="text-lg font-bold text-[#1F2937]">
+                      <span className="text-xl font-extrabold text-[#1F2937] tracking-tight">
                         Table #{order.table?.tableNumber || order.tableNumber || 'Takeaway'}
                       </span>
-                      <div className="text-[11px] text-[#5B6470]">
-                        Ticket #{order.orderNumber || order.id.slice(0, 6)}
+                      <div className="text-[11px] text-[#5B6470] font-medium mt-0.5">
+                        Ticket <span className="font-mono font-bold text-[#1F2937]">#{order.orderNumber || order.id.slice(0, 6)}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-lg bg-[#FAF7F2] border border-[#E5D8C6]">
-                      <Clock className={`w-3.5 h-3.5 ${isCritical ? 'text-rose-600 animate-pulse' : 'text-[#92400E]'}`} />
-                      <span className={isCritical ? 'text-rose-600 font-bold' : 'text-[#1F2937] font-semibold'}>
+                    <div className="flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] shadow-xs">
+                      <Clock className={`w-3.5 h-3.5 ${isCritical ? 'text-red-600 animate-pulse' : isWarning ? 'text-[#D97706]' : 'text-[#92400E]'}`} />
+                      <span className={`tabular-nums ${isCritical ? 'text-red-600 font-bold' : 'text-[#1F2937] font-semibold'}`}>
                         {mins}m
                       </span>
                     </div>
@@ -203,12 +227,20 @@ export default function KitchenDisplayView() {
 
                   {/* Status Pill */}
                   <div className="mb-3">
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border bg-white border-[#E5D8C6] text-[#1F2937]">
-                      {order.status}
+                    <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${
+                      order.status === 'PENDING'
+                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        : order.status === 'IN_PREPARATION'
+                        ? 'bg-amber-100 border-amber-300 text-[#B45309]'
+                        : order.status === 'READY'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-white border-[#E5D8C6] text-[#1F2937]'
+                    }`}>
+                      {order.status === 'IN_PREPARATION' ? 'COOKING' : order.status}
                     </span>
                     {order.notes && (
-                      <div className="text-[11px] text-amber-900 bg-amber-50/90 p-2 rounded-lg border border-amber-200 mt-2">
-                        Note: {order.notes}
+                      <div className="text-[11px] text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mt-2 font-medium">
+                        <strong>Note:</strong> {order.notes}
                       </div>
                     )}
                   </div>
@@ -216,17 +248,17 @@ export default function KitchenDisplayView() {
                   {/* Item List */}
                   <div className="space-y-2 border-t border-[#E5D8C6] pt-3">
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="bg-[#FAF7F2] rounded-xl p-2.5 border border-[#E5D8C6]">
+                      <div key={idx} className="bg-[#FAF7F2] hover:bg-[#F1E8DB] rounded-xl p-2.5 border border-[#E5D8C6] transition-colors">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-[#1F2937] flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-amber-100 text-[#92400E] border border-amber-200 flex items-center justify-center font-bold text-xs">
+                            <span className="w-5 h-5 rounded-md bg-amber-100 text-[#92400E] border border-amber-200 flex items-center justify-center font-bold text-xs shrink-0 tabular-nums">
                               {item.quantity}
                             </span>
-                            <span>{item.menuItem?.name || item.name}</span>
+                            <span className="truncate max-w-[170px]">{item.menuItem?.name || item.name}</span>
                           </span>
                         </div>
                         {item.specialInstructions && (
-                          <div className="text-[11px] text-rose-700 mt-1 pl-7 italic">
+                          <div className="text-[11px] text-red-700 mt-1 pl-7 italic">
                             • {item.specialInstructions}
                           </div>
                         )}
@@ -241,7 +273,7 @@ export default function KitchenDisplayView() {
                         <span className="flex items-center gap-1">
                           <PackageCheck className="w-3.5 h-3.5" /> Recipe BOM Check
                         </span>
-                        <span className="text-[10px] text-[#5B6470] font-mono">
+                        <span className="text-[10px] text-[#5B6470] font-mono tabular-nums">
                           {order.calculatedIngredients.filter((i) => i.isSufficient).length}/{order.calculatedIngredients.length} Stock OK
                         </span>
                       </div>
@@ -252,20 +284,20 @@ export default function KitchenDisplayView() {
                             className={`flex items-center justify-between text-[11px] px-2 py-1 rounded-lg border ${
                               ing.isSufficient
                                 ? 'bg-[#FAF7F2] border-[#E5D8C6] text-[#1F2937]'
-                                : 'bg-rose-50 border-rose-200 text-rose-800 font-semibold'
+                                : 'bg-red-50 border-red-200 text-red-700 font-semibold'
                             }`}
                           >
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={`w-1.5 h-1.5 rounded-full ${
-                                  ing.isSufficient ? 'bg-emerald-500' : 'bg-rose-500 animate-ping'
+                                  ing.isSufficient ? 'bg-[#16A34A]' : 'bg-red-600 animate-ping'
                                 }`}
                               ></span>
                               <span className="truncate max-w-[120px] font-medium">{ing.name}</span>
                             </div>
-                            <div className="font-mono text-[10px] text-right">
+                            <div className="font-mono text-[10px] text-right tabular-nums">
                               <span>Req: {ing.requiredQuantity} {ing.unit}</span>
-                              <span className={`ml-1.5 ${ing.isSufficient ? 'text-[#5B6470]' : 'text-rose-700 font-bold'}`}>
+                              <span className={`ml-1.5 ${ing.isSufficient ? 'text-[#5B6470]' : 'text-red-600 font-bold'}`}>
                                 (Stock: {ing.currentStock})
                               </span>
                             </div>
@@ -276,50 +308,54 @@ export default function KitchenDisplayView() {
                   )}
                 </div>
 
-                {/* Progressive Action Button */}
+                {/* Progressive Action Button (Minimum 44px target) */}
                 <div className="pt-4 border-t border-[#E5D8C6] mt-4">
                   {order.status === 'PENDING' && (
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => handleAccept(order.id)}
                       disabled={actionLoading === order.id}
-                      className="w-full flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+                      className="w-full min-h-[44px] font-bold text-xs"
                     >
-                      <Flame className="w-4 h-4" />
+                      <Flame className="w-4 h-4 mr-2" />
                       <span>{actionLoading === order.id ? 'Accepting...' : 'Start Cooking'}</span>
-                    </button>
+                    </Button>
                   )}
 
                   {order.status === 'IN_PREPARATION' && (
-                    <button
+                    <Button
+                      variant="success"
                       onClick={() => handleMarkReady(order.id)}
                       disabled={actionLoading === order.id}
-                      className="w-full flex items-center justify-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+                      className="w-full min-h-[44px] font-bold text-xs"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
                       <span>{actionLoading === order.id ? 'Marking...' : 'Mark Food Ready'}</span>
-                    </button>
+                    </Button>
                   )}
 
                   {order.status === 'READY' && (
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => handleMarkServed(order.id)}
                       disabled={actionLoading === order.id}
-                      className="w-full flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+                      className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
                     >
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4 mr-2" />
                       <span>{actionLoading === order.id ? 'Updating...' : 'Mark Served to Table'}</span>
-                    </button>
+                    </Button>
                   )}
 
                   {order.status === 'SERVED' && (
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => handleCompleteOrder(order.id)}
                       disabled={actionLoading === order.id}
-                      className="w-full flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+                      className="w-full min-h-[44px] font-bold text-xs"
                     >
-                      <PackageCheck className="w-4 h-4" />
+                      <PackageCheck className="w-4 h-4 mr-2" />
                       <span>{actionLoading === order.id ? 'Completing...' : 'Complete & Deduct Stock'}</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

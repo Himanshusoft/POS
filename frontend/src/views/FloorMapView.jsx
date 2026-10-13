@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { Modal } from '../components/ui';
 import {
   LayoutGrid,
   Users,
@@ -384,79 +385,78 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
       )}
 
       {/* Add Table Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-sandstone-lg">
-            <h3 className="text-lg font-bold text-[#1F2937] mb-1">Add Dining Table</h3>
-            <p className="text-xs text-[#5B6470] mb-5">Create a new table for dining service</p>
-
-            <form onSubmit={handleCreateTable} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
-                  Table Number / Identifier *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 101, T-5, Patio-1"
-                  value={newTable.tableNumber}
-                  onChange={(e) => setNewTable({ ...newTable, tableNumber: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
-                  Guest Seating Capacity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  required
-                  value={newTable.capacity}
-                  onChange={(e) => setNewTable({ ...newTable, capacity: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
-                  Floor / Dining Section
-                </label>
-                <select
-                  value={newTable.floor}
-                  onChange={(e) => setNewTable({ ...newTable, floor: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E]"
-                >
-                  <option value="Ground Floor">Ground Floor</option>
-                  <option value="First Floor">First Floor</option>
-                  <option value="Rooftop Terrace">Rooftop Terrace</option>
-                  <option value="Outdoor Patio">Outdoor Patio</option>
-                  <option value="VIP Lounge">VIP Lounge</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Adding...' : 'Create Table'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add Dining Table"
+        subtitle="Create a new table for dining service"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleCreateTable} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">
+              Table Number / Identifier *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. 101, T-5, Patio-1"
+              value={newTable.tableNumber}
+              onChange={(e) => setNewTable({ ...newTable, tableNumber: e.target.value })}
+              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">
+              Guest Seating Capacity
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              required
+              value={newTable.capacity}
+              onChange={(e) => setNewTable({ ...newTable, capacity: e.target.value })}
+              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">
+              Floor / Dining Section
+            </label>
+            <select
+              value={newTable.floor}
+              onChange={(e) => setNewTable({ ...newTable, floor: e.target.value })}
+              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+            >
+              <option value="Ground Floor">Ground Floor</option>
+              <option value="First Floor">First Floor</option>
+              <option value="Rooftop Terrace">Rooftop Terrace</option>
+              <option value="Outdoor Patio">Outdoor Patio</option>
+              <option value="VIP Lounge">VIP Lounge</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 text-xs font-semibold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer disabled:opacity-50"
+            >
+              {submitting ? 'Adding...' : 'Create Table'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

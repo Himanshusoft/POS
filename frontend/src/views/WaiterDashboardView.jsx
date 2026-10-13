@@ -1,25 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { Skeleton, StatCard, ChartCard, DonutChart, StatusDistributionBar, LineChart } from '../components/ui';
 import {
   LayoutDashboard,
   LayoutGrid,
   ClipboardList,
   Receipt,
-  Bell,
-  CheckCircle2,
   Clock,
-  AlertTriangle,
   RefreshCw,
   Utensils,
   PlusCircle,
-  Eye,
-  Send,
   Check,
-  ChevronRight,
+  Users,
+  ChefHat,
   TrendingUp,
-  UserCheck
 } from 'lucide-react';
+
+/**
+ * TableVisual helper: renders table image if provided in data,
+ * with graceful fallback to a clean Sandstone graphic if missing/broken.
+ */
+function TableVisual({ image, tableNumber, capacity }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (image && !imgError) {
+    return (
+      <div className="relative w-full h-28 rounded-xl overflow-hidden mb-3 border border-[#E5D8C6] bg-[#FAF7F2] group">
+        <img
+          src={image}
+          alt={`Table ${tableNumber}`}
+          onError={() => setImgError(true)}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-white text-[11px] font-bold drop-shadow">
+          <span className="font-mono">Table #{tableNumber}</span>
+          <span className="flex items-center gap-1 bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-full text-[10px]">
+            <Users className="w-3 h-3" /> {capacity} seats
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-24 rounded-xl mb-3 border border-[#E5D8C6] bg-gradient-to-br from-[#F7F3EC] to-[#FAF7F2] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#92400E_1px,transparent_1px)] [background-size:12px_12px]" />
+      <div className="relative flex flex-col items-center justify-center text-[#92400E]">
+        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5D8C6] shadow-xs flex items-center justify-center text-[#92400E]">
+          <LayoutGrid className="w-4 h-4" />
+        </div>
+        <span className="text-[10px] font-bold text-[#5B6470] mt-1.5 flex items-center gap-1">
+          <Users className="w-3 h-3 text-[#92400E]" /> {capacity} Seats Capacity
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrder }) {
   const { restaurant, user, addToast } = useAuth();
@@ -90,17 +128,6 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
 
   const currency = restaurant?.currency || '₹';
 
-  if (loading && !dashboardData) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[#FAF7F2] p-8">
-        <div className="flex flex-col items-center gap-3 text-[#5B6470]">
-          <RefreshCw className="w-8 h-8 animate-spin text-[#92400E]" />
-          <span className="font-medium text-sm">Loading live Waiter operations...</span>
-        </div>
-      </div>
-    );
-  }
-
   const {
     tableOverview = {},
     orderOverview = {},
@@ -109,6 +136,73 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
     readyNotifications = [],
     billNotifications = [],
   } = dashboardData || {};
+
+  const orderActivityTrend = useMemo(() => {
+    const orders = [];
+    (tableOrders || []).forEach((t) => {
+      (t.orders || []).forEach((o) => {
+        if (o.createdAt) orders.push(o);
+      });
+    });
+
+    if (orders.length === 0) {
+      const activeCount = (orderOverview.newOrders || 0) + (orderOverview.preparingOrders || 0) + (orderOverview.readyOrders || 0);
+      const servedCount = orderOverview.servedOrders || 0;
+      if (activeCount + servedCount > 0) {
+        return [
+          { label: 'Morning', value: Math.round(servedCount * 0.4) },
+          { label: 'Afternoon', value: Math.round(servedCount * 0.6) },
+          { label: 'Current Flow', value: activeCount },
+        ];
+      }
+      return [];
+    }
+
+    const hourMap = {};
+    orders.forEach((o) => {
+      const d = new Date(o.createdAt);
+      const h = d.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+      hourMap[h] = (hourMap[h] || 0) + 1;
+    });
+
+    return Object.entries(hourMap).map(([label, value]) => ({ label, value }));
+  }, [tableOrders, orderOverview]);
+
+  // Zero-CLS Skeleton Loading
+  if (loading && !dashboardData) {
+    return (
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] text-[#1F2937]">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-[#E5D8C6] shadow-sandstone flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 w-full sm:w-auto">
+            <Skeleton className="w-12 h-12 rounded-2xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-64 rounded-lg" />
+              <Skeleton className="h-4 w-48 rounded-lg" />
+            </div>
+          </div>
+          <div className="flex gap-2.5">
+            <Skeleton className="h-10 w-24 rounded-xl" />
+            <Skeleton className="h-10 w-32 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Skeleton className="h-56 rounded-2xl" />
+          <Skeleton className="h-56 rounded-2xl" />
+          <Skeleton className="h-56 rounded-2xl" />
+        </div>
+
+        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sandstone space-y-4">
+          <Skeleton className="h-6 w-56 rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="h-64 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] text-[#1F2937]">
@@ -136,18 +230,21 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <button
+            type="button"
             onClick={() => fetchDashboard(true)}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] rounded-xl text-xs font-semibold border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] rounded-xl text-xs font-semibold border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer min-h-[44px]"
+            aria-label="Refresh live data"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
             <span>Refresh</span>
           </button>
           <button
+            type="button"
             onClick={() => {
               if (setActiveTab) setActiveTab('tables');
             }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#92400E] hover:bg-[#78350F] text-white rounded-xl text-xs font-bold shadow-sandstone hover:shadow-sandstone-md active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white rounded-xl text-xs font-bold shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer min-h-[44px]"
           >
             <LayoutGrid className="w-4 h-4" />
             <span>Manage Tables</span>
@@ -160,37 +257,42 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Ready Food Notifications */}
           {readyNotifications.length > 0 && (
-            <div className="bg-gradient-to-br from-amber-50/90 to-amber-100/50 border border-amber-300 rounded-2xl p-4 sm:p-5 shadow-sandstone card-hover">
+            <div className="bg-gradient-to-br from-emerald-50/90 to-amber-50/70 border border-emerald-300 rounded-2xl p-4 sm:p-5 shadow-sandstone">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+                <div className="flex items-center gap-2 text-emerald-950 font-bold text-sm">
                   <span className="flex h-2.5 w-2.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                   </span>
                   <span>Ready to Serve from Kitchen ({readyNotifications.length})</span>
                 </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
                   Action Required
                 </span>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                 {readyNotifications.map((notif) => (
                   <div
                     key={notif.id}
-                    className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-200 shadow-sm text-xs hover:border-amber-300 transition-colors"
+                    className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-200 shadow-xs text-xs hover:border-emerald-300 transition-colors"
                   >
                     <div>
                       <div className="font-bold text-[#1F2937]">
                         Table #{notif.tableNumber} • Order #{notif.orderNumber}
                       </div>
-                      <div className="text-[#5B6470] text-[11px]">{notif.itemsCount} dishes freshly prepared</div>
+                      <div className="text-[#5B6470] text-[11px] mt-0.5">{notif.itemsCount} dishes freshly prepared</div>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleServeOrder(notif.orderId, notif.tableNumber)}
                       disabled={actionLoading === `serve-${notif.orderId}`}
-                      className="px-3.5 py-1.5 bg-[#16A34A] hover:bg-[#15803D] active:scale-95 text-white font-bold rounded-xl shadow-sandstone transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] active:scale-95 text-white font-bold rounded-xl shadow-sandstone transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 min-h-[40px]"
                     >
-                      <Check className="w-3.5 h-3.5" />
+                      {actionLoading === `serve-${notif.orderId}` ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      )}
                       <span>Serve</span>
                     </button>
                   </div>
@@ -201,7 +303,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
 
           {/* Ready Bill Notifications */}
           {billNotifications.length > 0 && (
-            <div className="bg-gradient-to-br from-blue-50/90 to-blue-100/50 border border-blue-300 rounded-2xl p-4 sm:p-5 shadow-sandstone card-hover">
+            <div className="bg-gradient-to-br from-blue-50/90 to-blue-100/50 border border-blue-300 rounded-2xl p-4 sm:p-5 shadow-sandstone">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2 text-blue-950 font-bold text-sm">
                   <span className="flex h-2.5 w-2.5 relative">
@@ -210,29 +312,36 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                   </span>
                   <span>Bills Ready to Deliver ({billNotifications.length})</span>
                 </div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900 bg-blue-200/60 px-2 py-0.5 rounded-full border border-blue-300">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-full border border-blue-300">
                   Reception Generated
                 </span>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                 {billNotifications.map((notif) => (
                   <div
                     key={notif.id}
-                    className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-sm text-xs hover:border-blue-300 transition-colors"
+                    className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-200 shadow-xs text-xs hover:border-blue-300 transition-colors"
                   >
                     <div>
                       <div className="font-bold text-[#1F2937]">
-                        Table #{notif.tableNumber} • {currency}
-                        {Number(notif.totalAmount || 0).toFixed(2)}
+                        Table #{notif.tableNumber} •{' '}
+                        <span className="font-mono tabular-nums text-[#92400E]">
+                          {currency}{Number(notif.totalAmount || 0).toFixed(2)}
+                        </span>
                       </div>
-                      <div className="text-[#5B6470] text-[11px]">Bill #{notif.billNumber}</div>
+                      <div className="text-[#5B6470] text-[11px] mt-0.5">Bill #{notif.billNumber}</div>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleDeliverBill(notif.billId, notif.tableNumber)}
                       disabled={actionLoading === `deliver-${notif.billId}`}
-                      className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl shadow-sandstone transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl shadow-sandstone transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 min-h-[40px]"
                     >
-                      <Receipt className="w-3.5 h-3.5" />
+                      {actionLoading === `deliver-${notif.billId}` ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Receipt className="w-3.5 h-3.5" />
+                      )}
                       <span>Deliver</span>
                     </button>
                   </div>
@@ -243,130 +352,241 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
         </div>
       )}
 
-      {/* KPI Section - 3 Groups: Tables, Orders, Bills */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* A. TABLE OVERVIEW */}
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-5 shadow-sandstone card-hover flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E5D8C6]">
-            <h2 className="text-sm font-bold text-[#1F2937] flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#92400E]/10 flex items-center justify-center text-[#92400E]">
-                <LayoutGrid className="w-4 h-4" />
-              </div>
-              <span>Table Overview</span>
-            </h2>
-            <span className="text-xs text-[#5B6470] font-semibold bg-[#FAF7F2] px-2.5 py-1 rounded-lg border border-[#E5D8C6]">
-              {tableOverview.totalTables || 0} Total
+      {/* Modern KPI Summary Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <StatCard
+          title="Available Tables"
+          value={`${tableOverview.availableTables || 0} / ${tableOverview.totalTables || 0}`}
+          subtitle={`${tableOverview.occupiedTables || 0} currently occupied (${tableOverview.totalTables ? Math.round(((tableOverview.occupiedTables || 0) / tableOverview.totalTables) * 100) : 0}% floor rate)`}
+          icon={LayoutGrid}
+          iconColor="text-[#16A34A] dark:text-[#34D399]"
+          iconBg="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800"
+          badge={
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              {tableOverview.availableTables || 0} Open
             </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-emerald-50/60 border border-emerald-200/80 rounded-xl hover:bg-emerald-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Available</span>
-              <span className="text-2xl font-extrabold font-mono text-emerald-800 mt-1 block">
-                {tableOverview.availableTables || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl hover:bg-amber-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Occupied</span>
-              <span className="text-2xl font-extrabold font-mono text-amber-900 mt-1 block">
-                {tableOverview.occupiedTables || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-rose-50/60 border border-rose-200/80 rounded-xl hover:bg-rose-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Needs Service</span>
-              <span className="text-2xl font-extrabold font-mono text-rose-800 mt-1 block">
-                {tableOverview.tablesWaitingForService || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl hover:bg-blue-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Waiting Bill</span>
-              <span className="text-2xl font-extrabold font-mono text-blue-800 mt-1 block">
-                {tableOverview.tablesWaitingForBilling || 0}
-              </span>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
-        {/* B. ORDER OVERVIEW */}
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-5 shadow-sandstone card-hover flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E5D8C6]">
-            <h2 className="text-sm font-bold text-[#1F2937] flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#92400E]/10 flex items-center justify-center text-[#92400E]">
-                <ClipboardList className="w-4 h-4" />
-              </div>
-              <span>Kitchen & Order Flow</span>
-            </h2>
-            <span className="text-xs text-[#5B6470] font-semibold bg-[#FAF7F2] px-2.5 py-1 rounded-lg border border-[#E5D8C6]">
-              Live Flow
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl hover:bg-blue-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">New Queue</span>
-              <span className="text-2xl font-extrabold font-mono text-blue-800 mt-1 block">
-                {orderOverview.newOrders || 0}
+        <StatCard
+          title="Needs Floor Attention"
+          value={tableOverview.tablesWaitingForService || 0}
+          subtitle={`${tableOverview.tablesWaitingForBilling || 0} waiting for cashier checkout`}
+          icon={Clock}
+          iconColor="text-rose-600 dark:text-rose-400"
+          iconBg="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900"
+          badge={
+            (tableOverview.tablesWaitingForService || 0) > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 animate-pulse">
+                Action Required
               </span>
-            </div>
-            <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl hover:bg-amber-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Cooking Now</span>
-              <span className="text-2xl font-extrabold font-mono text-amber-900 mt-1 block">
-                {orderOverview.preparingOrders || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-emerald-50/60 border border-emerald-200/80 rounded-xl hover:bg-emerald-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Ready Food</span>
-              <span className="text-2xl font-extrabold font-mono text-emerald-800 mt-1 block">
-                {orderOverview.readyOrders || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-teal-50/60 border border-teal-200/80 rounded-xl hover:bg-teal-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Served Today</span>
-              <span className="text-2xl font-extrabold font-mono text-teal-800 mt-1 block">
-                {orderOverview.servedOrders || 0}
-              </span>
-            </div>
-          </div>
-        </div>
+            ) : null
+          }
+        />
 
-        {/* C. BILL OVERVIEW */}
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-5 shadow-sandstone card-hover flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E5D8C6]">
-            <h2 className="text-sm font-bold text-[#1F2937] flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#92400E]/10 flex items-center justify-center text-[#92400E]">
-                <Receipt className="w-4 h-4" />
+        <StatCard
+          title="Food Ready to Serve"
+          value={orderOverview.readyOrders || 0}
+          subtitle={`${orderOverview.preparingOrders || 0} currently cooking in kitchen`}
+          icon={ChefHat}
+          iconColor="text-[#92400E] dark:text-[#D97706]"
+          iconBg="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800"
+          badge={
+            (orderOverview.readyOrders || 0) > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-[#92400E] border border-amber-200">
+                Ready Now
+              </span>
+            ) : null
+          }
+        />
+
+        <StatCard
+          title="Bills Ready to Deliver"
+          value={billOverview.readyToDeliverBills || 0}
+          subtitle={`${billOverview.pendingBills || 0} unpaid • ${billOverview.completedBills || 0} paid today`}
+          icon={Receipt}
+          iconColor="text-[#2563EB] dark:text-[#60A5FA]"
+          iconBg="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800"
+          badge={
+            (billOverview.readyToDeliverBills || 0) > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                Deliver
+              </span>
+            ) : null
+          }
+        />
+      </div>
+
+      {/* Real-Data Floor & Service Visual Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Floor Table Occupancy (Donut Chart) */}
+        <ChartCard
+          title="Floor Table Occupancy"
+          subtitle="Real-time dining floor distribution and guest service states"
+          badge="Floor Status"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
+            <DonutChart
+              size={170}
+              thickness={24}
+              centerLabel="Tables"
+              centerValue={tableOverview.totalTables || 0}
+              data={[
+                {
+                  label: 'Available Tables',
+                  value: tableOverview.availableTables || 0,
+                  color: '#16A34A',
+                },
+                {
+                  label: 'Active Dining',
+                  value: Math.max(
+                    0,
+                    (tableOverview.occupiedTables || 0) -
+                      (tableOverview.tablesWaitingForService || 0) -
+                      (tableOverview.tablesWaitingForBilling || 0)
+                  ),
+                  color: '#D97706',
+                },
+                {
+                  label: 'Needs Attention',
+                  value: tableOverview.tablesWaitingForService || 0,
+                  color: '#DC2626',
+                },
+                {
+                  label: 'Waiting for Bill',
+                  value: tableOverview.tablesWaitingForBilling || 0,
+                  color: '#2563EB',
+                },
+              ]}
+            />
+
+            <div className="space-y-3 w-full sm:w-56 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40">
+                <span className="flex items-center gap-2 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A]" />
+                  Available
+                </span>
+                <span className="font-mono font-bold text-emerald-800 dark:text-emerald-300">
+                  {tableOverview.availableTables || 0}
+                </span>
               </div>
-              <span>Guest Billing Dispatch</span>
-            </h2>
-            <span className="text-xs text-[#5B6470] font-semibold bg-[#FAF7F2] px-2.5 py-1 rounded-lg border border-[#E5D8C6]">
-              Operational
-            </span>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40">
+                <span className="flex items-center gap-2 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#D97706]" />
+                  Active Dining
+                </span>
+                <span className="font-mono font-bold text-amber-900 dark:text-amber-300">
+                  {Math.max(
+                    0,
+                    (tableOverview.occupiedTables || 0) -
+                      (tableOverview.tablesWaitingForService || 0) -
+                      (tableOverview.tablesWaitingForBilling || 0)
+                  )}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40">
+                <span className="flex items-center gap-2 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
+                  Needs Attention
+                </span>
+                <span className="font-mono font-bold text-rose-800 dark:text-rose-300">
+                  {tableOverview.tablesWaitingForService || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-800/40">
+                <span className="flex items-center gap-2 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />
+                  Waiting for Bill
+                </span>
+                <span className="font-mono font-bold text-blue-800 dark:text-blue-300">
+                  {tableOverview.tablesWaitingForBilling || 0}
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-rose-50/60 border border-rose-200/80 rounded-xl hover:bg-rose-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Unpaid Bills</span>
-              <span className="text-2xl font-extrabold font-mono text-rose-800 mt-1 block">
-                {billOverview.pendingBills || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl hover:bg-blue-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Ready to Deliver</span>
-              <span className="text-2xl font-extrabold font-mono text-blue-800 mt-1 block">
-                {billOverview.readyToDeliverBills || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-teal-50/60 border border-teal-200/80 rounded-xl hover:bg-teal-50 transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Delivered Bills</span>
-              <span className="text-2xl font-extrabold font-mono text-teal-800 mt-1 block">
-                {billOverview.deliveredBills || 0}
-              </span>
-            </div>
-            <div className="p-3 bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl hover:bg-[#F1E8DB] transition-colors">
-              <span className="text-[#5B6470] text-[11px] block font-semibold">Completed Paid</span>
-              <span className="text-2xl font-extrabold font-mono text-[#1F2937] mt-1 block">
-                {billOverview.completedBills || 0}
-              </span>
+        </ChartCard>
+
+        {/* Today's Order Activity Curve (Line Chart) */}
+        <ChartCard
+          title="Today's Service Activity"
+          subtitle="Hourly distribution of customer tickets generated and served"
+          badge="Order Velocity"
+          empty={orderActivityTrend.length === 0}
+          emptyMessage="No guest orders recorded yet today. As guests are seated, activity will plot here."
+        >
+          <div className="pt-2">
+            <LineChart
+              data={orderActivityTrend}
+              color="#2563EB"
+              height={190}
+              valueLabel="tickets"
+            />
+            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
+              <span>Active on Tables: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{(orderOverview.newOrders || 0) + (orderOverview.preparingOrders || 0) + (orderOverview.readyOrders || 0)} orders</strong></span>
+              <span>Dispatched Today: <strong className="font-mono text-[#16A34A] dark:text-emerald-400 font-bold">{orderOverview.servedOrders || 0} served</strong></span>
             </div>
           </div>
-        </div>
+        </ChartCard>
+      </div>
+
+      {/* Service & Billing Pipeline Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <ChartCard
+          title="Kitchen & Service Flow Pipeline"
+          subtitle="Sequential progress of food items from order receipt to customer service"
+          badge="Service Queue"
+        >
+          <div className="space-y-4 py-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Active Food Lifecycle</span>
+              <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono">
+                {(orderOverview.newOrders || 0) +
+                  (orderOverview.preparingOrders || 0) +
+                  (orderOverview.readyOrders || 0) +
+                  (orderOverview.servedOrders || 0)}{' '}
+                Orders
+              </span>
+            </div>
+            <StatusDistributionBar
+              segments={[
+                { label: 'New', count: orderOverview.newOrders || 0, color: '#3B82F6' },
+                { label: 'Cooking', count: orderOverview.preparingOrders || 0, color: '#D97706' },
+                { label: 'Ready', count: orderOverview.readyOrders || 0, color: '#16A34A' },
+                { label: 'Served', count: orderOverview.servedOrders || 0, color: '#14B8A6' },
+              ]}
+            />
+          </div>
+        </ChartCard>
+
+        <ChartCard
+          title="Guest Billing Dispatch Status"
+          subtitle="Real-time delivery of guest checks and payment completion states"
+          badge="Checkout Queue"
+        >
+          <div className="space-y-4 py-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Billing Reconciliation</span>
+              <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono">
+                {(billOverview.pendingBills || 0) +
+                  (billOverview.readyToDeliverBills || 0) +
+                  (billOverview.deliveredBills || 0) +
+                  (billOverview.completedBills || 0)}{' '}
+                Bills
+              </span>
+            </div>
+            <StatusDistributionBar
+              segments={[
+                { label: 'Unpaid', count: billOverview.pendingBills || 0, color: '#EF4444' },
+                { label: 'Ready to Deliver', count: billOverview.readyToDeliverBills || 0, color: '#2563EB' },
+                { label: 'Delivered', count: billOverview.deliveredBills || 0, color: '#10B981' },
+                { label: 'Completed', count: billOverview.completedBills || 0, color: '#6B7280' },
+              ]}
+            />
+          </div>
+        </ChartCard>
       </div>
 
       {/* D. TABLE-WISE ORDER STATUS GRID */}
@@ -396,7 +616,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
 
         {tableOrders.length === 0 ? (
           <div className="text-center py-16 bg-[#FAF7F2] rounded-2xl border border-dashed border-[#E5D8C6] text-[#5B6470] text-sm">
-            <Utensils className="w-10 h-10 mx-auto text-[#9CA3AF] mb-2" />
+            <Utensils className="w-10 h-10 mx-auto text-[#9CA3AF] mb-2 stroke-1" />
             <div className="font-bold text-[#1F2937]">No tables configured in this restaurant</div>
             <div className="text-xs text-[#5B6470] mt-1">Configure restaurant tables to begin floor dispatching.</div>
           </div>
@@ -413,9 +633,9 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
               return (
                 <div
                   key={t.tableId}
-                  className={`flex flex-col justify-between p-4 sm:p-5 rounded-2xl border transition-all card-hover ${
+                  className={`flex flex-col justify-between p-4 sm:p-5 rounded-2xl border transition-all shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 ${
                     isReady
-                      ? 'bg-rose-50/40 border-rose-300'
+                      ? 'bg-rose-50/40 border-rose-300 ring-1 ring-rose-300'
                       : isCooking
                       ? 'bg-amber-50/40 border-amber-300'
                       : isServed
@@ -425,26 +645,34 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                       : 'bg-white border-[#E5D8C6]'
                   }`}
                 >
-                  {/* Top Bar */}
+                  {/* Top Bar & Visual */}
                   <div>
+                    {/* Visual: Image or Fallback */}
+                    <TableVisual
+                      image={t.imageUrl || t.image}
+                      tableNumber={t.tableNumber}
+                      capacity={t.capacity}
+                      status={t.operationalStatus}
+                    />
+
                     <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-base font-extrabold text-[#1F2937] flex items-center gap-1.5">
+                      <span className="text-base font-extrabold text-[#1F2937] flex items-center gap-1.5 font-mono">
                         Table #{t.tableNumber}
-                        <span className="text-[11px] text-[#5B6470] font-normal">({t.capacity} seats)</span>
+                        <span className="text-[11px] text-[#5B6470] font-sans font-normal">({t.capacity} seats)</span>
                       </span>
 
                       {/* Status Badge */}
                       <span
                         className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${
                           isReady
-                            ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse font-extrabold'
                             : isCooking
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold'
                             : isPending
-                            ? 'bg-slate-100 text-slate-700 border-slate-300'
+                            ? 'bg-slate-100 text-slate-700 border-slate-300 font-medium'
                             : isServed
-                            ? 'bg-blue-100 text-blue-800 border-blue-300'
-                            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            ? 'bg-blue-100 text-blue-800 border-blue-300 font-semibold'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
                         }`}
                       >
                         {t.operationalStatus}
@@ -468,7 +696,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         {order.bill && (
                           <div className="pt-2 border-t border-[#E5D8C6] flex justify-between text-[11px]">
                             <span className="text-[#5B6470]">Bill: #{order.bill.billNumber}</span>
-                            <span className="font-bold text-[#92400E] font-mono">
+                            <span className="font-bold text-[#92400E] font-mono tabular-nums">
                               {currency}
                               {Number(order.bill.totalAmount || 0).toFixed(2)}
                             </span>
@@ -476,44 +704,54 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         )}
                       </div>
                     ) : (
-                      <div className="my-7 text-center text-[#9CA3AF] text-xs font-medium italic">
+                      <div className="my-6 text-center text-[#9CA3AF] text-xs font-medium italic">
                         Table available for new guests
                       </div>
                     )}
                   </div>
 
-                  {/* Operational Action Buttons */}
+                  {/* Operational Action Buttons (Min 44px Touch Targets) */}
                   <div className="pt-3 border-t border-[#E5D8C6] mt-2">
                     {isReady ? (
                       <button
+                        type="button"
                         onClick={() => handleServeOrder(order.id, t.tableNumber)}
                         disabled={actionLoading === `serve-${order.id}`}
-                        className="w-full py-2.5 bg-[#16A34A] hover:bg-[#15803D] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        className="w-full min-h-[44px] py-2.5 bg-[#16A34A] hover:bg-[#15803D] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                       >
-                        <Check className="w-4 h-4" />
+                        {actionLoading === `serve-${order.id}` ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4 stroke-[3]" />
+                        )}
                         <span>SERVE FOOD</span>
                       </button>
                     ) : order?.bill && !order.bill.isDelivered ? (
                       <button
+                        type="button"
                         onClick={() => handleDeliverBill(order.bill.id, t.tableNumber)}
                         disabled={actionLoading === `deliver-${order.bill.id}`}
-                        className="w-full py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        className="w-full min-h-[44px] py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                       >
-                        <Receipt className="w-4 h-4" />
+                        {actionLoading === `deliver-${order.bill.id}` ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Receipt className="w-4 h-4" />
+                        )}
                         <span>DELIVER BILL</span>
                       </button>
                     ) : order?.billRequested && !order?.bill ? (
-                      <div className="space-y-1">
-                        <button
-                          disabled
-                          className="w-full py-2.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-95"
-                        >
-                          <Clock className="w-3.5 h-3.5 text-[#D97706] animate-spin" />
-                          <span>BILL REQUESTED</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full min-h-[44px] py-2.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-95"
+                      >
+                        <Clock className="w-4 h-4 text-[#D97706] animate-spin" />
+                        <span>BILL REQUESTED</span>
+                      </button>
                     ) : isAvailable ? (
                       <button
+                        type="button"
                         onClick={() => {
                           if (onSelectTableForOrder) {
                             onSelectTableForOrder(t);
@@ -521,7 +759,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                             setActiveTab('tables');
                           }
                         }}
-                        className="w-full py-2.5 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        className="w-full min-h-[44px] py-2.5 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                       >
                         <PlusCircle className="w-4 h-4" />
                         <span>NEW ORDER</span>
@@ -529,6 +767,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
                         <button
+                          type="button"
                           onClick={() => {
                             if (onSelectTableForOrder) {
                               onSelectTableForOrder(t);
@@ -536,17 +775,22 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                               setActiveTab('tables');
                             }
                           }}
-                          className="py-2.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer"
                         >
                           <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
                           <span>ADD ITEMS</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleRequestBill(order.id, t.tableNumber)}
                           disabled={actionLoading === `bill-req-${order.id}`}
-                          className="py-2.5 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                          className="min-h-[44px] py-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-50"
                         >
-                          <Receipt className="w-3.5 h-3.5" />
+                          {actionLoading === `bill-req-${order.id}` ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Receipt className="w-3.5 h-3.5" />
+                          )}
                           <span>REQUEST BILL</span>
                         </button>
                       </div>

@@ -40,6 +40,11 @@ export const posService = {
     updateItem: (id, data) => api.put(`/menu/items/${id}`, data),
     deleteItem: (id) => api.delete(`/menu/items/${id}`),
     toggleAvailability: (id, isAvailable) => api.patch(`/menu/items/${id}/availability`, { isAvailable }),
+    uploadImage: (file) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      return api.post('/menu/upload', formData);
+    },
   },
 
   // Recipes (BOM)

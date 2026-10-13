@@ -46,11 +46,23 @@ export function Badge({
     OUT_OF_SERVICE: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
     REFUNDED: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
     INACTIVE: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
+    OUT_OF_STOCK: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
+    LOW_STOCK: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
+
+    // Dietary
+    VEG: 'bg-emerald-50 text-[#16A34A] border-emerald-300',
+    'NON-VEG': 'bg-rose-50 text-[#EF4444] border-rose-300',
+    NON_VEG: 'bg-rose-50 text-[#EF4444] border-rose-300',
+    JAIN: 'bg-amber-50 text-[#D97706] border-amber-300',
+    EGG: 'bg-amber-50 text-amber-800 border-amber-300',
 
     // Neutral / Sandstone Gray / Reserved
-    neutral: 'bg-[#FAF7F2] text-[#5B6470] border-[#E5D8C6]',
+    neutral: 'bg-[#FAF7F2] text-[#4B5563] border-[#E5D8C6]',
     RESERVED: 'bg-[#8B5CF6]/10 text-[#7C3AED] border-[#8B5CF6]/25',
-    GUEST: 'bg-[#FAF7F2] text-[#5B6470] border-[#E5D8C6]',
+    GUEST: 'bg-[#FAF7F2] text-[#4B5563] border-[#E5D8C6]',
+    DINE_IN: 'bg-amber-50 text-[#92400E] border-amber-200',
+    TAKEAWAY: 'bg-blue-50 text-[#2563EB] border-blue-200',
+    DELIVERY: 'bg-purple-50 text-purple-700 border-purple-200',
   };
 
   const currentStyle =

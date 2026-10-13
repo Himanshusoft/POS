@@ -1,5 +1,26 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const removeLocalUploadFile = (relativeUrl) => {
+  if (!relativeUrl || typeof relativeUrl !== 'string' || !relativeUrl.startsWith('/uploads/menu/')) {
+    return;
+  }
+  try {
+    const filename = path.basename(relativeUrl);
+    const fullPath = path.join(__dirname, '../../uploads/menu', filename);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  } catch (err) {
+    console.error('Failed to cleanup local menu image file:', err.message);
+  }
+};
 
 // Categories
 export const createCategory = async (restaurantId, data) => {
@@ -124,6 +145,7 @@ export const createMenuItem = async (restaurantId, data) => {
       name,
       description: data.description || null,
       price: Number(data.price),
+      imageUrl: data.imageUrl || null,
       isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
       dietary: data.dietary || null,
     },
@@ -184,7 +206,7 @@ export const getMenuItemById = async (restaurantId, id) => {
 };
 
 export const updateMenuItem = async (restaurantId, id, data) => {
-  await getMenuItemById(restaurantId, id);
+  const existingItem = await getMenuItemById(restaurantId, id);
 
   if (data.categoryId) {
     const category = await prisma.menuCategory.findFirst({
@@ -198,6 +220,19 @@ export const updateMenuItem = async (restaurantId, id, data) => {
     }
   }
 
+  let targetImageUrl = undefined;
+  if (data.removeImage === true || data.removeImage === 'true' || data.imageUrl === null) {
+    targetImageUrl = null;
+    if (existingItem.imageUrl) {
+      removeLocalUploadFile(existingItem.imageUrl);
+    }
+  } else if (data.imageUrl !== undefined) {
+    targetImageUrl = data.imageUrl;
+    if (existingItem.imageUrl && existingItem.imageUrl !== data.imageUrl) {
+      removeLocalUploadFile(existingItem.imageUrl);
+    }
+  }
+
   return await prisma.menuItem.update({
     where: { id },
     data: {
@@ -205,6 +240,7 @@ export const updateMenuItem = async (restaurantId, id, data) => {
       description: data.description !== undefined ? data.description : undefined,
       price: data.price !== undefined ? Number(data.price) : undefined,
       categoryId: data.categoryId !== undefined ? data.categoryId : undefined,
+      imageUrl: targetImageUrl,
       isAvailable: data.isAvailable !== undefined ? data.isAvailable : undefined,
       dietary: data.dietary !== undefined ? (data.dietary || null) : undefined,
     },
@@ -240,6 +276,11 @@ export const deleteMenuItem = async (restaurantId, id) => {
     error.statusCode = 409;
     throw error;
   }
+
+  if (item.imageUrl) {
+    removeLocalUploadFile(item.imageUrl);
+  }
+
   return await prisma.menuItem.delete({
     where: { id },
   });

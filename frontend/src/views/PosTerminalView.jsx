@@ -1,23 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../services/api';
+import { Skeleton } from '../components/ui/Skeleton';
 import {
   ShoppingBag,
   Search,
   Plus,
   Minus,
-  Trash2,
   Send,
   Clock,
   Sparkles,
-  AlertCircle,
-  CheckCircle2,
   X,
-  History
+  History,
+  UtensilsCrossed,
+  RefreshCw
 } from 'lucide-react';
 
+/**
+ * MenuItemImage helper:
+ * Displays real image URL if provided in API/database.
+ * If missing or fails to load, gracefully displays a neutral Sandstone dish placeholder.
+ */
+function MenuItemImage({ image, name, categoryName }) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [image]);
+
+  const resolvedUrl = image && !imgError ? getImageUrl(image) : null;
+
+  if (resolvedUrl) {
+    return (
+      <div className="relative w-full h-32 sm:h-36 rounded-xl overflow-hidden mb-2.5 border border-[#E5D8C6] bg-[#FAF7F2] group">
+        <img
+          src={resolvedUrl}
+          alt={name}
+          onError={() => setImgError(true)}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-28 sm:h-32 rounded-xl mb-2.5 border border-[#E5D8C6] bg-gradient-to-br from-[#F7F3EC] to-[#FAF7F2] flex flex-col items-center justify-center text-[#5B6470] overflow-hidden">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#92400E_1px,transparent_1px)] [background-size:10px_10px]" />
+      <div className="w-9 h-9 rounded-xl bg-white border border-[#E5D8C6] shadow-xs flex items-center justify-center text-[#92400E]">
+        <UtensilsCrossed className="w-4 h-4" />
+      </div>
+      <span className="text-[10px] font-semibold text-[#5B6470] mt-1.5 flex items-center gap-1">
+        {categoryName || 'Menu Dish'}
+      </span>
+    </div>
+  );
+}
+
 export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
-  const { restaurant, addToast, role } = useAuth();
+  const { restaurant, addToast } = useAuth();
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [tables, setTables] = useState([]);
@@ -207,11 +250,11 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   });
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-[#FAF7F2]">
+    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-[#FAF7F2] text-[#1F2937]">
       {/* LEFT: Menu Catalog & Categories */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F2] p-6 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F2] p-5 sm:p-6 overflow-hidden">
         {/* Top Control Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -219,17 +262,18 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               placeholder="Search dishes, drinks, starters..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-[#E5D8C6] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] shadow-sandstone"
+              className="w-full bg-white border border-[#E5D8C6] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] shadow-sandstone transition-all min-h-[42px]"
             />
           </div>
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => {
                 fetchActiveOrders();
                 setShowHistory(true);
               }}
-              className="flex items-center gap-2 bg-white hover:bg-[#F1E8DB] text-[#1F2937] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#E5D8C6] shadow-sandstone transition-colors cursor-pointer"
+              className="flex items-center gap-2 bg-white hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer min-h-[42px]"
             >
               <History className="w-4 h-4 text-[#92400E]" />
               <span>Active Orders</span>
@@ -240,8 +284,9 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         {/* Category Pills */}
         <div className="flex gap-2 overflow-x-auto pb-3 shrink-0 scrollbar-none">
           <button
+            type="button"
             onClick={() => setActiveCategoryId('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer min-h-[36px] ${
               activeCategoryId === 'ALL'
                 ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
                 : 'bg-white text-[#5B6470] hover:bg-[#F1E8DB] hover:text-[#1F2937] border border-[#E5D8C6] shadow-sandstone'
@@ -252,8 +297,9 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
           {categories.map((cat) => (
             <button
               key={cat.id}
+              type="button"
               onClick={() => setActiveCategoryId(cat.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer min-h-[36px] ${
                 activeCategoryId === cat.id
                   ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
                   : 'bg-white text-[#5B6470] hover:bg-[#F1E8DB] hover:text-[#1F2937] border border-[#E5D8C6] shadow-sandstone'
@@ -265,79 +311,102 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         </div>
 
         {/* Food Items Grid */}
-        <div className="flex-1 overflow-y-auto pr-1 mt-2">
+        <div className="flex-1 overflow-y-auto pr-1 mt-1">
           {loading ? (
-            <div className="h-64 flex items-center justify-center text-[#5B6470] text-sm">
-              Loading menu catalog...
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-[#9CA3AF]">
-              <ShoppingBag className="w-10 h-10 mb-2 stroke-1" />
-              <p>No dishes match your selection.</p>
-            </div>
-          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => addToCart(item)}
-                  className={`bg-white border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-200 select-none group shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 ${
-                    !item.isAvailable
-                      ? 'opacity-50 border-[#E5D8C6] bg-slate-50 cursor-not-allowed'
-                      : 'border-[#E5D8C6] hover:border-[#92400E]'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="font-bold text-[#1F2937] text-sm group-hover:text-[#92400E] transition-colors line-clamp-1">
-                        {item.name}
-                      </span>
-                      {(item.dietary || item.isVeg !== undefined) && (
-                        <span
-                          className={`w-3.5 h-3.5 rounded-sm border p-0.5 flex items-center justify-center shrink-0 ${
-                            item.dietary === 'VEG' || item.dietary === 'JAIN' || (item.isVeg === true && !item.dietary)
-                              ? 'border-emerald-600'
-                              : item.dietary === 'EGG'
-                              ? 'border-amber-600'
-                              : 'border-rose-600'
-                          }`}
-                          title={item.dietary || (item.isVeg ? 'VEG' : 'NON-VEG')}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              item.dietary === 'VEG' || item.dietary === 'JAIN' || (item.isVeg === true && !item.dietary)
-                                ? 'bg-emerald-600'
-                                : item.dietary === 'EGG'
-                                ? 'bg-amber-600'
-                                : 'bg-rose-600'
-                            }`}
-                          ></span>
-                        </span>
-                      )}
-                    </div>
-                    {item.description && (
-                      <p className="text-xs text-[#5B6470] line-clamp-2 mb-3 leading-relaxed">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-[#E5D8C6] mt-2">
-                    <span className="font-bold text-[#92400E] text-sm font-mono">
-                      {currency}{Number(item.price).toFixed(2)}
-                    </span>
-                    {!item.isAvailable ? (
-                      <span className="text-[10px] uppercase font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                        86 Out
-                      </span>
-                    ) : (
-                      <span className="w-7 h-7 rounded-lg bg-amber-100 group-hover:bg-[#92400E] text-[#92400E] group-hover:text-white flex items-center justify-center transition-all duration-200">
-                        <Plus className="w-4 h-4" />
-                      </span>
-                    )}
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="bg-white border border-[#E5D8C6] rounded-2xl p-4 space-y-3 shadow-sandstone">
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                  <Skeleton className="h-4 w-3/4 rounded-lg" />
+                  <Skeleton className="h-3 w-1/2 rounded-lg" />
+                  <div className="flex justify-between items-center pt-2">
+                    <Skeleton className="h-5 w-16 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
                   </div>
                 </div>
               ))}
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-[#9CA3AF] bg-white rounded-2xl border border-dashed border-[#E5D8C6]">
+              <ShoppingBag className="w-10 h-10 mb-2 stroke-1 text-[#9CA3AF]" />
+              <p className="font-semibold text-sm text-[#1F2937]">No dishes match your selection.</p>
+              <p className="text-xs text-[#5B6470] mt-0.5">Try searching with a different keyword or category.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredItems.map((item) => {
+                const categoryObj = categories.find((c) => c.id === item.categoryId);
+                const categoryName = categoryObj?.name || 'General';
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => addToCart(item)}
+                    className={`bg-white border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all duration-200 select-none group shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 ${
+                      !item.isAvailable
+                        ? 'opacity-60 border-[#E5D8C6] bg-slate-50/80 cursor-not-allowed'
+                        : 'border-[#E5D8C6] hover:border-[#92400E]'
+                    }`}
+                  >
+                    <div>
+                      {/* Image / Visual */}
+                      <MenuItemImage
+                        image={item.imageUrl || item.image}
+                        name={item.name}
+                        categoryName={categoryName}
+                      />
+
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span className="font-bold text-[#1F2937] text-sm group-hover:text-[#92400E] transition-colors line-clamp-1">
+                          {item.name}
+                        </span>
+                        {(item.dietary || item.isVeg !== undefined) && (
+                          <span
+                            className={`w-3.5 h-3.5 rounded-xs border p-0.5 flex items-center justify-center shrink-0 ${
+                              item.dietary === 'VEG' || item.dietary === 'JAIN' || (item.isVeg === true && !item.dietary)
+                                ? 'border-emerald-600'
+                                : item.dietary === 'EGG'
+                                ? 'border-amber-600'
+                                : 'border-rose-600'
+                            }`}
+                            title={item.dietary || (item.isVeg ? 'VEG' : 'NON-VEG')}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                item.dietary === 'VEG' || item.dietary === 'JAIN' || (item.isVeg === true && !item.dietary)
+                                  ? 'bg-emerald-600'
+                                  : item.dietary === 'EGG'
+                                  ? 'bg-amber-600'
+                                  : 'bg-rose-600'
+                              }`}
+                            ></span>
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-xs text-[#5B6470] line-clamp-2 mb-3 leading-relaxed">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-[#E5D8C6] mt-2">
+                      <span className="font-extrabold text-[#92400E] text-sm font-mono tabular-nums">
+                        {currency}{Number(item.price).toFixed(2)}
+                      </span>
+                      {!item.isAvailable ? (
+                        <span className="text-[10px] uppercase font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                          86 Out
+                        </span>
+                      ) : (
+                        <span className="w-8 h-8 rounded-xl bg-amber-100 group-hover:bg-[#92400E] text-[#92400E] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -354,6 +423,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             </div>
             {cart.length > 0 && (
               <button
+                type="button"
                 onClick={clearCart}
                 className="text-xs text-rose-700 hover:text-rose-900 font-semibold transition-colors cursor-pointer"
               >
@@ -371,7 +441,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               <select
                 value={selectedTableId}
                 onChange={(e) => setSelectedTableId(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] transition-all"
               >
                 <option value="">Select Table</option>
                 {tables.map((t) => (
@@ -389,7 +459,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               <select
                 value={orderType}
                 onChange={(e) => setOrderType(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] transition-all"
               >
                 <option value="DINE_IN">Dine-In</option>
                 <option value="TAKEAWAY">Takeaway</option>
@@ -419,7 +489,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                   <Clock className="w-3.5 h-3.5 text-[#92400E]" />
                   Already In Order ({activeOrderOnTable.items.length})
                 </span>
-                <span className="text-[11px] font-mono font-bold text-[#1F2937]">
+                <span className="text-[11px] font-mono font-bold text-[#1F2937] tabular-nums">
                   {currency}{existingSubtotal.toFixed(2)}
                 </span>
               </div>
@@ -439,7 +509,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                       }`}>
                         {it.status}
                       </span>
-                      <span className="text-[#1F2937] font-mono text-[11px]">
+                      <span className="text-[#1F2937] font-mono text-[11px] tabular-nums">
                         {currency}{Number(it.subtotal || 0).toFixed(2)}
                       </span>
                     </div>
@@ -476,27 +546,31 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-bold text-[#1F2937] text-xs leading-tight">{item.name}</div>
-                    <div className="text-[11px] text-[#92400E] font-mono mt-0.5 font-bold">
+                    <div className="text-[11px] text-[#92400E] font-mono mt-0.5 font-bold tabular-nums">
                       {currency}{item.price.toFixed(2)} each
                     </div>
                   </div>
 
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-1.5 bg-white border border-[#E5D8C6] rounded-lg p-0.5">
+                  {/* Quantity Controls (Accessible Touch Targets) */}
+                  <div className="flex items-center gap-1 bg-white border border-[#E5D8C6] rounded-lg p-0.5">
                     <button
+                      type="button"
                       onClick={() => updateQuantity(item.menuItemId, -1)}
-                      className="w-6 h-6 rounded flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] active:scale-95 transition-colors cursor-pointer"
+                      aria-label="Decrease quantity"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-3 h-3 stroke-[2.5]" />
                     </button>
-                    <span className="w-6 text-center text-xs font-bold text-[#1F2937]">
+                    <span className="w-7 text-center text-xs font-bold font-mono text-[#1F2937] tabular-nums">
                       {item.quantity}
                     </span>
                     <button
+                      type="button"
                       onClick={() => updateQuantity(item.menuItemId, 1)}
-                      className="w-6 h-6 rounded flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] active:scale-95 transition-colors cursor-pointer"
+                      aria-label="Increase quantity"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-3 h-3 stroke-[2.5]" />
                     </button>
                   </div>
                 </div>
@@ -522,7 +596,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               placeholder="Kitchen Order Note (optional)"
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-1.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E]"
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] min-h-[38px]"
             />
           </div>
 
@@ -530,29 +604,35 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             {activeOrderOnTable && existingSubtotal > 0 && (
               <div className="flex justify-between text-[#5B6470]">
                 <span>Already Ordered</span>
-                <span className="font-mono text-[#1F2937] font-semibold">{currency}{existingSubtotal.toFixed(2)}</span>
+                <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{existingSubtotal.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-[#5B6470]">
               <span>{activeOrderOnTable ? 'New Items Subtotal' : 'Subtotal'}</span>
-              <span className="font-mono text-[#1F2937] font-semibold">{currency}{newSubtotal.toFixed(2)}</span>
+              <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{newSubtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-[#5B6470]">
               <span>Estimated Tax ({taxRate}%)</span>
-              <span className="font-mono text-[#1F2937] font-semibold">{currency}{estimatedTax.toFixed(2)}</span>
+              <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{estimatedTax.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm font-bold text-[#1F2937] pt-2 border-t border-[#E5D8C6]">
               <span>Grand Total</span>
-              <span className="text-[#92400E] font-mono text-base font-extrabold">{currency}{grandTotal.toFixed(2)}</span>
+              <span className="text-[#92400E] font-mono text-base font-extrabold tabular-nums">{currency}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
+          {/* Fire To Kitchen Button (Min 48px Prominent Touch Target) */}
           <button
+            type="button"
             onClick={handlePlaceOrder}
             disabled={submitting || cart.length === 0}
-            className="w-full flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] disabled:opacity-50 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+            className="w-full min-h-[48px] flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 disabled:opacity-50 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
           >
-            <Send className="w-4 h-4" />
+            {submitting ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
             <span>
               {submitting
                 ? 'Submitting Ticket...'
@@ -566,7 +646,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
       {/* ACTIVE ORDERS DRAWER */}
       {showHistory && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
           <div className="w-full max-w-xl bg-white border-l border-[#E5D8C6] h-full flex flex-col shadow-sandstone-lg animate-slide-left">
             <div className="p-5 border-b border-[#E5D8C6] flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-[#1F2937] text-base">
@@ -574,6 +654,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                 <span>Active Kitchen & Service Orders</span>
               </div>
               <button
+                type="button"
                 onClick={() => setShowHistory(false)}
                 className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB] cursor-pointer"
               >
@@ -583,7 +664,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {loadingOrders ? (
-                <div className="text-center py-12 text-[#5B6470] text-sm">Loading orders...</div>
+                <div className="text-center py-12 text-[#5B6470] text-sm flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#92400E]" />
+                  <span>Loading orders...</span>
+                </div>
               ) : activeOrders.length === 0 ? (
                 <div className="text-center py-12 text-[#9CA3AF] text-sm">No active orders found.</div>
               ) : (
@@ -594,10 +678,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-bold text-[#1F2937] text-sm">
+                        <span className="font-bold text-[#1F2937] text-sm font-mono">
                           Table #{ord.table?.tableNumber || ord.tableNumber || 'N/A'}
                         </span>
-                        <span className="text-xs text-[#5B6470] ml-2">
+                        <span className="text-xs text-[#5B6470] ml-2 font-mono">
                           #{ord.orderNumber || ord.id.slice(0, 8)}
                         </span>
                       </div>
@@ -612,7 +696,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                           <span className="font-medium">
                             {it.quantity}x {it.menuItem?.name || it.name}
                           </span>
-                          <span className="text-[#5B6470] font-mono">
+                          <span className="text-[#5B6470] font-mono tabular-nums">
                             {currency}{Number(it.unitPrice || it.price || 0).toFixed(2)}
                           </span>
                         </div>
@@ -622,6 +706,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                     {['PENDING', 'IN_PREPARATION'].includes(ord.status) && (
                       <div className="pt-2 border-t border-[#E5D8C6] flex justify-end">
                         <button
+                          type="button"
                           onClick={() => handleCancelOrder(ord.id)}
                           className="text-xs font-bold text-rose-700 hover:text-rose-900 transition-colors cursor-pointer"
                         >

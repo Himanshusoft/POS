@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { INVENTORY_UNITS, getUnitLabel } from '../constants/inventory.constants';
+import { Modal, SkeletonTable, EmptyState, Badge, Button } from '../components/ui';
 import {
   Boxes,
   Plus,
@@ -11,12 +12,10 @@ import {
   Trash2,
   Search,
   Scale,
-  DollarSign,
   TrendingDown,
-  FileSpreadsheet,
   History,
-  ArrowLeftRight,
-  X
+  ArrowUpDown,
+  Archive,
 } from 'lucide-react';
 
 export default function InventoryView() {
@@ -298,13 +297,14 @@ export default function InventoryView() {
             <Boxes className="w-6 h-6 text-[#92400E]" />
             <span>Inventory, Stock & Wastage Control</span>
           </h1>
-          <p className="text-sm text-[#5B6470]">
+          <p className="text-sm text-[#5B6470] mt-0.5">
             Real-time raw material balances, threshold reorder alerts, and spoilage tracking
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={() => {
               if (items.length > 0) {
                 setWastageForm({
@@ -316,81 +316,100 @@ export default function InventoryView() {
               }
               setShowWastageModal(true);
             }}
-            className="flex items-center gap-1.5 bg-white hover:bg-rose-50 text-[#EF4444] text-xs font-semibold px-4 py-2.5 rounded-xl border border-rose-200 transition-colors shadow-sm"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
           >
-            <TrendingDown className="w-4 h-4 text-[#EF4444]" />
+            <TrendingDown className="w-4 h-4 mr-1.5 text-red-600" />
             <span>Log Wastage</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => setShowItemModal(true)}
-            className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 mr-1.5" />
             <span>Add Stock Item</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Low Stock Warning Banner */}
       {lowStockItems.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm">
+        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm animate-fade-in" role="alert">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-[#D97706] shrink-0" />
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
+              <AlertTriangle className="w-5 h-5 text-[#D97706]" />
+            </div>
             <div>
               <div className="text-sm font-bold text-[#92400E]">
-                Low Stock Warning: {lowStockItems.length} ingredients below safe reorder threshold!
+                Low Stock Warning: {lowStockItems.length} ingredient{lowStockItems.length > 1 ? 's' : ''} below safe reorder threshold!
               </div>
-              <div className="text-xs text-[#B45309] mt-0.5">
-                {lowStockItems.map((i) => `${i.name} (${i.currentStock} ${i.unit})`).slice(0, 4).join(', ')}
-                {lowStockItems.length > 4 ? ' and more...' : ''}
+              <div className="text-xs text-[#B45309] mt-0.5 font-medium">
+                {lowStockItems.map((i) => `${i.name} (${Number(i.currentStock).toFixed(1)} ${i.unit})`).slice(0, 4).join(', ')}
+                {lowStockItems.length > 4 ? ` and ${lowStockItems.length - 4} more...` : ''}
               </div>
             </div>
           </div>
+          <button
+            onClick={() => {
+              setActiveTab('stock');
+              setSearchQuery('');
+            }}
+            className="text-xs font-semibold text-[#92400E] underline hover:text-[#78350F] shrink-0 px-2 py-1"
+          >
+            Review Items
+          </button>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto">
+      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto" role="tablist">
         <button
+          role="tab"
+          aria-selected={activeTab === 'stock'}
           onClick={() => setActiveTab('stock')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
             activeTab === 'stock'
-              ? 'bg-[#92400E] text-white shadow-sm'
+              ? 'bg-[#92400E] text-white shadow-sm font-bold'
               : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
           }`}
         >
-          Raw Materials Stock ({items.length})
+          Raw Materials Stock <span className="tabular-nums">({items.length})</span>
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'consumption'}
           onClick={() => setActiveTab('consumption')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
             activeTab === 'consumption'
-              ? 'bg-[#92400E] text-white shadow-sm'
+              ? 'bg-[#92400E] text-white shadow-sm font-bold'
               : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
           }`}
         >
-          Consumption History ({consumptions.length})
+          Consumption History <span className="tabular-nums">({consumptions.length})</span>
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'audit'}
           onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
             activeTab === 'audit'
-              ? 'bg-[#92400E] text-white shadow-sm'
+              ? 'bg-[#92400E] text-white shadow-sm font-bold'
               : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
           }`}
         >
-          Stock Movements & Audit ({auditTransactions.length})
+          Stock Movements & Audit <span className="tabular-nums">({auditTransactions.length})</span>
         </button>
         {role !== 'KITCHEN_ADMIN' && (
           <button
+            role="tab"
+            aria-selected={activeTab === 'wastage'}
             onClick={() => setActiveTab('wastage')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
               activeTab === 'wastage'
-                ? 'bg-[#92400E] text-white shadow-sm'
+                ? 'bg-[#92400E] text-white shadow-sm font-bold'
                 : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
             }`}
           >
-            Wastage Log History ({wastages.length})
+            Wastage Log History <span className="tabular-nums">({wastages.length})</span>
           </button>
         )}
       </div>
@@ -398,125 +417,163 @@ export default function InventoryView() {
       {/* TAB 1: STOCK ITEMS */}
       {activeTab === 'stock' && (
         <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5D8C6] flex items-center justify-between">
-            <div className="relative w-72">
-              <Search className="w-3.5 h-3.5 text-[#5B6470] absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="p-4 border-b border-[#E5D8C6] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-[#5B6470] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search raw material or SKU..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-3 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
               />
+            </div>
+            <div className="text-xs text-[#5B6470] font-medium">
+              Showing <span className="font-bold text-[#1F2937] tabular-nums">{filteredItems.length}</span> of <span className="tabular-nums">{items.length}</span> ingredients
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
-                <tr>
-                  <th className="px-5 py-3.5">Raw Material / Ingredient</th>
-                  <th className="px-5 py-3.5">SKU / Code</th>
-                  <th className="px-5 py-3.5">Current Stock</th>
-                  <th className="px-5 py-3.5">Min Safe Level</th>
-                  <th className="px-5 py-3.5">Cost / Unit</th>
-                  <th className="px-5 py-3.5">Location</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5D8C6]/60">
-                {filteredItems.map((it) => {
-                  const minSafe = Number(it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minStockLevel !== undefined ? it.minStockLevel : 5));
-                  const currentStock = Number(it.currentStock ?? 0);
-                  const isLow = currentStock <= minSafe;
-                  const cost = Number(it.costPerUnit !== undefined ? it.costPerUnit : (it.costPrice !== undefined ? it.costPrice : 0));
-                  return (
-                    <tr key={it.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
-                      <td className="px-5 py-4">
-                        <div className="font-bold text-[#1F2937] text-sm">{it.name}</div>
-                        <div className="text-[11px] text-[#5B6470] font-mono">Unit: {it.unit}</div>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470]">
-                        {it.sku || '—'}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`font-mono font-bold text-sm ${
-                            isLow ? 'text-[#EF4444]' : 'text-[#16A34A]'
-                          }`}
-                        >
-                          {currentStock % 1 === 0 ? currentStock : currentStock.toFixed(2)} {it.unit}
-                        </span>
-                        {isLow && (
-                          <div className="text-[10px] text-[#EF4444] font-bold uppercase mt-0.5">
-                            Low Stock Alert
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-[#5B6470] font-mono">
-                        {minSafe % 1 === 0 ? minSafe : minSafe.toFixed(2)} {it.unit}
-                      </td>
-                      <td className="px-5 py-4 text-[#1F2937] font-mono">
-                        {currency}{cost.toFixed(2)} / {it.unit}
-                      </td>
-                      <td className="px-5 py-4 text-[#5B6470]">
-                        {it.storageLocation || 'Main Warehouse'}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          <button
-                            onClick={() => {
-                              setSelectedItemForAdjust(it);
-                              setAdjustQuantity('');
-                              setAdjustReason('Purchase Inward Receipt');
-                              setAdjustNotes('');
-                              setShowAdjustModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 bg-white hover:bg-[#F1E8DB] text-[#92400E] px-2.5 py-1.5 rounded-lg border border-[#E5D8C6] font-semibold transition-colors shadow-sm text-xs"
-                            title="Adjust Stock"
-                          >
-                            <Scale className="w-3.5 h-3.5 text-[#92400E]" />
-                            <span>Adjust</span>
-                          </button>
-                          <button
-                            onClick={() => openEditModal(it)}
-                            className="p-1.5 bg-white hover:bg-[#F1E8DB] text-[#5B6470] hover:text-[#1F2937] rounded-lg border border-[#E5D8C6] transition-colors shadow-sm"
-                            title="Edit Item"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          {role === 'RESTAURANT_OWNER' && (
-                            <button
-                              onClick={() => handleDeleteItem(it)}
-                              className="p-1.5 bg-white hover:bg-rose-50 text-[#5B6470] hover:text-[#EF4444] rounded-lg border border-[#E5D8C6] hover:border-rose-200 transition-colors shadow-sm"
-                              title="Delete Item"
+          {loading ? (
+            <div className="p-4">
+              <SkeletonTable rows={5} columns={7} />
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <EmptyState
+              icon={Boxes}
+              title={searchQuery ? 'No matching ingredients found' : 'No inventory items registered'}
+              description={searchQuery ? `No ingredients matching "${searchQuery}". Clear your search to view all items.` : 'Start adding raw materials, bulk produce, or bar stock to track kitchen inventory.'}
+              actionLabel={searchQuery ? 'Clear Search' : 'Add First Stock Item'}
+              onAction={searchQuery ? () => setSearchQuery('') : () => setShowItemModal(true)}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3.5">Raw Material / Ingredient</th>
+                    <th className="px-5 py-3.5">SKU / Code</th>
+                    <th className="px-5 py-3.5">Current Stock</th>
+                    <th className="px-5 py-3.5">Min Safe Level</th>
+                    <th className="px-5 py-3.5">Cost / Unit</th>
+                    <th className="px-5 py-3.5">Location</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5D8C6]/60">
+                  {filteredItems.map((it) => {
+                    const minSafe = Number(it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minStockLevel !== undefined ? it.minStockLevel : 5));
+                    const currentStock = Number(it.currentStock ?? 0);
+                    const isLow = currentStock <= minSafe;
+                    const cost = Number(it.costPerUnit !== undefined ? it.costPerUnit : (it.costPrice !== undefined ? it.costPrice : 0));
+                    return (
+                      <tr key={it.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-[#1F2937] text-sm">{it.name}</div>
+                          <div className="text-[11px] text-[#5B6470] font-mono mt-0.5">Unit: {it.unit}</div>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[#5B6470] text-xs">
+                          {it.sku || '—'}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-mono font-bold text-sm tabular-nums ${
+                                isLow ? 'text-red-600' : 'text-emerald-700'
+                              }`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              {currentStock % 1 === 0 ? currentStock : currentStock.toFixed(2)} {it.unit}
+                            </span>
+                            {isLow && (
+                              <Badge variant="danger" size="sm">
+                                LOW STOCK
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[#5B6470] font-mono tabular-nums">
+                          {minSafe % 1 === 0 ? minSafe : minSafe.toFixed(2)} {it.unit}
+                        </td>
+                        <td className="px-5 py-4 text-[#1F2937] font-mono font-medium tabular-nums">
+                          {currency}{cost.toFixed(2)} / {it.unit}
+                        </td>
+                        <td className="px-5 py-4 text-[#5B6470]">
+                          {it.storageLocation || 'Main Warehouse'}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="inline-flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => {
+                                setSelectedItemForAdjust(it);
+                                setAdjustQuantity('');
+                                setAdjustReason('Purchase Inward Receipt');
+                                setAdjustNotes('');
+                                setShowAdjustModal(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-white hover:bg-[#FAF7F2] text-[#92400E] hover:text-[#78350F] px-3 py-1.5 rounded-lg border border-[#E5D8C6] font-semibold transition-all shadow-xs text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              title="Adjust Stock"
+                            >
+                              <Scale className="w-3.5 h-3.5 text-[#92400E]" />
+                              <span>Adjust</span>
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <button
+                              onClick={() => openEditModal(it)}
+                              className="p-2 min-h-[36px] min-w-[36px] bg-white hover:bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] rounded-lg border border-[#E5D8C6] transition-colors shadow-xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              title="Edit Item"
+                              aria-label={`Edit ${it.name}`}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            {role === 'RESTAURANT_OWNER' && (
+                              <button
+                                onClick={() => handleDeleteItem(it)}
+                                className="p-2 min-h-[36px] min-w-[36px] bg-white hover:bg-rose-50 text-[#5B6470] hover:text-red-600 rounded-lg border border-[#E5D8C6] hover:border-red-200 transition-colors shadow-xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                                title="Delete Item"
+                                aria-label={`Delete ${it.name}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 2: WASTAGE LOGS */}
       {activeTab === 'wastage' && (
         <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
-          {wastages.length === 0 ? (
-            <div className="p-12 text-center text-[#5B6470]">
-              <TrendingDown className="w-12 h-12 mx-auto mb-2 text-[#E7DCCB]" />
-              <p className="text-[#1F2937] font-semibold">No Spoilage / Wastage Logged</p>
+          {loading ? (
+            <div className="p-4">
+              <SkeletonTable rows={5} columns={6} />
             </div>
+          ) : wastages.length === 0 ? (
+            <EmptyState
+              icon={TrendingDown}
+              title="No Spoilage / Wastage Logged"
+              description="Track kitchen prep burns, spilled ingredients, and expired items here to keep recipe food costs balanced."
+              actionLabel="Log Wastage"
+              onAction={() => {
+                if (items.length > 0) {
+                  setWastageForm({
+                    inventoryItemId: items[0].id,
+                    quantity: 1,
+                    reason: 'SPOILAGE',
+                    notes: '',
+                  });
+                }
+                setShowWastageModal(true);
+              }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
+                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Ingredient</th>
                     <th className="px-5 py-3.5">Wasted Quantity</th>
@@ -528,22 +585,22 @@ export default function InventoryView() {
                 </thead>
                 <tbody className="divide-y divide-[#E5D8C6]/60">
                   {wastages.map((wst) => (
-                    <tr key={wst.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
+                    <tr key={wst.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
                       <td className="px-5 py-4 font-bold text-[#1F2937]">
                         {wst.inventoryItem?.name || 'Raw Ingredient'}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-[#EF4444]">
+                      <td className="px-5 py-4 font-mono font-bold text-red-600 tabular-nums">
                         {wst.quantity} {wst.inventoryItem?.unit || 'units'}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-50 text-[#EF4444] border border-rose-200">
+                        <Badge variant="danger" size="sm">
                           {wst.reason}
-                        </span>
+                        </Badge>
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#1F2937]">
+                      <td className="px-5 py-4 font-mono text-[#1F2937] font-semibold tabular-nums">
                         {currency}{Number(wst.totalCost || wst.cost || 0).toFixed(2)}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470]">
+                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
                         {new Date(wst.createdAt).toLocaleString()}
                       </td>
                       <td className="px-5 py-4 text-[#5B6470] italic">
@@ -563,19 +620,23 @@ export default function InventoryView() {
         <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
           <div className="p-4 border-b border-[#E5D8C6]">
             <h3 className="text-sm font-bold text-[#1F2937]">Recipe Ingredient Depletion Audit Trail</h3>
-            <p className="text-xs text-[#5B6470]">Traceable log of stock automatically deducted when food tickets are marked READY</p>
+            <p className="text-xs text-[#5B6470] mt-0.5">Traceable log of stock automatically deducted when food tickets are marked READY in kitchen</p>
           </div>
 
-          {consumptions.length === 0 ? (
-            <div className="p-12 text-center text-[#5B6470]">
-              <Boxes className="w-12 h-12 mx-auto mb-2 text-[#E7DCCB]" />
-              <p className="text-[#1F2937] font-semibold">No Consumption Recorded Yet</p>
-              <p className="text-xs text-[#5B6470] mt-1">Stock consumption entries appear when kitchen orders are completed.</p>
+          {loading ? (
+            <div className="p-4">
+              <SkeletonTable rows={5} columns={7} />
             </div>
+          ) : consumptions.length === 0 ? (
+            <EmptyState
+              icon={Boxes}
+              title="No Consumption Recorded Yet"
+              description="Stock consumption entries are automatically recorded when kitchen prep tickets with BOM recipes are marked READY."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
+                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Date / Time</th>
                     <th className="px-5 py-3.5">Ingredient</th>
@@ -588,23 +649,23 @@ export default function InventoryView() {
                 </thead>
                 <tbody className="divide-y divide-[#E5D8C6]/60">
                   {consumptions.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
-                      <td className="px-5 py-4 font-mono text-[#5B6470]">
+                    <tr key={entry.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
+                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
                         {new Date(entry.createdAt).toLocaleString()}
                       </td>
                       <td className="px-5 py-4 font-bold text-[#1F2937]">
                         {entry.inventoryItem?.name || 'Raw Material'}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-[#EF4444]">
-                        {Number(entry.quantity).toFixed(4)} {entry.unit}
+                      <td className="px-5 py-4 font-mono font-bold text-red-600 tabular-nums">
+                        -{Number(entry.quantity).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470]">
+                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums">
                         {Number(entry.previousBalance).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-[#16A34A]">
+                      <td className="px-5 py-4 font-mono font-bold text-emerald-700 tabular-nums">
                         {Number(entry.remainingBalance).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#D97706] font-semibold">
+                      <td className="px-5 py-4 font-mono text-[#D97706] font-semibold tabular-nums">
                         {entry.reference || '—'}
                       </td>
                       <td className="px-5 py-4 text-[#1F2937]">
@@ -625,16 +686,16 @@ export default function InventoryView() {
           <div className="p-4 border-b border-[#E5D8C6] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-[#1F2937]">Stock Movements & Transaction Audit Trail</h3>
-              <p className="text-xs text-[#5B6470]">Traceable ledger of inward receipts, manual adjustments, transfers, and opening stock</p>
+              <p className="text-xs text-[#5B6470] mt-0.5">Traceable ledger of inward receipts, manual adjustments, transfers, and opening balances</p>
             </div>
             <div className="flex items-center gap-1.5 bg-[#FAF7F2] p-1 rounded-xl border border-[#E5D8C6]">
               {['ALL', 'PURCHASE', 'ADJUSTMENT', 'TRANSFER'].map((f) => (
                 <button
                   key={f}
                   onClick={() => setAuditFilter(f)}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#92400E] ${
                     auditFilter === f
-                      ? 'bg-[#92400E] text-white shadow-xs'
+                      ? 'bg-[#92400E] text-white shadow-xs font-bold'
                       : 'text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB]'
                   }`}
                 >
@@ -644,16 +705,20 @@ export default function InventoryView() {
             </div>
           </div>
 
-          {auditTransactions.filter((t) => auditFilter === 'ALL' || t.type === auditFilter).length === 0 ? (
-            <div className="p-12 text-center text-[#5B6470]">
-              <History className="w-12 h-12 mx-auto mb-2 text-[#E7DCCB]" />
-              <p className="text-[#1F2937] font-semibold">No Stock Movements Found</p>
-              <p className="text-xs text-[#5B6470] mt-1">Stock adjustments, inward purchases, and transfers will appear here.</p>
+          {loading ? (
+            <div className="p-4">
+              <SkeletonTable rows={5} columns={8} />
             </div>
+          ) : auditTransactions.filter((t) => auditFilter === 'ALL' || t.type === auditFilter).length === 0 ? (
+            <EmptyState
+              icon={History}
+              title="No Stock Movements Found"
+              description="Stock adjustments, inward purchases, and transfers will automatically appear in this immutable ledger."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
+                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Date / Time</th>
                     <th className="px-5 py-3.5">Ingredient / SKU</th>
@@ -672,42 +737,42 @@ export default function InventoryView() {
                       const isPositive = Number(entry.quantity) >= 0;
                       const unit = entry.unit || entry.inventoryItem?.unit || 'units';
                       return (
-                        <tr key={entry.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
-                          <td className="px-5 py-4 font-mono text-[#5B6470] whitespace-nowrap">
+                        <tr key={entry.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
+                          <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
                             {new Date(entry.createdAt).toLocaleString()}
                           </td>
                           <td className="px-5 py-4 font-bold text-[#1F2937]">
                             <div>{entry.inventoryItem?.name || 'Raw Material'}</div>
                             {entry.inventoryItem?.sku && (
-                              <div className="text-[10px] text-[#5B6470] font-mono">{entry.inventoryItem.sku}</div>
+                              <div className="text-[10px] text-[#5B6470] font-mono mt-0.5">{entry.inventoryItem.sku}</div>
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                               entry.type === 'PURCHASE'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                                 : entry.type === 'TRANSFER'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
                                 : entry.type === 'CONSUMPTION'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-purple-50 text-purple-800 border border-purple-200'
                             }`}>
                               {entry.reason?.includes('Opening') ? 'Opening Stock' : entry.type}
                             </span>
                           </td>
-                          <td className={`px-5 py-4 font-mono font-bold ${isPositive ? 'text-[#16A34A]' : 'text-[#EF4444]'}`}>
+                          <td className={`px-5 py-4 font-mono font-bold tabular-nums ${isPositive ? 'text-emerald-700' : 'text-red-600'}`}>
                             {isPositive ? `+${Number(entry.quantity).toFixed(2)}` : Number(entry.quantity).toFixed(2)} {unit}
                           </td>
-                          <td className="px-5 py-4 font-mono text-[#5B6470]">
+                          <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums">
                             {Number(entry.previousBalance).toFixed(2)} {unit}
                           </td>
-                          <td className="px-5 py-4 font-mono font-bold text-[#1F2937]">
+                          <td className="px-5 py-4 font-mono font-bold text-[#1F2937] tabular-nums">
                             {Number(entry.remainingBalance).toFixed(2)} {unit}
                           </td>
                           <td className="px-5 py-4 text-[#1F2937]">
                             <div className="font-medium">{entry.reason || 'Manual Adjustment'}</div>
                             {entry.reference && (
-                              <div className="text-[11px] text-[#5B6470] italic">{entry.reference}</div>
+                              <div className="text-[11px] text-[#5B6470] italic mt-0.5">{entry.reference}</div>
                             )}
                           </td>
                           <td className="px-5 py-4 font-mono text-[#5B6470]">
@@ -724,414 +789,371 @@ export default function InventoryView() {
       )}
 
       {/* CREATE STOCK ITEM MODAL */}
-      {showItemModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Add Warehouse Inventory Item</h3>
-                <p className="text-xs text-[#5B6470]">Track bulk raw ingredients, produce, and bar supplies</p>
-              </div>
-              <button
-                onClick={() => setShowItemModal(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateItem} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Item Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Arabica Coffee Beans"
-                  value={itemForm.name}
-                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">SKU / Code</label>
-                  <input
-                    type="text"
-                    placeholder="ING-COF-01"
-                    value={itemForm.sku}
-                    onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">Unit of Measure *</label>
-                  <select
-                    value={itemForm.unit}
-                    onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  >
-                    {INVENTORY_UNITS.map((u) => (
-                      <option key={u.value} value={u.value}>
-                        {u.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Opening Stock</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={itemForm.currentStock}
-                    onChange={(e) => setItemForm({ ...itemForm, currentStock: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={itemForm.minStockThreshold}
-                    onChange={(e) => setItemForm({ ...itemForm, minStockThreshold: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={itemForm.costPerUnit}
-                    onChange={(e) => setItemForm({ ...itemForm, costPerUnit: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  onClick={() => setShowItemModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
-                >
-                  Add Item
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showItemModal}
+        onClose={() => setShowItemModal(false)}
+        title="Add Warehouse Inventory Item"
+        subtitle="Track bulk raw ingredients, produce, and bar supplies"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleCreateItem} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Item Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Arabica Coffee Beans"
+              value={itemForm.name}
+              onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">SKU / Code</label>
+              <input
+                type="text"
+                placeholder="ING-COF-01"
+                value={itemForm.sku}
+                onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Unit of Measure *</label>
+              <select
+                value={itemForm.unit}
+                onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              >
+                {INVENTORY_UNITS.map((u) => (
+                  <option key={u.value} value={u.value}>
+                    {u.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Opening Stock</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={itemForm.currentStock}
+                onChange={(e) => setItemForm({ ...itemForm, currentStock: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={itemForm.minStockThreshold}
+                onChange={(e) => setItemForm({ ...itemForm, minStockThreshold: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={itemForm.costPerUnit}
+                onChange={(e) => setItemForm({ ...itemForm, costPerUnit: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowItemModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+            >
+              Add Item
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* EDIT STOCK ITEM MODAL */}
-      {showEditModal && selectedItemForEdit && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Edit Inventory Item</h3>
-                <p className="text-xs text-[#5B6470]">Update raw ingredient details and thresholds</p>
-              </div>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateItem} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Item Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">SKU / Code</label>
-                  <input
-                    type="text"
-                    value={editForm.sku}
-                    onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">Unit of Measure *</label>
-                  <select
-                    value={editForm.unit}
-                    onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  >
-                    {INVENTORY_UNITS.map((u) => (
-                      <option key={u.value} value={u.value}>
-                        {u.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Current Stock</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editForm.currentStock}
-                    onChange={(e) => setEditForm({ ...editForm, currentStock: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editForm.minStockThreshold}
-                    onChange={(e) => setEditForm({ ...editForm, minStockThreshold: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editForm.costPerUnit}
-                    onChange={(e) => setEditForm({ ...editForm, costPerUnit: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showEditModal && Boolean(selectedItemForEdit)}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Inventory Item"
+        subtitle="Update raw ingredient details and thresholds"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleUpdateItem} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Item Name *</label>
+            <input
+              type="text"
+              required
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">SKU / Code</label>
+              <input
+                type="text"
+                value={editForm.sku}
+                onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Unit of Measure *</label>
+              <select
+                value={editForm.unit}
+                onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              >
+                {INVENTORY_UNITS.map((u) => (
+                  <option key={u.value} value={u.value}>
+                    {u.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Current Stock</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.currentStock}
+                onChange={(e) => setEditForm({ ...editForm, currentStock: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.minStockThreshold}
+                onChange={(e) => setEditForm({ ...editForm, minStockThreshold: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.costPerUnit}
+                onChange={(e) => setEditForm({ ...editForm, costPerUnit: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ADJUST STOCK MODAL */}
-      {showAdjustModal && selectedItemForAdjust && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Adjust Inventory Stock</h3>
-                <p className="text-xs text-[#5B6470]">
-                  Current Balance: <span className="font-bold text-[#16A34A]">
-                    {Number(selectedItemForAdjust.currentStock) % 1 === 0 ? Number(selectedItemForAdjust.currentStock) : Number(selectedItemForAdjust.currentStock).toFixed(2)} {selectedItemForAdjust.unit}
-                  </span>
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={adjustLoading}
-                onClick={() => !adjustLoading && setShowAdjustModal(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB] disabled:opacity-50"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAdjustStock} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Quantity Adjustment (positive to add, negative to deduct) *
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  placeholder="+10 or -5"
-                  value={adjustQuantity}
-                  onChange={(e) => setAdjustQuantity(e.target.value)}
-                  disabled={adjustLoading}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Reason *</label>
-                <select
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  disabled={adjustLoading}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
-                >
-                  <option value="Purchase Inward Receipt">Purchase Inward Receipt</option>
-                  <option value="Physical Inventory Audit / Reconciliation">Physical Inventory Audit / Reconciliation</option>
-                  <option value="Damaged / Broken">Damaged / Broken</option>
-                  <option value="Expired Shelf Life">Expired Shelf Life</option>
-                  <option value="Manual Correction">Manual Correction</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Audit Notes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Month-end count correction"
-                  value={adjustNotes}
-                  onChange={(e) => setAdjustNotes(e.target.value)}
-                  disabled={adjustLoading}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  disabled={adjustLoading}
-                  onClick={() => setShowAdjustModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937] disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={adjustLoading}
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20 disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {adjustLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{adjustLoading ? 'Adjusting...' : 'Confirm Adjustment'}</span>
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showAdjustModal && Boolean(selectedItemForAdjust)}
+        onClose={() => !adjustLoading && setShowAdjustModal(false)}
+        title="Adjust Inventory Stock"
+        subtitle={
+          selectedItemForAdjust ? (
+            <span>
+              Current Balance: <strong className="text-emerald-700 font-mono tabular-nums">
+                {Number(selectedItemForAdjust.currentStock) % 1 === 0 ? Number(selectedItemForAdjust.currentStock) : Number(selectedItemForAdjust.currentStock).toFixed(2)} {selectedItemForAdjust.unit}
+              </strong>
+            </span>
+          ) : undefined
+        }
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleAdjustStock} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+              Quantity Adjustment (positive to add, negative to deduct) *
+            </label>
+            <input
+              type="number"
+              step="any"
+              required
+              placeholder="+10 or -5"
+              value={adjustQuantity}
+              onChange={(e) => setAdjustQuantity(e.target.value)}
+              disabled={adjustLoading}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+            />
           </div>
-        </div>
-      )}
 
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Reason *</label>
+            <select
+              value={adjustReason}
+              onChange={(e) => setAdjustReason(e.target.value)}
+              disabled={adjustLoading}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+            >
+              <option value="Purchase Inward Receipt">Purchase Inward Receipt</option>
+              <option value="Physical Inventory Audit / Reconciliation">Physical Inventory Audit / Reconciliation</option>
+              <option value="Damaged / Broken">Damaged / Broken</option>
+              <option value="Expired Shelf Life">Expired Shelf Life</option>
+              <option value="Manual Correction">Manual Correction</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Audit Notes</label>
+            <input
+              type="text"
+              placeholder="e.g. Month-end count correction"
+              value={adjustNotes}
+              onChange={(e) => setAdjustNotes(e.target.value)}
+              disabled={adjustLoading}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={adjustLoading}
+              onClick={() => setShowAdjustModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={adjustLoading}
+            >
+              {adjustLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+              <span>{adjustLoading ? 'Adjusting...' : 'Confirm Adjustment'}</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* LOG WASTAGE MODAL */}
-      {showWastageModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Log Spoilage / Food Wastage</h3>
-                <p className="text-xs text-[#5B6470]">Record kitchen waste to maintain accurate stock and cost tracking</p>
-              </div>
-              <button
-                onClick={() => setShowWastageModal(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleLogWastage} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Raw Ingredient *</label>
-                <select
-                  required
-                  value={wastageForm.inventoryItemId}
-                  onChange={(e) => setWastageForm({ ...wastageForm, inventoryItemId: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                >
-                  {items.map((it) => (
-                    <option key={it.id} value={it.id}>
-                      {it.name} (Stock: {it.currentStock} {it.unit})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">Quantity Lost *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    required
-                    value={wastageForm.quantity}
-                    onChange={(e) => setWastageForm({ ...wastageForm, quantity: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1">Reason</label>
-                  <select
-                    value={wastageForm.reason}
-                    onChange={(e) => setWastageForm({ ...wastageForm, reason: e.target.value })}
-                    className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                  >
-                    <option value="SPOILAGE">Spoiled / Rotten</option>
-                    <option value="EXPIRATION">Expired Shelf Date</option>
-                    <option value="PREPARATION_ERROR">Kitchen Prep Burn / Error</option>
-                    <option value="SPILLAGE">Spilled / Dropped</option>
-                    <option value="OVERPRODUCTION">Unsold Overproduction</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">Incident Notes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Refrigerator temperature failure overnight"
-                  value={wastageForm.notes}
-                  onChange={(e) => setWastageForm({ ...wastageForm, notes: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  onClick={() => setShowWastageModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-rose-950/20"
-                >
-                  Record Wastage
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showWastageModal}
+        onClose={() => setShowWastageModal(false)}
+        title="Log Spoilage / Food Wastage"
+        subtitle="Record kitchen waste to maintain accurate stock and cost tracking"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleLogWastage} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Raw Ingredient *</label>
+            <select
+              required
+              value={wastageForm.inventoryItemId}
+              onChange={(e) => setWastageForm({ ...wastageForm, inventoryItemId: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+            >
+              {items.map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.name} (Stock: {Number(it.currentStock).toFixed(1)} {it.unit})
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Quantity Lost *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={wastageForm.quantity}
+                onChange={(e) => setWastageForm({ ...wastageForm, quantity: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Reason</label>
+              <select
+                value={wastageForm.reason}
+                onChange={(e) => setWastageForm({ ...wastageForm, reason: e.target.value })}
+                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              >
+                <option value="SPOILAGE">Spoiled / Rotten</option>
+                <option value="EXPIRATION">Expired Shelf Date</option>
+                <option value="PREPARATION_ERROR">Kitchen Prep Burn / Error</option>
+                <option value="SPILLAGE">Spilled / Dropped</option>
+                <option value="OVERPRODUCTION">Unsold Overproduction</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Incident Notes</label>
+            <input
+              type="text"
+              placeholder="e.g. Refrigerator temperature failure overnight"
+              value={wastageForm.notes}
+              onChange={(e) => setWastageForm({ ...wastageForm, notes: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowWastageModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+            >
+              Record Wastage
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

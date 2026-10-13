@@ -7,6 +7,7 @@ import { Button } from './Button';
  * - Subtle circular/curated icon container
  * - Clear title & supportive subtitle
  * - Optional CTA button
+ * - Proper theme awareness in Light and Dark mode
  */
 export function EmptyState({
   icon: Icon,
@@ -21,21 +22,21 @@ export function EmptyState({
   return (
     <div
       className={`
-        flex flex-col items-center justify-center text-center bg-white border border-[#E5D8C6] rounded-2xl
+        flex flex-col items-center justify-center text-center bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl transition-colors duration-200
         ${compact ? 'p-6 sm:p-8' : 'p-8 sm:p-12'}
         ${className}
       `}
     >
       {Icon && (
-        <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#E5D8C6] flex items-center justify-center text-[#92400E] mb-3.5 shadow-2xs">
+        <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center text-[#92400E] dark:text-[#D97706] mb-3.5 shadow-2xs">
           <Icon className="w-7 h-7" />
         </div>
       )}
 
-      <h3 className="heading-card text-[#1F2937] tracking-tight">{title}</h3>
+      <h3 className="heading-card text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">{title}</h3>
 
       {description && (
-        <p className="text-xs sm:text-sm text-[#5B6470] mt-1.5 max-w-sm leading-relaxed">
+        <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-1.5 max-w-sm leading-relaxed">
           {description}
         </p>
       )}

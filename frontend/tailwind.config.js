@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -20,6 +21,7 @@ export default {
           text: '#1F2937',
           muted: '#5B6470',
           disabled: '#9CA3AF',
+          soft: '#F7F3EC',
           primary: '#92400E',
           'primary-hover': '#78350F',
           secondary: '#D97706',
@@ -50,6 +52,7 @@ export default {
         surface: {
           DEFAULT: '#E7DCCB',
           light: '#FAF7F2',
+          soft: '#F7F3EC',
           card: '#FFFFFF',
           border: '#E5D8C6',
           hover: '#F1E8DB',

@@ -36,6 +36,9 @@ export const validateCreateMenuItem = (data) => {
   if (data?.dietary !== undefined && data.dietary !== null && !supportedDietary.includes(data.dietary)) {
     errors.push(`dietary must be one of ${supportedDietary.join(', ')}`);
   }
+  if (data?.imageUrl !== undefined && data.imageUrl !== null && typeof data.imageUrl !== 'string') {
+    errors.push('imageUrl must be a string or null');
+  }
   return { isValid: errors.length === 0, errors };
 };
 
@@ -52,7 +55,10 @@ export const validateUpdateMenuItem = (data) => {
   if (data?.dietary !== undefined && data.dietary !== null && !supportedDietary.includes(data.dietary)) {
     errors.push(`dietary must be one of ${supportedDietary.join(', ')}`);
   }
-  if (!Object.keys(data || {}).some((key) => ['name', 'description', 'price', 'categoryId', 'isAvailable', 'dietary'].includes(key))) errors.push('At least one supported field is required');
+  if (data?.imageUrl !== undefined && data.imageUrl !== null && typeof data.imageUrl !== 'string') {
+    errors.push('imageUrl must be a string or null');
+  }
+  if (!Object.keys(data || {}).some((key) => ['name', 'description', 'price', 'categoryId', 'isAvailable', 'dietary', 'imageUrl', 'removeImage'].includes(key))) errors.push('At least one supported field is required');
   return { isValid: errors.length === 0, errors };
 };
 

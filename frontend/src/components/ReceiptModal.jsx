@@ -47,25 +47,25 @@ export default function ReceiptModal({ bill, onClose }) {
   const paidAt = (isPaid || isPartiallyPaid) ? (latestPayment?.createdAt || bill.updatedAt) : null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header Actions */}
-        <div className="p-4 border-b border-[#E5D8C6] flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[#92400E] font-semibold text-sm">
+        <div className="p-4 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[#92400E] dark:text-[#D97706] font-semibold text-sm">
             <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
             <span>Tax Invoice / Receipt</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
             </button>
             <button
               onClick={onClose}
-              className="text-[#5B6470] hover:text-[#1F2937] p-1 rounded-lg transition-colors cursor-pointer"
+              className="text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] p-1.5 rounded-lg hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -73,7 +73,7 @@ export default function ReceiptModal({ bill, onClose }) {
         </div>
 
         {/* Printable Receipt Paper */}
-        <div className="p-6 overflow-y-auto flex-1 font-mono text-xs bg-[#FAF7F2]">
+        <div className="p-6 overflow-y-auto flex-1 font-mono text-xs bg-[#FAF7F2] dark:bg-[#141210]">
           <div id="printable-receipt" className="bg-white text-black p-6 rounded-lg shadow-sm border border-slate-200">
             {/* Store Header */}
             <div className="text-center pb-4 border-b border-dashed border-gray-400">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { Button, Badge, Modal, Input, EmptyState, Skeleton } from '../components/ui';
 import {
   LayoutGrid,
   Users,
@@ -37,7 +38,6 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
     try {
       const res = await posService.tables.getAll();
       if (res.success && res.data) {
-        // Backend returns paginated object or items array
         const list = Array.isArray(res.data) ? res.data : (res.data.items || []);
         setTables(list);
       }
@@ -146,36 +146,6 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return {
-          bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-          label: 'Available',
-          dot: 'bg-emerald-500',
-        };
-      case 'OCCUPIED':
-        return {
-          bg: 'bg-rose-50 text-rose-800 border-rose-200',
-          label: 'Occupied',
-          dot: 'bg-rose-500',
-        };
-      case 'RESERVED':
-        return {
-          bg: 'bg-amber-50 text-amber-900 border-amber-200',
-          label: 'Reserved',
-          dot: 'bg-amber-500',
-        };
-      case 'OUT_OF_SERVICE':
-      default:
-        return {
-          bg: 'bg-slate-50 text-slate-700 border-slate-200',
-          label: 'Out of Service',
-          dot: 'bg-slate-400',
-        };
-    }
-  };
-
   const filteredTables = tables.filter((t) => {
     const matchStatus = filterStatus === 'ALL' || t.status === filterStatus;
     const matchSearch =
@@ -195,33 +165,47 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
-            <LayoutGrid className="w-6 h-6 text-[#92400E]" />
-            <span>Table Management</span>
-          </h1>
-          <p className="text-sm text-[#5B6470] mt-0.5">
-            Manage tables and seating areas for your restaurant
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#E5D8C6] p-5 sm:p-6 rounded-2xl shadow-sandstone">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 border border-[#92400E]/20 flex items-center justify-center text-[#92400E] shrink-0 shadow-sm">
+            <LayoutGrid className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight">
+                Table Management
+              </h1>
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#92400E]/10 text-[#92400E] border border-[#92400E]/20 shadow-2xs">
+                Dining Floor Live
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-[#5B6470] mt-0.5 font-medium">
+              Manage dining tables, seating capacity, real-time occupancy, and cashier dispatch
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+          <Button
+            variant="secondary"
+            size="md"
             onClick={fetchTables}
             disabled={loading}
-            className="p-2.5 bg-white hover:bg-[#F1E8DB] text-[#1F2937] rounded-xl border border-[#E5D8C6] shadow-sm transition-colors cursor-pointer"
+            icon={RefreshCw}
+            loading={loading}
             title="Refresh Table Records"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
-          </button>
-          <button
+            Refresh
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#92400E]/20 cursor-pointer"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Table</span>
-          </button>
+            Add Table
+          </Button>
         </div>
       </div>
 
@@ -229,70 +213,103 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div
           onClick={() => setFilterStatus('ALL')}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setFilterStatus('ALL');
+            }
+          }}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
             filterStatus === 'ALL'
-              ? 'bg-white border-[#92400E] ring-1 ring-[#92400E] shadow-sm'
-              : 'bg-white border-[#E5D8C6] hover:border-[#92400E] shadow-sm'
+              ? 'bg-white border-[#92400E] ring-2 ring-[#92400E] shadow-sandstone'
+              : 'bg-white border-[#E5D8C6] hover:border-[#92400E]/60 shadow-sandstone'
           }`}
         >
-          <div className="text-xs font-semibold text-[#5B6470]">Total Tables</div>
-          <div className="text-2xl font-extrabold text-[#1F2937] mt-1">{summary.total}</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-[#5B6470]">Total Tables</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-[#1F2937] font-mono tabular-nums mt-1">{summary.total}</div>
         </div>
 
         <div
           onClick={() => setFilterStatus('AVAILABLE')}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setFilterStatus('AVAILABLE');
+            }
+          }}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
             filterStatus === 'AVAILABLE'
-              ? 'bg-emerald-50/70 border-emerald-400 ring-1 ring-emerald-400 shadow-sm'
-              : 'bg-white border-[#E5D8C6] hover:border-emerald-300 shadow-sm'
+              ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500 shadow-sandstone'
+              : 'bg-white border-[#E5D8C6] hover:border-emerald-300 shadow-sandstone'
           }`}
         >
-          <div className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             Available
           </div>
-          <div className="text-2xl font-extrabold text-emerald-800 mt-1">{summary.available}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-800 font-mono tabular-nums mt-1">{summary.available}</div>
         </div>
 
         <div
           onClick={() => setFilterStatus('OCCUPIED')}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setFilterStatus('OCCUPIED');
+            }
+          }}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${
             filterStatus === 'OCCUPIED'
-              ? 'bg-rose-50/70 border-rose-400 ring-1 ring-rose-400 shadow-sm'
-              : 'bg-white border-[#E5D8C6] hover:border-rose-300 shadow-sm'
+              ? 'bg-rose-50/70 border-rose-500 ring-2 ring-rose-500 shadow-sandstone'
+              : 'bg-white border-[#E5D8C6] hover:border-rose-300 shadow-sandstone'
           }`}
         >
-          <div className="text-xs font-semibold text-rose-800 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
             Occupied
           </div>
-          <div className="text-2xl font-extrabold text-rose-800 mt-1">{summary.occupied}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-rose-800 font-mono tabular-nums mt-1">{summary.occupied}</div>
         </div>
 
         <div
           onClick={() => setFilterStatus('RESERVED')}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setFilterStatus('RESERVED');
+            }
+          }}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
             filterStatus === 'RESERVED'
-              ? 'bg-amber-50/70 border-amber-400 ring-1 ring-amber-400 shadow-sm'
-              : 'bg-white border-[#E5D8C6] hover:border-amber-300 shadow-sm'
+              ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-500 shadow-sandstone'
+              : 'bg-white border-[#E5D8C6] hover:border-amber-300 shadow-sandstone'
           }`}
         >
-          <div className="text-xs font-semibold text-amber-900 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
             Reserved
           </div>
-          <div className="text-2xl font-extrabold text-amber-900 mt-1">{summary.reserved}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 font-mono tabular-nums mt-1">{summary.reserved}</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-[#E5D8C6] shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E5D8C6] shadow-sandstone">
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {['ALL', 'AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE'].map((status) => (
             <button
               key={status}
+              type="button"
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
                 filterStatus === status
                   ? 'bg-[#92400E] text-white shadow-sm'
                   : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
@@ -312,83 +329,86 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
         </div>
 
         <div className="relative w-full sm:w-64 shrink-0">
-          <Search className="w-3.5 h-3.5 text-[#5B6470] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by table number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E]"
+            className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-10 pr-3.5 py-2 text-xs sm:text-sm text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
           />
         </div>
       </div>
 
       {/* Tables Grid */}
       {loading ? (
-        <div className="h-64 flex flex-col items-center justify-center gap-3 bg-white border border-[#E5D8C6] rounded-2xl shadow-sm">
-          <RefreshCw className="w-8 h-8 text-[#92400E] animate-spin" />
-          <span className="text-sm text-[#5B6470]">Loading tables from database...</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="bg-white border border-[#E5D8C6] rounded-2xl p-5 shadow-sandstone space-y-3">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-20" />
+              <div className="pt-3 border-t border-[#E5D8C6]/50">
+                <Skeleton className="h-9 w-full rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredTables.length === 0 ? (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-12 text-center shadow-sm">
-          <LayoutGrid className="w-12 h-12 text-[#E7DCCB] mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-[#1F2937]">No Tables Found</h3>
-          <p className="text-xs text-[#5B6470] mt-1 max-w-sm mx-auto">
-            {tables.length === 0
-              ? 'No dining tables created yet. Click "Add Table" to get started.'
-              : 'No tables match the current search or status filter.'}
-          </p>
-          {tables.length === 0 && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="mt-4 inline-flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white font-semibold text-xs px-4 py-2 rounded-xl shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add First Table
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={LayoutGrid}
+          title="No Tables Found"
+          description={
+            tables.length === 0
+              ? 'No dining tables created yet. Click "Add Table" to configure your restaurant layout.'
+              : 'No tables match the current search or status filter.'
+          }
+          actionLabel={tables.length === 0 ? 'Add First Table' : undefined}
+          onAction={tables.length === 0 ? () => setShowAddModal(true) : undefined}
+          actionIcon={Plus}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredTables.map((table) => {
-            const badge = getStatusBadge(table.status);
             const activeOrder = table.activeOrders?.[0] || table.orders?.[0];
 
             return (
               <div
                 key={table.id}
-                className={`bg-white border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 group ${
+                className={`bg-white border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-sandstone card-hover group ${
                   table.status === 'OCCUPIED'
-                    ? 'border-rose-200 bg-rose-50/20'
+                    ? 'border-rose-200 bg-rose-50/15'
                     : table.status === 'AVAILABLE'
-                    ? 'border-emerald-200 bg-emerald-50/20'
-                    : 'border-[#E5D8C6] hover:border-[#92400E]'
+                    ? 'border-emerald-200 bg-emerald-50/15'
+                    : 'border-[#E5D8C6]'
                 }`}
               >
                 {/* Table Header & Seating Info */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-[#1F2937] text-lg group-hover:text-[#92400E] transition-colors">
+                    <span className="font-extrabold text-[#1F2937] text-lg tracking-tight group-hover:text-[#92400E] transition-colors">
                       {table.tableNumber.toLowerCase().startsWith('table')
                         ? table.tableNumber
                         : `Table ${table.tableNumber}`}
                     </span>
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${badge.bg}`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
-                      {badge.label}
-                    </span>
+                    <Badge
+                      variant={table.status}
+                      status={table.status.replace('_', ' ')}
+                      size="sm"
+                    />
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-[#5B6470] mb-4 font-medium">
+                  <div className="flex items-center gap-3 text-xs text-[#5B6470] mb-4 font-medium">
                     <span className="flex items-center gap-1.5">
                       <Users className="w-3.5 h-3.5 text-[#92400E]" />
-                      <span className="font-semibold text-[#1F2937]">{table.capacity} Seats</span>
+                      <span className="font-bold text-[#1F2937] tabular-nums">{table.capacity} Seats</span>
                     </span>
                     {activeOrder && (
                       <>
                         <span className="text-[#E5D8C6]">•</span>
-                        <span className="text-rose-700 font-semibold truncate max-w-[120px]">
+                        <span className="text-rose-700 font-semibold truncate max-w-[120px] font-mono">
                           {activeOrder.orderNumber}
                         </span>
                       </>
@@ -400,31 +420,35 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                 <div className="space-y-2 pt-3 border-t border-[#E5D8C6]">
                   {/* Order Workflow Buttons */}
                   {table.status === 'AVAILABLE' ? (
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                      className="w-full flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-colors shadow-sm cursor-pointer"
+                      className="w-full"
+                      icon={ShoppingBag}
                     >
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>Take Order</span>
-                    </button>
+                      Take Order
+                    </Button>
                   ) : table.status === 'OCCUPIED' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                        className="flex items-center justify-center gap-1 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] border border-[#E5D8C6] text-xs font-semibold py-2 px-2 rounded-xl transition-colors cursor-pointer"
+                        icon={ShoppingBag}
                         title="Add items to existing order"
                       >
-                        <ShoppingBag className="w-3 h-3 text-[#92400E]" />
-                        <span>Add Items</span>
-                      </button>
-                      <button
+                        Add Items
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
-                        className="flex items-center justify-center gap-1 bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold py-2 px-2 rounded-xl transition-colors shadow-sm cursor-pointer"
+                        icon={Receipt}
                         title="Go to billing & payment"
                       >
-                        <Receipt className="w-3 h-3" />
-                        <span>Checkout</span>
-                      </button>
+                        Checkout
+                      </Button>
                     </div>
                   ) : null}
 
@@ -433,7 +457,8 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                     <select
                       value={table.status}
                       onChange={(e) => handleStatusChange(table.id, e.target.value)}
-                      className="text-[11px] bg-[#FAF7F2] border border-[#E5D8C6] text-[#1F2937] rounded-lg px-2 py-1 focus:outline-none focus:border-[#92400E] cursor-pointer"
+                      aria-label={`Status for ${table.tableNumber}`}
+                      className="text-xs bg-[#FAF7F2] border border-[#E5D8C6] text-[#1F2937] font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#92400E] cursor-pointer"
                     >
                       <option value="AVAILABLE">Available</option>
                       <option value="OCCUPIED">Occupied</option>
@@ -443,15 +468,19 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
 
                     <div className="flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => handleEditTable(table)}
-                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] transition-colors cursor-pointer"
+                        aria-label={`Edit ${table.tableNumber}`}
+                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
                         title="Edit Table"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteTable(table.id, table.tableNumber)}
-                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#EF4444] hover:bg-rose-50 transition-colors cursor-pointer"
+                        aria-label={`Delete ${table.tableNumber}`}
+                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#EF4444] hover:bg-rose-50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#EF4444]"
                         title="Delete Table"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -466,177 +495,123 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
       )}
 
       {/* ADD TABLE MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Add New Table</h3>
-                <p className="text-xs text-[#5B6470]">Create a table for your restaurant</p>
-              </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Table"
+        subtitle="Create a dining table for your restaurant layout"
+      >
+        <form onSubmit={handleCreateTable} className="space-y-4">
+          <Input
+            label="Table Number / Name"
+            required
+            placeholder="e.g. Table 1, T2, 101"
+            value={addForm.tableNumber}
+            onChange={(e) => setAddForm({ ...addForm, tableNumber: e.target.value })}
+          />
 
-            <form onSubmit={handleCreateTable} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Table Number / Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Table 1, T2, 101"
-                  value={addForm.tableNumber}
-                  onChange={(e) => setAddForm({ ...addForm, tableNumber: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
+          <Input
+            label="Seating Capacity (Guests)"
+            type="number"
+            min="1"
+            max="100"
+            required
+            value={addForm.capacity}
+            onChange={(e) => setAddForm({ ...addForm, capacity: e.target.value })}
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Seating Capacity (Guests) *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  required
-                  value={addForm.capacity}
-                  onChange={(e) => setAddForm({ ...addForm, capacity: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Initial Status
-                </label>
-                <select
-                  value={addForm.status}
-                  onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="OCCUPIED">Occupied</option>
-                  <option value="RESERVED">Reserved</option>
-                  <option value="OUT_OF_SERVICE">Out of Service</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20 cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Creating...' : 'Create Table'}
-                </button>
-              </div>
-            </form>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-[#1F2937]">Initial Status</label>
+            <select
+              value={addForm.status}
+              onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="OCCUPIED">Occupied</option>
+              <option value="RESERVED">Reserved</option>
+              <option value="OUT_OF_SERVICE">Out of Service</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowAddModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={submitting}
+              loading={submitting}
+            >
+              Create Table
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* EDIT TABLE MODAL */}
-      {showEditModal && editingTable && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E5D8C6] rounded-2xl w-full max-w-md p-6 shadow-2xl animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5D8C6]">
-              <div>
-                <h3 className="text-lg font-bold text-[#1F2937]">Edit Table</h3>
-                <p className="text-xs text-[#5B6470]">Update table details and seating capacity</p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditingTable(null);
-                }}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        isOpen={showEditModal && Boolean(editingTable)}
+        onClose={() => setShowEditModal(false)}
+        title={`Edit ${editingTable?.tableNumber}`}
+        subtitle="Update table details, seating capacity, and status"
+      >
+        <form onSubmit={handleUpdateTable} className="space-y-4">
+          <Input
+            label="Table Number / Name"
+            required
+            value={editForm.tableNumber}
+            onChange={(e) => setEditForm({ ...editForm, tableNumber: e.target.value })}
+          />
 
-            <form onSubmit={handleUpdateTable} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Table Number / Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.tableNumber}
-                  onChange={(e) => setEditForm({ ...editForm, tableNumber: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
+          <Input
+            label="Seating Capacity (Guests)"
+            type="number"
+            min="1"
+            max="100"
+            required
+            value={editForm.capacity}
+            onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
+          />
 
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Seating Capacity (Guests) *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  required
-                  value={editForm.capacity}
-                  onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1">
-                  Status
-                </label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
-                >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="OCCUPIED">Occupied</option>
-                  <option value="RESERVED">Reserved</option>
-                  <option value="OUT_OF_SERVICE">Out of Service</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingTable(null);
-                  }}
-                  className="px-4 py-2 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20 cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-[#1F2937]">Table Status</label>
+            <select
+              value={editForm.status}
+              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="OCCUPIED">Occupied</option>
+              <option value="RESERVED">Reserved</option>
+              <option value="OUT_OF_SERVICE">Out of Service</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={submitting}
+              loading={submitting}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

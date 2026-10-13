@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
@@ -39,6 +40,7 @@ import ReportsView from './views/ReportsView';
 import StaffView from './views/StaffView';
 import SettingsView from './views/SettingsView';
 import RestaurantAdminDashboardView from './views/RestaurantAdminDashboardView';
+import ReceptionistDashboardView from './views/ReceptionistDashboardView';
 
 import { UtensilsCrossed, RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -230,12 +232,12 @@ function PosDashboard() {
   // 1. Loading Workspace State
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-[#FAF7F2] flex flex-col items-center justify-center gap-4">
+      <div className="h-screen w-screen bg-[#FAF7F2] dark:bg-[#141210] flex flex-col items-center justify-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#92400E] to-[#D97706] flex items-center justify-center shadow-xl shadow-[#92400E]/20 animate-pulse">
           <UtensilsCrossed className="w-8 h-8 text-white" />
         </div>
-        <div className="flex items-center gap-2 text-[#5B6470] text-sm font-medium">
-          <RefreshCw className="w-4 h-4 animate-spin text-[#92400E]" />
+        <div className="flex items-center gap-2 text-[#5B6470] dark:text-[#A89B8C] text-sm font-medium">
+          <RefreshCw className="w-4 h-4 animate-spin text-[#92400E] dark:text-[#D97706]" />
           <span>Loading your workspace...</span>
         </div>
       </div>
@@ -393,7 +395,10 @@ function PosDashboard() {
 
     // Receptionist Views
     if (role === ROLES.RECEPTIONIST) {
-      if (activeTab === 'billing' || activeTab === 'dashboard') {
+      if (activeTab === 'dashboard') {
+        return <ReceptionistDashboardView setActiveTab={navigateTab} />;
+      }
+      if (activeTab === 'billing') {
         return <BillingView preSelectedTable={selectedTable} />;
       }
       if (activeTab === 'floor') {
@@ -444,7 +449,7 @@ function PosDashboard() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#FAF7F2] text-[#1F2937] overflow-hidden font-sans">
+    <div className="h-screen w-screen flex flex-col bg-[#FAF7F2] dark:bg-[#141210] text-[#1F2937] dark:text-[#F7F3EC] overflow-hidden font-sans">
       <Navbar
         activeTab={activeTab}
         setActiveTab={navigateTab}
@@ -467,7 +472,7 @@ function PosDashboard() {
           setMobileOpen={setMobileSidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] min-w-0">
+        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] dark:bg-[#141210] min-w-0">
           <ErrorBoundary onReset={() => navigateTab(ROLE_CONFIG[normalizeRole(role)]?.defaultTab || 'dashboard')}>
             {renderMainContent()}
           </ErrorBoundary>
@@ -482,9 +487,11 @@ function PosDashboard() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <PosDashboard />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <PosDashboard />
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

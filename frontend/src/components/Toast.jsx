@@ -26,7 +26,7 @@ export default function Toast() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-3 p-4 rounded-xl bg-white border border-[#E5D8C6] shadow-lg text-[#1F2937] pointer-events-auto transition-all duration-200 animate-slide-in ${
+          className={`flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] shadow-lg text-[#1F2937] dark:text-[#F7F3EC] pointer-events-auto transition-all duration-200 animate-slide-in ${
             borderStyles[toast.type] || borderStyles.info
           }`}
         >
@@ -34,7 +34,7 @@ export default function Toast() {
           <div className="flex-1 text-sm font-medium leading-snug">{toast.message}</div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="text-[#5B6470] hover:text-[#1F2937] transition-colors p-0.5 rounded cursor-pointer"
+            className="text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] transition-colors p-0.5 rounded cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

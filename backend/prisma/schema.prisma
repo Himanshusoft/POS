@@ -225,6 +225,7 @@ model MenuItem {
   name         String
   description  String?
   price        Decimal       @db.Decimal(10, 2)
+  imageUrl     String?
   isAvailable  Boolean       @default(true)
   dietary      String?
   createdAt    DateTime      @default(now())
