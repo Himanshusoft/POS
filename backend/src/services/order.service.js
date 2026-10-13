@@ -1,6 +1,7 @@
 import { prisma } from '../config/env.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { validateOrderInventory } from './inventoryAvailability.service.js';
 
 export const createOrder = async (restaurantId, waiterId, data) => {
   return await serializableTransaction(prisma, async (tx) => {
@@ -50,17 +51,13 @@ export const createOrder = async (restaurantId, waiterId, data) => {
       });
     }
 
-    // 2. Validate menu items and pricing
+    // 2. Validate menu items and inventory availability
+    await validateOrderInventory(tx, restaurantId, data.items);
+
     const menuItemIds = data.items.map((i) => i.menuItemId);
     const menuItems = await tx.menuItem.findMany({
       where: { id: { in: menuItemIds }, restaurantId },
     });
-
-    if (menuItems.length !== menuItemIds.length) {
-      const error = new Error('One or more menu items are invalid or not found');
-      error.statusCode = 400;
-      throw error;
-    }
 
     const itemMap = new Map(menuItems.map((m) => [m.id, m]));
 
@@ -260,16 +257,13 @@ export const addItemsToExistingOrder = async (tx, restaurantId, orderId, items, 
     throw error;
   }
 
+  // Validate menu items and inventory availability
+  await validateOrderInventory(tx, restaurantId, items);
+
   const menuItemIds = items.map((i) => i.menuItemId);
   const menuItems = await tx.menuItem.findMany({
     where: { id: { in: menuItemIds }, restaurantId },
   });
-
-  if (menuItems.length !== menuItemIds.length) {
-    const error = new Error('One or more menu items are invalid or not found');
-    error.statusCode = 400;
-    throw error;
-  }
 
   const itemMap = new Map(menuItems.map((m) => [m.id, m]));
 
@@ -503,6 +497,13 @@ export const updateOrderStatus = async (restaurantId, orderId, nextStatus) => {
   throw error;
 };
 
+export const validateCartAvailability = async (restaurantId, items) => {
+  return await prisma.$transaction(async (tx) => {
+    await validateOrderInventory(tx, restaurantId, items);
+    return { isValid: true };
+  });
+};
+
 export default {
   createOrder,
   getOrders,
@@ -516,4 +517,5 @@ export default {
   markServed,
   sendToKitchen,
   updateOrderStatus,
+  validateCartAvailability,
 };

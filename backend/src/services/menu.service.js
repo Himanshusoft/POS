@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { evaluateMenuItemAvailability } from './inventoryAvailability.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,7 +174,7 @@ export const getMenuItems = async (restaurantId, filters = {}) => {
     where.name = { contains: String(filters.search), mode: 'insensitive' };
   }
 
-  return await findManyPaginated(prisma.menuItem, {
+  const result = await findManyPaginated(prisma.menuItem, {
       where,
       include: {
         category: true,
@@ -181,6 +182,18 @@ export const getMenuItems = async (restaurantId, filters = {}) => {
       },
       orderBy: { name: 'asc' },
   }, filters);
+
+  result.items = result.items.map((item) => {
+    const availability = evaluateMenuItemAvailability(item, 1);
+    return {
+      ...item,
+      inventoryAvailability: availability,
+      isOrderable: availability.isOrderable,
+      maxOrderableQuantity: availability.maxOrderableQuantity,
+    };
+  });
+
+  return result;
 };
 
 export const getMenuItemById = async (restaurantId, id) => {
@@ -202,7 +215,14 @@ export const getMenuItemById = async (restaurantId, id) => {
     error.statusCode = 404;
     throw error;
   }
-  return item;
+
+  const availability = evaluateMenuItemAvailability(item, 1);
+  return {
+    ...item,
+    inventoryAvailability: availability,
+    isOrderable: availability.isOrderable,
+    maxOrderableQuantity: availability.maxOrderableQuantity,
+  };
 };
 
 export const updateMenuItem = async (restaurantId, id, data) => {

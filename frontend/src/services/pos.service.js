@@ -73,6 +73,7 @@ export const posService = {
     sendToKitchen: (id) => api.post(`/orders/${id}/send-to-kitchen`),
     requestBill: (id) => api.post(`/orders/${id}/request-bill`),
     cancelBillRequest: (id) => api.post(`/orders/${id}/cancel-bill-request`),
+    validateCart: (items) => api.post('/orders/validate-cart', { items }),
   },
 
   // Waiter Operations

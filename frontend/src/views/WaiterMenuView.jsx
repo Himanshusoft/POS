@@ -7,8 +7,11 @@ import {
   UtensilsCrossed,
   Search,
   CheckCircle2,
-  XCircle
+  XCircle,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
+import { getItemAvailability } from '../utils/inventoryValidation';
 
 /**
  * MenuItemImage helper:
@@ -187,13 +190,19 @@ export default function WaiterMenuView() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredItems.map((item) => {
-            const isAvail = item.isAvailable;
+            const availability = getItemAvailability(item, 1);
+            const isOrderable = availability.isOrderable;
             const categoryName = categories.find((c) => c.id === item.categoryId)?.name || 'General';
 
             return (
               <div
                 key={item.id}
-                className="bg-white border border-[#E5D8C6] hover:border-[#92400E] rounded-2xl p-5 shadow-sandstone hover:shadow-sandstone-md hover:-translate-y-0.5 flex flex-col justify-between transition group"
+                className={`bg-white border rounded-2xl p-5 shadow-sandstone transition flex flex-col justify-between group ${
+                  !isOrderable
+                    ? 'opacity-80 border-[#E5D8C6] hover:border-amber-400/60'
+                    : 'border-[#E5D8C6] hover:border-[#92400E] hover:shadow-sandstone-md hover:-translate-y-0.5'
+                }`}
+                title={!isOrderable ? availability.reasonMessage : undefined}
               >
                 <div>
                   {/* Food Image with fallback */}
@@ -209,19 +218,46 @@ export default function WaiterMenuView() {
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border ${
-                        isAvail
+                        !item.isAvailable
+                          ? 'bg-rose-50 text-rose-800 border-rose-200'
+                          : isOrderable
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-rose-50 text-rose-800 border-rose-200'
+                          : 'bg-amber-50 text-amber-900 border-amber-300'
                       }`}
                     >
-                      {isAvail ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                      {isAvail ? 'Available' : 'Unavailable'}
+                      {!item.isAvailable ? (
+                        <>
+                          <XCircle className="w-3 h-3 text-rose-600" />
+                          86 Out
+                        </>
+                      ) : isOrderable ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Available
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-3 h-3 text-amber-600" />
+                          {availability.reasonCode === 'NO_RECIPE' ? 'No Recipe' : 'Insufficient Stock'}
+                        </>
+                      )}
                     </span>
                   </div>
 
                   <h3 className="font-bold text-[#1F2937] text-sm group-hover:text-[#92400E] transition line-clamp-1">
                     {item.name}
                   </h3>
+
+                  {/* Prominent explanation when item is not orderable */}
+                  {!isOrderable && (
+                    <div className="bg-amber-50/90 border border-amber-200 rounded-lg p-1.5 mt-2 text-[11px] text-amber-900 leading-snug flex items-start gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <span className="line-clamp-2 font-medium">
+                        {availability.reasonMessage}
+                      </span>
+                    </div>
+                  )}
+
                   {item.description && (
                     <p className="text-xs text-[#5B6470] mt-1 line-clamp-2 leading-relaxed">
                       {item.description}
