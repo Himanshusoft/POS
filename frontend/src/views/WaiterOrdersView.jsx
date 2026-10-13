@@ -227,11 +227,15 @@ export default function WaiterOrdersView({ onSelectTableForOrder }) {
                                 : 'text-[#92400E]'
                             }`}
                           >
-                            {o.bill.status} ({currency}
+                            {o.bill.status === 'PAID' ? 'PAID' : 'Bill Ready'} ({currency}
                             {Number(o.bill.totalAmount).toFixed(2)})
                           </span>
+                        ) : isServed ? (
+                          <span className="text-amber-800 font-semibold text-[11px]">Waiting for Receptionist</span>
+                        ) : isCompleted ? (
+                          <span className="text-emerald-800 font-semibold text-[11px]">Settled</span>
                         ) : (
-                          <span className="text-[#9CA3AF] text-[11px]">Unbilled</span>
+                          <span className="text-[#9CA3AF] text-[11px]">Locked until order is served</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-[#5B6470] text-[11px] whitespace-nowrap font-mono tabular-nums">

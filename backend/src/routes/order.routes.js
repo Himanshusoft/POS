@@ -17,14 +17,14 @@ router.use(validateQuery);
 router.get('/active', orderController.getActiveOrders);
 router.get('/', orderController.getOrders);
 router.get('/:id', orderController.getOrderById);
-router.post('/', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.RECEPTIONIST), validateRequest(validateCreateOrder), orderController.createOrder);
+router.post('/', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), validateRequest(validateCreateOrder), orderController.createOrder);
 router.post('/:id/items', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.addItemsToOrder);
 router.post('/:id/request-bill', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.requestBill);
 router.post('/:id/cancel-bill-request', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.RECEPTIONIST), orderController.cancelBillRequest);
 router.post('/:id/send-to-kitchen', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.sendToKitchen);
-router.patch('/:id/served', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), orderController.markServed);
-router.post('/:id/serve', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), orderController.markServed);
-router.patch('/:id/status', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), orderController.updateOrderStatus);
+router.patch('/:id/served', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.markServed);
+router.post('/:id/serve', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.markServed);
+router.patch('/:id/status', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.updateOrderStatus);
 router.patch('/:id/cancel', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), orderController.cancelOrder);
 router.patch('/:id', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), validateRequest(validateOrderUpdate), orderController.updateOrder);
 

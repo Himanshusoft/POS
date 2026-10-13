@@ -8,22 +8,37 @@ import { authorizeRoles, ROLES } from '../middleware/role.middleware.js';
 import { validateRequest } from '../middleware/validation.middleware.js';
 import { validateGenerateBill } from '../validations/billing.validation.js';
 import { validateBillUpdate } from '../validations/resource.validation.js';
+import { sendError } from '../utils/response.js';
 
 const router = Router();
 validateUuidParams(router);
+
+const authorizeBillGeneration = (req, res, next) => {
+  if (!req.user || !req.user.role) {
+    return sendError(res, 401, 'User unauthenticated', { code: 'UNAUTHENTICATED' });
+  }
+  if (![ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER].includes(req.user.role)) {
+    return sendError(res, 403, 'You are not authorized to generate bills.', {
+      code: 'FORBIDDEN',
+      userRole: req.user.role,
+      requiredRoles: [ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER],
+    });
+  }
+  next();
+};
 
 router.use(authenticate);
 router.use(validateQuery);
 
 router.get('/pending-orders', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getPendingOrders);
-router.get('/order/:orderId', billingController.getBillByOrderId);
-router.get('/bills', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBills);
-router.get('/bills/:id', billingController.getBillById);
+router.get('/order/:orderId', authorizeRoles(ROLES.WAITER, ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBillByOrderId);
+router.get('/bills', authorizeRoles(ROLES.WAITER, ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBills);
+router.get('/bills/:id', authorizeRoles(ROLES.WAITER, ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBillById);
 router.get('/', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBills);
-router.get('/:id', billingController.getBillById);
-router.post('/generate', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateGenerateBill), billingController.createBill);
-router.post('/bills', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateGenerateBill), billingController.createBill);
-router.post('/', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateGenerateBill), billingController.createBill);
+router.get('/:id', authorizeRoles(ROLES.WAITER, ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBillById);
+router.post('/generate', authorizeBillGeneration, validateRequest(validateGenerateBill), billingController.createBill);
+router.post('/bills', authorizeBillGeneration, validateRequest(validateGenerateBill), billingController.createBill);
+router.post('/', authorizeBillGeneration, validateRequest(validateGenerateBill), billingController.createBill);
 router.patch('/bills/:id/deliver', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), billingController.deliverBill);
 router.post('/bills/:id/deliver', authorizeRoles(ROLES.WAITER, ROLES.RESTAURANT_OWNER), billingController.deliverBill);
 router.patch('/bills/:id', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateBillUpdate), billingController.updateBill);

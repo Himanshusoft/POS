@@ -1,8 +1,9 @@
 import { prisma } from '../config/env.js';
+import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 
 export const generateBill = async (restaurantId, receptionistId, data) => {
-  return await prisma.$transaction(async (tx) => {
+  return await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: data.orderId, restaurantId },
       include: {
@@ -18,37 +19,25 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       throw error;
     }
 
-    if (order.status === 'CANCELLED') {
-      const error = new Error('Cannot generate a bill for a cancelled order');
+    if (order.bill && order.bill.status !== 'VOID') {
+      const error = new Error('A bill has already been generated for this order.');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    if (order.status !== 'SERVED') {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!['SERVED', 'COMPLETED', 'READY'].includes(order.status) && !order.billRequested) {
-      const error = new Error('Order must be prepared and served, or have bill requested by waiter, before a bill can be generated');
-      error.statusCode = 422;
+    if (!order.items || order.items.length === 0 || order.items.some((item) => item.status !== 'SERVED')) {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
+      error.statusCode = 400;
       throw error;
     }
 
-    if (order.bill && order.bill.status !== 'VOID') {
-      return order.bill;
-    }
-
-    // Ensure order is marked SERVED and all items are SERVED once bill is being created
-    if (order.status !== 'SERVED' && order.status !== 'COMPLETED') {
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          status: 'SERVED',
-          servedAt: new Date(),
-          billRequested: false,
-        },
-      });
-      await tx.orderItem.updateMany({
-        where: { orderId: order.id, status: { not: 'SERVED' } },
-        data: { status: 'SERVED' },
-      });
-    } else if (order.billRequested) {
+    if (order.billRequested) {
       await tx.order.update({
         where: { id: order.id },
         data: { billRequested: false },
@@ -201,10 +190,7 @@ export const getPendingBillingOrders = async (restaurantId, filters = {}) => {
       where: {
         restaurantId,
         bill: null,
-        OR: [
-          { billRequested: true, status: { notIn: ['CANCELLED', 'COMPLETED'] } },
-          { status: { in: ['READY', 'SERVED', 'COMPLETED'] } },
-        ],
+        status: 'SERVED',
       },
       include: {
         table: true,
@@ -212,7 +198,7 @@ export const getPendingBillingOrders = async (restaurantId, filters = {}) => {
         items: { include: { menuItem: true } },
       },
       orderBy: [
-        { billRequested: 'desc' },
+        { servedAt: 'desc' },
         { createdAt: 'desc' },
       ],
     },

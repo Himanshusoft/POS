@@ -88,7 +88,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
         posService.billing.getBills({ limit: 100 }),
         posService.payments.getAll({ limit: 100 }),
       ]);
-      if (ordRes.success) setPendingOrders(ordRes.data?.items || (Array.isArray(ordRes.data) ? ordRes.data : []));
+      if (ordRes.success) {
+        const rawOrders = ordRes.data?.items || (Array.isArray(ordRes.data) ? ordRes.data : []);
+        setPendingOrders(rawOrders.filter((o) => o.status === 'SERVED' && !o.bill));
+      }
       if (billRes.success) setBills(billRes.data?.items || (Array.isArray(billRes.data) ? billRes.data : []));
       if (payRes.success) setPayments(payRes.data?.items || (Array.isArray(payRes.data) ? payRes.data : []));
     } catch (err) {
@@ -109,6 +112,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   }, []);
 
   const openGenerateModal = (order) => {
+    if (!order || order.status !== 'SERVED') {
+      addToast('Order is not eligible for billing. The order must be served first.', 'error');
+      return;
+    }
     setSelectedOrderForBill(order);
     setDiscountPercent(0);
     setDiscountAmount(0);
@@ -953,16 +960,17 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 z-10 bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
                   <tr>
-                    <th className="px-5 py-4">Table / Ticket</th>
+                    <th className="px-5 py-4">Table / Order ID</th>
                     <th className="px-5 py-4">Items Ordered</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Elapsed</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
+                    <th className="px-5 py-4">Order Status</th>
+                    <th className="px-5 py-4">Amount</th>
+                    <th className="px-5 py-4 text-right">Billing Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
                   {pendingOrders.map((ord) => {
                     const ordTotal = ord.items?.reduce((sum, i) => sum + Number(i.subtotal || 0), 0) || 0;
+                    const isEligible = ord.status === 'SERVED' && !ord.bill;
                     return (
                       <tr
                         key={ord.id}
@@ -998,32 +1006,27 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                               </div>
                             ))}
                           </div>
-                          <div className="text-xs font-bold text-[#92400E] dark:text-[#D97706] font-mono mt-1 tabular-nums">
-                            Total: {currency}{ordTotal.toFixed(2)}
-                          </div>
                         </td>
                         <td className="px-5 py-4">
-                          {ord.billRequested ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
-                              BILL REQUESTED
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                              {ord.status}
-                            </span>
-                          )}
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {ord.status}
+                          </span>
                         </td>
-                        <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
-                          {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <td className="px-5 py-4 font-extrabold text-[#92400E] dark:text-[#D97706] font-mono text-sm tabular-nums">
+                          {currency}{ordTotal.toFixed(2)}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <Button
-                            variant="primary"
-                            onClick={() => openGenerateModal(ord)}
-                          >
-                            <Receipt className="w-3.5 h-3.5 mr-1.5" />
-                            <span>Generate Bill</span>
-                          </Button>
+                          {isEligible ? (
+                            <Button
+                              variant="primary"
+                              onClick={() => openGenerateModal(ord)}
+                            >
+                              <Receipt className="w-3.5 h-3.5 mr-1.5" />
+                              <span>Generate Bill</span>
+                            </Button>
+                          ) : (
+                            <span className="text-[11px] text-[#5B6470]">Not eligible</span>
+                          )}
                         </td>
                       </tr>
                     );

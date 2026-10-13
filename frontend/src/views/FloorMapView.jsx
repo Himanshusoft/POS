@@ -337,20 +337,28 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
                     </button>
                   ) : table.status === 'OCCUPIED' ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                        className="flex items-center justify-center gap-1 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] border border-[#E5D8C6] text-xs font-semibold py-2 px-2 rounded-xl transition-colors cursor-pointer"
-                      >
-                        <ShoppingBag className="w-3 h-3 text-[#92400E]" />
-                        <span>Add Items</span>
-                      </button>
-                      <button
-                        onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
-                        className="flex items-center justify-center gap-1 bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold py-2 px-2 rounded-xl transition-colors shadow-sandstone cursor-pointer"
-                      >
-                        <Receipt className="w-3 h-3" />
-                        <span>Checkout</span>
-                      </button>
+                      {role !== 'RECEPTIONIST' && (
+                        <button
+                          onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
+                          className="flex items-center justify-center gap-1 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] border border-[#E5D8C6] text-xs font-semibold py-2 px-2 rounded-xl transition-colors cursor-pointer"
+                        >
+                          <ShoppingBag className="w-3 h-3 text-[#92400E]" />
+                          <span>Add Items</span>
+                        </button>
+                      )}
+                      {role !== 'WAITER' && table.orders?.some((o) => o.status === 'SERVED') ? (
+                        <button
+                          onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
+                          className="flex items-center justify-center gap-1 bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold py-2 px-2 rounded-xl transition-colors shadow-sandstone cursor-pointer"
+                        >
+                          <Receipt className="w-3 h-3" />
+                          <span>Checkout</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1 bg-slate-100 text-[#5B6470] border border-slate-200 text-[10px] font-semibold py-2 px-2 rounded-xl text-center">
+                          <span>{table.orders?.some((o) => o.status === 'SERVED') ? 'Waiting Reception' : 'Locked until served'}</span>
+                        </div>
+                      )}
                     </div>
                   ) : null}
 

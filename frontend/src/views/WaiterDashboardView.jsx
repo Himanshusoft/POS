@@ -693,13 +693,21 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                             {order.itemsSummary}
                           </p>
                         )}
-                        {order.bill && (
-                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between text-[11px]">
-                            <span className="text-[#5B6470]">Bill: #{order.bill.billNumber}</span>
+                        {order.bill ? (
+                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between items-center text-[11px]">
+                            <span className="font-semibold text-emerald-700">Bill Ready: #{order.bill.billNumber}</span>
                             <span className="font-bold text-[#92400E] font-mono tabular-nums">
                               {currency}
                               {Number(order.bill.totalAmount || 0).toFixed(2)}
                             </span>
+                          </div>
+                        ) : isServed ? (
+                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between items-center text-[11px]">
+                            <span className="font-semibold text-amber-800">Billing: Waiting for Receptionist</span>
+                          </div>
+                        ) : (
+                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between items-center text-[11px]">
+                            <span className="text-[#5B6470]">Billing: Locked until order is served.</span>
                           </div>
                         )}
                       </div>
@@ -724,31 +732,62 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         ) : (
                           <Check className="w-4 h-4 stroke-[3]" />
                         )}
-                        <span>SERVE FOOD</span>
+                        <span>SERVE CUSTOMER</span>
                       </button>
                     ) : order?.bill && !order.bill.isDelivered ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab && setActiveTab('bills')}
+                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-[#92400E]" />
+                          <span>VIEW BILL</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeliverBill(order.bill.id, t.tableNumber)}
+                          disabled={actionLoading === `deliver-${order.bill.id}`}
+                          className="min-h-[44px] py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {actionLoading === `deliver-${order.bill.id}` ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>DELIVER BILL</span>
+                        </button>
+                      </div>
+                    ) : order?.bill && order.bill.isDelivered ? (
                       <button
                         type="button"
-                        onClick={() => handleDeliverBill(order.bill.id, t.tableNumber)}
-                        disabled={actionLoading === `deliver-${order.bill.id}`}
-                        className="w-full min-h-[44px] py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        onClick={() => setActiveTab && setActiveTab('bills')}
+                        className="w-full min-h-[44px] py-2.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] text-[#1F2937] border border-[#E5D8C6] font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        {actionLoading === `deliver-${order.bill.id}` ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Receipt className="w-4 h-4" />
-                        )}
-                        <span>DELIVER BILL</span>
+                        <Receipt className="w-4 h-4 text-[#92400E]" />
+                        <span>VIEW BILL (DELIVERED)</span>
                       </button>
-                    ) : order?.billRequested && !order?.bill ? (
-                      <button
-                        type="button"
-                        disabled
-                        className="w-full min-h-[44px] py-2.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-95"
-                      >
-                        <Clock className="w-4 h-4 text-[#D97706] animate-spin" />
-                        <span>BILL REQUESTED</span>
-                      </button>
+                    ) : isServed ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onSelectTableForOrder) {
+                              onSelectTableForOrder(t);
+                            } else if (setActiveTab) {
+                              setActiveTab('tables');
+                            }
+                          }}
+                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
+                          <span>ADD ITEMS</span>
+                        </button>
+                        <div className="min-h-[44px] py-2 px-2 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1 text-center">
+                          <Clock className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+                          <span>WAITING BILL</span>
+                        </div>
+                      </div>
                     ) : isAvailable ? (
                       <button
                         type="button"
@@ -765,35 +804,20 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         <span>NEW ORDER</span>
                       </button>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onSelectTableForOrder) {
-                              onSelectTableForOrder(t);
-                            } else if (setActiveTab) {
-                              setActiveTab('tables');
-                            }
-                          }}
-                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
-                          <span>ADD ITEMS</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRequestBill(order.id, t.tableNumber)}
-                          disabled={actionLoading === `bill-req-${order.id}`}
-                          className="min-h-[44px] py-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-50"
-                        >
-                          {actionLoading === `bill-req-${order.id}` ? (
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Receipt className="w-3.5 h-3.5" />
-                          )}
-                          <span>REQUEST BILL</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSelectTableForOrder) {
+                            onSelectTableForOrder(t);
+                          } else if (setActiveTab) {
+                            setActiveTab('tables');
+                          }
+                        }}
+                        className="w-full min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
+                        <span>ADD ITEMS</span>
+                      </button>
                     )}
                   </div>
                 </div>
