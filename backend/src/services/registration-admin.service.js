@@ -1,5 +1,6 @@
 import { prisma } from '../config/env.js';
 import { hashPassword } from '../utils/password.js';
+import { cachedQuery, buildCacheKey, invalidateSuperAdminCache } from '../utils/cache.js';
 
 export const onboardRestaurant = async (data) => {
   const ownerEmail = (data.ownerEmail || data.email).trim().toLowerCase();
@@ -33,7 +34,7 @@ export const onboardRestaurant = async (data) => {
   const rawPassword = data.ownerPassword || data.password || 'Password123';
   const hashedPassword = await hashPassword(rawPassword);
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const restaurant = await tx.restaurant.create({
       data: {
         name: (data.restaurantName || data.name).trim(),
@@ -93,59 +94,65 @@ export const onboardRestaurant = async (data) => {
       },
     };
   });
+
+  await invalidateSuperAdminCache();
+  return result;
 };
 
 export const getRestaurants = async (filters = {}) => {
-  const where = {};
-  if (filters.isActive !== undefined) {
-    where.isActive = filters.isActive === 'true' || filters.isActive === true;
-  }
-  if (filters.search) {
-    where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
-      { email: { contains: filters.search, mode: 'insensitive' } },
-    ];
-  }
+  const cacheKey = buildCacheKey('global', 'superadmin:restaurants', filters);
+  return await cachedQuery(cacheKey, 20, async () => {
+    const where = {};
+    if (filters.isActive !== undefined) {
+      where.isActive = filters.isActive === 'true' || filters.isActive === true;
+    }
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
 
-  const restaurants = await prisma.restaurant.findMany({
-    where,
-    include: {
-      users: {
-        select: { id: true, name: true, email: true, phone: true, isActive: true, role: true },
-      },
-      subscription: {
-        include: {
-          plan: true,
+    const restaurants = await prisma.restaurant.findMany({
+      where,
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, phone: true, isActive: true, role: true },
+        },
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
+        _count: {
+          select: {
+            users: true,
+            tables: true,
+            orders: true,
+            menuItems: true,
+          },
         },
       },
-      _count: {
-        select: {
-          users: true,
-          tables: true,
-          orders: true,
-          menuItems: true,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return restaurants.map((r) => {
+      const owner = r.users.find((u) => u.role === 'RESTAURANT_OWNER') || null;
+      const waitersCount = r.users.filter((u) => u.role === 'WAITER').length;
+      const kitchenAdminsCount = r.users.filter((u) => u.role === 'KITCHEN_ADMIN').length;
+      const receptionistsCount = r.users.filter((u) => u.role === 'RECEPTIONIST').length;
+
+      return {
+        ...r,
+        owner,
+        roleCounts: {
+          waiters: waitersCount,
+          kitchenAdmins: kitchenAdminsCount,
+          receptionists: receptionistsCount,
         },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return restaurants.map((r) => {
-    const owner = r.users.find((u) => u.role === 'RESTAURANT_OWNER') || null;
-    const waitersCount = r.users.filter((u) => u.role === 'WAITER').length;
-    const kitchenAdminsCount = r.users.filter((u) => u.role === 'KITCHEN_ADMIN').length;
-    const receptionistsCount = r.users.filter((u) => u.role === 'RECEPTIONIST').length;
-
-    return {
-      ...r,
-      owner,
-      roleCounts: {
-        waiters: waitersCount,
-        kitchenAdmins: kitchenAdminsCount,
-        receptionists: receptionistsCount,
-      },
-      stats: r._count,
-    };
+        stats: r._count,
+      };
+    });
   });
 };
 
@@ -195,7 +202,7 @@ export const updateRestaurantStatus = async (id, isActive) => {
     throw error;
   }
 
-  return await prisma.restaurant.update({
+  const updated = await prisma.restaurant.update({
     where: { id },
     data: { isActive: Boolean(isActive) },
     include: {
@@ -204,6 +211,9 @@ export const updateRestaurantStatus = async (id, isActive) => {
       },
     },
   });
+
+  await invalidateSuperAdminCache();
+  return updated;
 };
 
 export const updateRestaurantSubscription = async (restaurantId, data) => {
@@ -257,6 +267,7 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
     });
   }
 
+  await invalidateSuperAdminCache();
   return updatedSubscription;
 };
 
@@ -292,75 +303,78 @@ export const resetOwnerCredentials = async (restaurantId, data) => {
 };
 
 export const getPlatformOverview = async () => {
-  const [
-    totalRestaurants,
-    activeRestaurants,
-    inactiveRestaurants,
-    totalPlatformUsers,
-    subscriptions,
-    plans,
-    recentRestaurants,
-  ] = await Promise.all([
-    prisma.restaurant.count(),
-    prisma.restaurant.count({ where: { isActive: true } }),
-    prisma.restaurant.count({ where: { isActive: false } }),
-    prisma.user.count(),
-    prisma.subscription.findMany({ select: { status: true } }),
-    prisma.plan.findMany({
-      include: {
-        _count: { select: { subscriptions: true } },
-      },
-    }),
-    prisma.restaurant.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        users: {
-          where: { role: 'RESTAURANT_OWNER' },
-          select: { name: true, email: true },
+  const cacheKey = buildCacheKey('global', 'superadmin', { type: 'overview' });
+  return await cachedQuery(cacheKey, 30, async () => {
+    const [
+      totalRestaurants,
+      activeRestaurants,
+      inactiveRestaurants,
+      totalPlatformUsers,
+      subscriptions,
+      plans,
+      recentRestaurants,
+    ] = await Promise.all([
+      prisma.restaurant.count(),
+      prisma.restaurant.count({ where: { isActive: true } }),
+      prisma.restaurant.count({ where: { isActive: false } }),
+      prisma.user.count(),
+      prisma.subscription.findMany({ select: { status: true } }),
+      prisma.plan.findMany({
+        include: {
+          _count: { select: { subscriptions: true } },
         },
-        subscription: {
-          include: { plan: true },
+      }),
+      prisma.restaurant.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          users: {
+            where: { role: 'RESTAURANT_OWNER' },
+            select: { name: true, email: true },
+          },
+          subscription: {
+            include: { plan: true },
+          },
+          _count: {
+            select: { users: true, tables: true, orders: true },
+          },
         },
-        _count: {
-          select: { users: true, tables: true, orders: true },
-        },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  const activeSubscriptions = subscriptions.filter((s) => s.status === 'ACTIVE').length;
-  const suspendedSubscriptions = subscriptions.filter((s) => s.status === 'SUSPENDED').length;
-  const expiredSubscriptions = subscriptions.filter((s) => s.status === 'EXPIRED').length;
+    const activeSubscriptions = subscriptions.filter((s) => s.status === 'ACTIVE').length;
+    const suspendedSubscriptions = subscriptions.filter((s) => s.status === 'SUSPENDED').length;
+    const expiredSubscriptions = subscriptions.filter((s) => s.status === 'EXPIRED').length;
 
-  return {
-    totalRestaurants,
-    activeRestaurants,
-    inactiveRestaurants,
-    totalPlatformUsers,
-    activeSubscriptions,
-    suspendedSubscriptions,
-    expiredSubscriptions,
-    plans: plans.map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      maxStaff: p.maxStaff,
-      maxTables: p.maxTables,
-      maxMenuItems: p.maxMenuItems,
-      activeSubscribers: p._count.subscriptions,
-      isActive: p.isActive,
-    })),
-    recentTenants: recentRestaurants.map((r) => ({
-      id: r.id,
-      name: r.name,
-      owner: r.users[0] || null,
-      plan: r.subscription?.plan?.name || 'No Plan',
-      status: r.isActive ? (r.subscription?.status || 'ACTIVE') : 'SUSPENDED',
-      createdAt: r.createdAt,
-      stats: r._count,
-    })),
-  };
+    return {
+      totalRestaurants,
+      activeRestaurants,
+      inactiveRestaurants,
+      totalPlatformUsers,
+      activeSubscriptions,
+      suspendedSubscriptions,
+      expiredSubscriptions,
+      plans: plans.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        maxStaff: p.maxStaff,
+        maxTables: p.maxTables,
+        maxMenuItems: p.maxMenuItems,
+        activeSubscribers: p._count.subscriptions,
+        isActive: p.isActive,
+      })),
+      recentTenants: recentRestaurants.map((r) => ({
+        id: r.id,
+        name: r.name,
+        owner: r.users[0] || null,
+        plan: r.subscription?.plan?.name || 'No Plan',
+        status: r.isActive ? (r.subscription?.status || 'ACTIVE') : 'SUSPENDED',
+        createdAt: r.createdAt,
+        stats: r._count,
+      })),
+    };
+  });
 };
 
 export default {

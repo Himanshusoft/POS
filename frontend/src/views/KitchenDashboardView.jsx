@@ -10,43 +10,34 @@ import {
   RefreshCw,
   Flame,
   ArrowRight,
-  PackageCheck,
   AlertCircle,
   LayoutGrid,
   CheckCheck,
 } from 'lucide-react';
 
+import { useKitchenDashboard, usePosMutations } from '../hooks/usePosQueries';
+
 export default function KitchenDashboardView({ setActiveTab }) {
-  const { addToast } = useAuth();
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
   const [actionLoading, setActionLoading] = useState(null);
 
-  const fetchDashboard = async () => {
-    try {
-      const res = await posService.kitchen.getDashboard();
-      if (res.success && res.data) {
-        setDashboardData(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load kitchen dashboard', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: dashboardData = null,
+    isLoading,
+    refetch,
+  } = useKitchenDashboard(restaurant?.id);
 
-  useEffect(() => {
-    fetchDashboard();
-    const interval = setInterval(fetchDashboard, 8000); // Polling every 8 seconds for live dashboard
-    return () => clearInterval(interval);
-  }, []);
+  const { invalidateOrders, invalidateInventory } = usePosMutations(restaurant?.id);
+  const loading = isLoading && !dashboardData;
+
+  const fetchDashboard = () => refetch();
 
   const handleAccept = async (orderId) => {
     setActionLoading(orderId);
     try {
       await posService.kitchen.acceptOrder(orderId);
       addToast('Ticket accepted by Kitchen Admin', 'info');
-      fetchDashboard();
+      invalidateOrders();
     } catch (err) {
       addToast(err.message || 'Failed to accept order', 'error');
     } finally {
@@ -59,7 +50,7 @@ export default function KitchenDashboardView({ setActiveTab }) {
     try {
       await posService.kitchen.startPreparation(orderId);
       addToast('Order moved to Cooking / IN_PREPARATION', 'info');
-      fetchDashboard();
+      invalidateOrders();
     } catch (err) {
       addToast(err.message || 'Failed to start preparation', 'error');
     } finally {
@@ -72,7 +63,8 @@ export default function KitchenDashboardView({ setActiveTab }) {
     try {
       await posService.kitchen.markReady(orderId);
       addToast('Order marked READY! Recipe ingredients automatically deducted from inventory.', 'success');
-      fetchDashboard();
+      invalidateOrders();
+      invalidateInventory();
     } catch (err) {
       addToast(err.message || 'Failed to mark ready. Check ingredient stock.', 'error');
     } finally {
@@ -472,48 +464,6 @@ export default function KitchenDashboardView({ setActiveTab }) {
                       </div>
                     ))}
                   </div>
-
-                  {/* Recipe Ingredient Stock BOM Check */}
-                  {order.calculatedIngredients && order.calculatedIngredients.length > 0 && (
-                    <div className="mt-3.5 pt-3 border-t border-[#E5D8C6]">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-[#5B6470] uppercase tracking-wider mb-2">
-                        <span className="flex items-center gap-1.5 text-[#92400E]">
-                          <PackageCheck className="w-3.5 h-3.5" /> Recipe Ingredients
-                        </span>
-                        <span className="font-mono text-[#5B6470] tabular-nums">
-                          {order.calculatedIngredients.filter((i) => i.isSufficient).length}/
-                          {order.calculatedIngredients.length} Stock OK
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {order.calculatedIngredients.map((ing, iIdx) => (
-                          <div
-                            key={iIdx}
-                            className={`flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-lg border ${
-                              ing.isSufficient
-                                ? 'bg-[#FAF7F2] border-[#E5D8C6] text-[#1F2937]'
-                                : 'bg-red-50 border-red-200 text-red-700 font-semibold'
-                            }`}
-                          >
-                            <span className="truncate max-w-[130px] flex items-center gap-1.5">
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  ing.isSufficient ? 'bg-[#16A34A]' : 'bg-red-600 animate-ping'
-                                }`}
-                              ></span>
-                              {ing.name}
-                            </span>
-                            <span className="font-mono text-[10px] text-right tabular-nums">
-                              <span>Req: {ing.requiredQuantity} {ing.unit}</span>
-                              <span className={`ml-1.5 ${ing.isSufficient ? 'text-[#5B6470]' : 'text-red-600 font-bold'}`}>
-                                (Stock: {ing.currentStock})
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* EXISTING ACTION BUTTON */}

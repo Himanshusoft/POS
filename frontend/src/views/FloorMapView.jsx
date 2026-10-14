@@ -15,35 +15,22 @@ import {
   Receipt
 } from 'lucide-react';
 
+import { useTables, usePosMutations } from '../hooks/usePosQueries';
+
 export default function FloorMapView({ onSelectTableForOrder, onNavigateToBilling }) {
   const { role, restaurant, addToast } = useAuth();
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: tables = [],
+    isLoading: loading,
+    refetch: fetchTables,
+  } = useTables(restaurant?.id, { refetchInterval: 8000 });
+  const { invalidateTables, invalidateOrders } = usePosMutations(restaurant?.id);
+
   const [filterFloor, setFilterFloor] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTable, setNewTable] = useState({ tableNumber: '', capacity: 4, floor: 'Ground Floor' });
   const [submitting, setSubmitting] = useState(false);
-
-  const fetchTables = async () => {
-    setLoading(true);
-    try {
-      const res = await posService.tables.getAll();
-      if (res.success && res.data) {
-        setTables(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to fetch floor tables', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTables();
-    const interval = setInterval(fetchTables, 8000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleServeOrder = async (orderId) => {
     try {

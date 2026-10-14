@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { Button, Badge, Skeleton } from '../components/ui';
+import { useKitchenOrders, usePosMutations } from '../hooks/usePosQueries';
 import {
   ChefHat,
   Clock,
@@ -14,36 +15,18 @@ import {
 } from 'lucide-react';
 
 export default function KitchenDisplayView() {
-  const { addToast } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
+  const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useKitchenOrders(restaurant?.id);
+  const { invalidateOrders } = usePosMutations(restaurant?.id);
   const [filterStage, setFilterStage] = useState('ALL');
   const [actionLoading, setActionLoading] = useState(null);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await posService.kitchen.getOrders();
-      if (res.success && res.data) {
-        setOrders(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load kitchen orders', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 8000); // Polling every 8 seconds for live kitchen orders
-    return () => clearInterval(interval);
-  }, []);
 
   const handleAccept = async (orderId) => {
     setActionLoading(orderId);
     try {
       await posService.kitchen.acceptOrder(orderId);
       addToast('Ticket accepted for preparation', 'info');
+      invalidateOrders();
       fetchOrders();
     } catch (err) {
       addToast(err.message || 'Failed to accept order', 'error');
@@ -57,6 +40,7 @@ export default function KitchenDisplayView() {
     try {
       await posService.kitchen.markReady(orderId);
       addToast('Order marked READY for food runner / waiter', 'success');
+      invalidateOrders();
       fetchOrders();
     } catch (err) {
       addToast(err.message || 'Failed to mark ready', 'error');
@@ -70,6 +54,7 @@ export default function KitchenDisplayView() {
     try {
       await posService.kitchen.markServed(orderId);
       addToast('Order marked SERVED to dining table', 'info');
+      invalidateOrders();
       fetchOrders();
     } catch (err) {
       addToast(err.message || 'Failed to mark served', 'error');
@@ -83,6 +68,7 @@ export default function KitchenDisplayView() {
     try {
       await posService.kitchen.completeOrder(orderId);
       addToast('Order completed & recipe inventory stock deducted!', 'success');
+      invalidateOrders();
       fetchOrders();
     } catch (err) {
       addToast(err.message || 'Failed to complete order. Check stock availability.', 'error');

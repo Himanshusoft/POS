@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { useSettings, usePosMutations } from '../hooks/usePosQueries';
 import { Button, Badge } from '../components/ui';
 import {
   Settings,
@@ -103,60 +104,62 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     quickCash: false,
   });
 
-  // Fetch all persisted settings on mount
-  const fetchAllSettings = async () => {
-    setLoading(true);
-    try {
-      const res = await posService.settings.get();
-      if (res.success && res.data) {
-        setServerSettings(res.data);
-        const st = res.data.settings;
+  const {
+    data: settingsData = null,
+    isLoading: loadingSettings,
+    refetch: refetchSettings,
+  } = useSettings(restaurant?.id);
+  const { invalidateSettings } = usePosMutations(restaurant?.id);
 
-        // Populate User Personal Preferences
-        if (st.user) {
-          setUserPrefForm((prev) => ({ ...prev, ...st.user }));
-        }
+  // Synchronize persisted settings whenever query data updates
+  useEffect(() => {
+    if (settingsData && settingsData.settings) {
+      setServerSettings(settingsData);
+      const st = settingsData.settings;
 
-        // Populate Platform Settings
-        if (st.platform) {
-          setPlatformForm({
-            ...(st.platform.platform_general || {}),
-            ...(st.platform.platform_system || {}),
+      // Populate User Personal Preferences
+      if (st.user) {
+        setUserPrefForm((prev) => ({ ...prev, ...st.user }));
+      }
+
+      // Populate Platform Settings
+      if (st.platform) {
+        setPlatformForm({
+          ...(st.platform.platform_general || {}),
+          ...(st.platform.platform_system || {}),
+        });
+      }
+
+      // Populate Restaurant Settings
+      if (st.restaurant) {
+        if (st.restaurant.profile) {
+          setRestForm({
+            name: st.restaurant.profile.name || '',
+            address: st.restaurant.profile.address || '',
+            phone: st.restaurant.profile.phone || '',
+            email: st.restaurant.profile.email || '',
+            currency: st.restaurant.profile.currency || 'INR',
+            taxRate: st.restaurant.profile.taxRate ?? 5,
           });
         }
-
-        // Populate Restaurant Settings
-        if (st.restaurant) {
-          if (st.restaurant.profile) {
-            setRestForm({
-              name: st.restaurant.profile.name || '',
-              address: st.restaurant.profile.address || '',
-              phone: st.restaurant.profile.phone || '',
-              email: st.restaurant.profile.email || '',
-              currency: st.restaurant.profile.currency || 'INR',
-              taxRate: st.restaurant.profile.taxRate ?? 5,
-            });
-          }
-          if (st.restaurant.operations || st.restaurant.billing) {
-            setOperationsForm({
-              ...(st.restaurant.operations || {}),
-              ...(st.restaurant.billing || {}),
-            });
-          }
-          if (st.restaurant.kitchen) {
-            setKitchenPolicyForm((prev) => ({ ...prev, ...st.restaurant.kitchen }));
-          }
-          if (st.restaurant.inventory) {
-            setInventoryPolicyForm((prev) => ({ ...prev, ...st.restaurant.inventory }));
-          }
+        if (st.restaurant.operations || st.restaurant.billing) {
+          setOperationsForm({
+            ...(st.restaurant.operations || {}),
+            ...(st.restaurant.billing || {}),
+          });
+        }
+        if (st.restaurant.kitchen) {
+          setKitchenPolicyForm((prev) => ({ ...prev, ...st.restaurant.kitchen }));
+        }
+        if (st.restaurant.inventory) {
+          setInventoryPolicyForm((prev) => ({ ...prev, ...st.restaurant.inventory }));
         }
       }
-    } catch (err) {
-      addToast(err.message || 'Failed to load settings', 'error');
-    } finally {
+      setLoading(false);
+    } else if (!loadingSettings) {
       setLoading(false);
     }
-  };
+  }, [settingsData, loadingSettings]);
 
   useEffect(() => {
     if (user) {
@@ -177,8 +180,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         taxRate: restaurant.taxRate !== undefined ? Number(restaurant.taxRate) : prev.taxRate,
       }));
     }
-    fetchAllSettings();
   }, [user, restaurant]);
+
+  const fetchAllSettings = async () => {
+    await refetchSettings();
+  };
 
   // Handle Profile Save
   const handleSaveProfile = async (e) => {

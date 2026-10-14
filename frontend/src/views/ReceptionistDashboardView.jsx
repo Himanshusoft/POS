@@ -21,60 +21,46 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
+import { usePendingBillingOrders, useBills, usePayments, usePosMutations } from '../hooks/usePosQueries';
+
 export default function ReceptionistDashboardView({ setActiveTab }) {
   const { restaurant, user, addToast } = useAuth();
-  const [bills, setBills] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [pendingOrders, setPendingOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-
   const currency = restaurant?.currency || '₹';
 
-  // Load all existing receptionist-authorized billing & transaction data
-  const fetchDashboardData = async (isBackground = false) => {
-    if (!isBackground) {
-      if (bills.length === 0 && payments.length === 0 && pendingOrders.length === 0) {
-        setLoading(true);
-      } else {
-        setRefreshing(true);
-      }
-    }
-    setError(null);
-    try {
-      const [ordRes, billRes, payRes] = await Promise.all([
-        posService.billing.getPendingOrders(),
-        posService.billing.getBills({ limit: 100 }),
-        posService.payments.getAll({ limit: 100 }),
-      ]);
+  const {
+    data: pendingOrders = [],
+    isLoading: loadingPending,
+    isRefetching: refetchingPending,
+    refetch: refetchPending,
+  } = usePendingBillingOrders(restaurant?.id);
 
-      if (ordRes.success) {
-        setPendingOrders(ordRes.data?.items || (Array.isArray(ordRes.data) ? ordRes.data : []));
-      }
-      if (billRes.success) {
-        setBills(billRes.data?.items || (Array.isArray(billRes.data) ? billRes.data : []));
-      }
-      if (payRes.success) {
-        setPayments(payRes.data?.items || (Array.isArray(payRes.data) ? payRes.data : []));
-      }
+  const {
+    data: bills = [],
+    isLoading: loadingBills,
+    isRefetching: refetchingBills,
+    refetch: refetchBills,
+  } = useBills(restaurant?.id, { limit: 100 });
+
+  const {
+    data: payments = [],
+    isLoading: loadingPayments,
+    isRefetching: refetchingPayments,
+    refetch: refetchPayments,
+  } = usePayments(restaurant?.id, { limit: 100 });
+
+  const loading = (loadingPending && pendingOrders.length === 0) ||
+    (loadingBills && bills.length === 0) ||
+    (loadingPayments && payments.length === 0);
+  const refreshing = refetchingPending || refetchingBills || refetchingPayments;
+  const error = null;
+
+  const fetchDashboardData = async () => {
+    try {
+      await Promise.all([refetchPending(), refetchBills(), refetchPayments()]);
     } catch (err) {
-      if (!isBackground) {
-        setError(err.message || 'Failed to load billing metrics');
-        addToast(err.message || 'Failed to load billing metrics', 'error');
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      addToast(err.message || 'Failed to refresh billing metrics', 'error');
     }
   };
-
-  useEffect(() => {
-    fetchDashboardData(false);
-    // Silent polling every 8 seconds for real-time cashier updates
-    const interval = setInterval(() => fetchDashboardData(true), 8000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Safe helper to extract payment info from bill (reusing the same logic from BillingView)
   const getBillPaymentInfo = (bill) => {

@@ -35,7 +35,7 @@ export default function Sidebar({
   mobileOpen = false,
   setMobileOpen,
 }) {
-  const { role, user, logout } = useAuth();
+  const { role, user, logout, loggingOut } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileMenuRef = useRef(null);
 
@@ -270,14 +270,15 @@ export default function Sidebar({
               <div className="pt-0.5">
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={loggingOut}
+                  onClick={async () => {
                     setProfileDropdownOpen(false);
-                    logout();
+                    await logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer text-left disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{loggingOut ? 'Signing Out...' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>

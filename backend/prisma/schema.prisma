@@ -182,6 +182,7 @@ model User {
   wastagesLogged Wastage[] @relation("UserWastages")
   settings       Setting[]
 
+  @@index([restaurantId, role])
   @@map("users")
 }
 
@@ -198,6 +199,7 @@ model Table {
   orders Order[]
 
   @@unique([restaurantId, tableNumber])
+  @@index([restaurantId, status])
   @@map("tables")
 }
 
@@ -286,6 +288,7 @@ model InventoryItem {
   inventoryTransactions InventoryTransaction[]
 
   @@unique([restaurantId, name])
+  @@index([restaurantId, currentStock])
   @@map("inventory_items")
 }
 
@@ -321,6 +324,8 @@ model Purchase {
 
   items PurchaseItem[]
 
+  @@index([restaurantId, purchaseDate])
+  @@index([supplierId])
   @@map("purchases")
 }
 
@@ -335,6 +340,8 @@ model PurchaseItem {
   totalCost       Decimal       @db.Decimal(10, 2)
   createdAt       DateTime      @default(now())
 
+  @@index([purchaseId])
+  @@index([inventoryItemId])
   @@map("purchase_items")
 }
 
@@ -364,6 +371,9 @@ model Order {
   bill                  Bill?
   inventoryTransactions InventoryTransaction[]
 
+  @@index([restaurantId, status, createdAt])
+  @@index([tableId])
+  @@index([waiterId])
   @@map("orders")
 }
 
@@ -381,6 +391,8 @@ model OrderItem {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
+  @@index([orderId])
+  @@index([menuItemId])
   @@map("order_items")
 }
 
@@ -408,6 +420,7 @@ model Bill {
 
   payments Payment[]
 
+  @@index([restaurantId, status, createdAt])
   @@map("bills")
 }
 
@@ -425,6 +438,8 @@ model Payment {
   razorpaySignature    String?
   createdAt            DateTime      @default(now())
 
+  @@index([billId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -442,6 +457,7 @@ model Wastage {
   recordedBy      User?         @relation("UserWastages", fields: [recordedById], references: [id], onDelete: SetNull)
   createdAt       DateTime      @default(now())
 
+  @@index([restaurantId, createdAt])
   @@map("wastages")
 }
 
@@ -469,6 +485,8 @@ model InventoryTransaction {
   reason           String?
   createdAt        DateTime                 @default(now())
 
+  @@index([restaurantId, createdAt])
+  @@index([inventoryItemId])
   @@map("inventory_transactions")
 }
 

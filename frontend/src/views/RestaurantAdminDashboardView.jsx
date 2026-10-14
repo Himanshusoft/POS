@@ -41,47 +41,52 @@ import {
   LayoutGrid
 } from 'lucide-react';
 
+import { useAdminDashboardSummary, useTables, usePayments, useMenuItems } from '../hooks/usePosQueries';
+
 export default function RestaurantAdminDashboardView({ setActiveTab }) {
   const { restaurant, user, addToast } = useAuth();
-  const [data, setData] = useState(null);
-  const [tables, setTables] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const currency = restaurant?.currency || '₹';
 
+  const {
+    data = null,
+    isLoading: loadingDashboard,
+    isRefetching: refetchingDashboard,
+    refetch: refetchDashboard,
+  } = useAdminDashboardSummary(restaurant?.id);
+
+  const {
+    data: tables = [],
+    isLoading: loadingTables,
+    refetch: refetchTables,
+  } = useTables(restaurant?.id);
+
+  const {
+    data: payments = [],
+    isLoading: loadingPayments,
+    refetch: refetchPayments,
+  } = usePayments(restaurant?.id, { limit: 100 });
+
+  const {
+    data: menuItems = [],
+    isLoading: loadingMenu,
+    refetch: refetchMenu,
+  } = useMenuItems(restaurant?.id);
+
+  const loading = (loadingDashboard && !data) || refetchingDashboard;
+
   const loadDashboard = async () => {
-    setLoading(true);
     try {
-      const [res, tblRes, payRes, menuRes] = await Promise.all([
-        posService.reports.getDashboard(),
-        posService.tables.getAll().catch(() => ({ data: [] })),
-        posService.payments.getAll({ limit: 100 }).catch(() => ({ data: [] })),
-        posService.menu.getItems().catch(() => ({ data: [] })),
+      await Promise.all([
+        refetchDashboard(),
+        refetchTables(),
+        refetchPayments(),
+        refetchMenu(),
       ]);
-      if (res.success && res.data) {
-        setData(res.data);
-      }
-      if (tblRes?.data) {
-        setTables(Array.isArray(tblRes.data) ? tblRes.data : tblRes.data.tables || []);
-      }
-      if (payRes?.data) {
-        setPayments(Array.isArray(payRes.data) ? payRes.data : payRes.data.items || []);
-      }
-      if (menuRes?.data) {
-        setMenuItems(Array.isArray(menuRes.data) ? menuRes.data : []);
-      }
+      addToast('Dashboard analytics refreshed', 'success');
     } catch (err) {
-      addToast(err.message || 'Failed to load restaurant analytics', 'error');
-    } finally {
-      setLoading(false);
+      addToast(err.message || 'Failed to refresh analytics', 'error');
     }
   };
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
 
   const getMethodIcon = (method) => {
     switch (method?.toUpperCase()) {

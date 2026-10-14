@@ -3,6 +3,7 @@ import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { SkeletonTable } from '../components/ui/Skeleton';
+import { useBills, usePosMutations } from '../hooks/usePosQueries';
 import {
   Receipt,
   Search,
@@ -14,37 +15,19 @@ import {
 
 export default function WaiterBillsView() {
   const { restaurant, addToast } = useAuth();
-  const [bills, setBills] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: bills = [], isLoading: loading, refetch: fetchBills } = useBills(restaurant?.id);
+  const { invalidateBilling } = usePosMutations(restaurant?.id);
   const [filterState, setFilterState] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBill, setSelectedBill] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-
-  const fetchBills = async () => {
-    try {
-      const res = await posService.billing.getBills();
-      if (res.success && res.data) {
-        setBills(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to fetch bills', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBills();
-    const interval = setInterval(fetchBills, 8000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleDeliver = async (billId, tableNumber) => {
     setActionLoading(billId);
     try {
       await posService.waiter.deliverBill(billId);
       addToast(`Bill delivered to Table #${tableNumber}!`, 'success');
+      invalidateBilling();
       fetchBills();
       if (selectedBill && selectedBill.id === billId) {
         setSelectedBill((prev) => ({ ...prev, isDelivered: true, deliveredAt: new Date() }));

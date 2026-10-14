@@ -17,10 +17,17 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { useTables, usePosMutations } from '../hooks/usePosQueries';
+
 export default function TableManagementView({ onSelectTableForOrder, onNavigateToBilling }) {
-  const { role, addToast } = useAuth();
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, role, addToast } = useAuth();
+  const {
+    data: tables = [],
+    isLoading: loading,
+    refetch: fetchTables,
+  } = useTables(restaurant?.id, { refetchInterval: 8000 });
+  const { invalidateTables } = usePosMutations(restaurant?.id);
+
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -33,26 +40,6 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   const [addForm, setAddForm] = useState({ tableNumber: '', capacity: 4, status: 'AVAILABLE' });
   const [editForm, setEditForm] = useState({ tableNumber: '', capacity: 4, status: 'AVAILABLE' });
   const [submitting, setSubmitting] = useState(false);
-
-  const fetchTables = async () => {
-    try {
-      const res = await posService.tables.getAll();
-      if (res.success && res.data) {
-        const list = Array.isArray(res.data) ? res.data : (res.data.items || []);
-        setTables(list);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to fetch restaurant tables', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTables();
-    const interval = setInterval(fetchTables, 6000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleCreateTable = async (e) => {
     e.preventDefault();

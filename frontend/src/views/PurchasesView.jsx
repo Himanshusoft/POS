@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { usePurchases, useSuppliers, useInventory, usePosMutations } from '../hooks/usePosQueries';
 import { Modal } from '../components/ui';
 import {
   Truck,
@@ -18,10 +19,15 @@ import {
 export default function PurchasesView() {
   const { restaurant, addToast } = useAuth();
   const [activeTab, setActiveTab] = useState('purchases'); // 'purchases' | 'suppliers'
-  const [purchases, setPurchases] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: purchases = [], isLoading: loadingPurchases, refetch: refetchPurchases } = usePurchases(restaurant?.id);
+  const { data: suppliers = [], isLoading: loadingSuppliers, refetch: refetchSuppliers } = useSuppliers(restaurant?.id);
+  const { data: inventoryItems = [], isLoading: loadingInventory, refetch: refetchInventory } = useInventory(restaurant?.id);
+  const { invalidatePurchases, invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const loading = (loadingPurchases && purchases.length === 0) ||
+    (loadingSuppliers && suppliers.length === 0) ||
+    (loadingInventory && inventoryItems.length === 0);
 
   // Modals
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -49,26 +55,8 @@ export default function PurchasesView() {
   const currency = restaurant?.currency || '₹';
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const [purRes, supRes, invRes] = await Promise.all([
-        posService.purchases.getAll(),
-        posService.suppliers.getAll(),
-        posService.inventory.getAll(),
-      ]);
-      if (purRes.success) setPurchases(purRes.data || []);
-      if (supRes.success) setSuppliers(supRes.data || []);
-      if (invRes.success) setInventoryItems(invRes.data || []);
-    } catch (err) {
-      addToast(err.message || 'Failed to load procurement data', 'error');
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([refetchPurchases(), refetchSuppliers(), refetchInventory()]);
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleCreateSupplier = async (e) => {
     e.preventDefault();

@@ -1,5 +1,6 @@
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { cachedQuery, buildCacheKey, invalidateTableCache } from '../utils/cache.js';
 
 export const createTable = async (restaurantId, data) => {
   const tableNumber = String(data.tableNumber).trim();
@@ -32,7 +33,7 @@ export const createTable = async (restaurantId, data) => {
     }
   }
 
-  return await prisma.table.create({
+  const result = await prisma.table.create({
     data: {
       restaurantId,
       tableNumber,
@@ -40,34 +41,39 @@ export const createTable = async (restaurantId, data) => {
       status: data.status || 'AVAILABLE',
     },
   });
+  await invalidateTableCache(restaurantId);
+  return result;
 };
 
 export const getTables = async (restaurantId, filters = {}) => {
-  const where = { restaurantId };
-  if (filters.status) where.status = filters.status;
+  const cacheKey = buildCacheKey(restaurantId, 'tables', filters);
+  return await cachedQuery(cacheKey, 15, async () => {
+    const where = { restaurantId };
+    if (filters.status) where.status = filters.status;
 
-  const result = await findManyPaginated(prisma.table, {
-    where,
-    orderBy: { tableNumber: 'asc' },
-    include: {
-      orders: {
-        where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } },
-        include: {
-          items: { include: { menuItem: true } },
-          waiter: { select: { id: true, name: true } },
-          bill: true,
+    const result = await findManyPaginated(prisma.table, {
+      where,
+      orderBy: { tableNumber: 'asc' },
+      include: {
+        orders: {
+          where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+          include: {
+            items: { include: { menuItem: true } },
+            waiter: { select: { id: true, name: true } },
+            bill: true,
+          },
+          orderBy: { createdAt: 'desc' },
         },
-        orderBy: { createdAt: 'desc' },
       },
-    },
-  }, filters);
+    }, filters);
 
-  result.items = result.items.map((t) => ({
-    ...t,
-    activeOrders: t.orders || [],
-  }));
+    result.items = result.items.map((t) => ({
+      ...t,
+      activeOrders: t.orders || [],
+    }));
 
-  return result;
+    return result;
+  });
 };
 
 export const getTableById = async (restaurantId, id) => {
@@ -122,7 +128,7 @@ export const updateTable = async (restaurantId, id, data) => {
     }
   }
 
-  return await prisma.table.update({
+  const updated = await prisma.table.update({
     where: { id },
     data: {
       tableNumber: data.tableNumber !== undefined ? data.tableNumber : table.tableNumber,
@@ -130,6 +136,8 @@ export const updateTable = async (restaurantId, id, data) => {
       status: data.status !== undefined ? data.status : table.status,
     },
   });
+  await invalidateTableCache(restaurantId);
+  return updated;
 };
 
 export const updateTableStatus = async (restaurantId, id, status) => {
@@ -141,10 +149,12 @@ export const updateTableStatus = async (restaurantId, id, status) => {
     error.statusCode = 404;
     throw error;
   }
-  return await prisma.table.update({
+  const updated = await prisma.table.update({
     where: { id },
     data: { status },
   });
+  await invalidateTableCache(restaurantId);
+  return updated;
 };
 
 export const deleteTable = async (restaurantId, id) => {
@@ -156,9 +166,11 @@ export const deleteTable = async (restaurantId, id) => {
     error.statusCode = 404;
     throw error;
   }
-  return await prisma.table.delete({
+  const deleted = await prisma.table.delete({
     where: { id },
   });
+  await invalidateTableCache(restaurantId);
+  return deleted;
 };
 
 export default {

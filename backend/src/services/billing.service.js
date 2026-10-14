@@ -1,8 +1,9 @@
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { invalidateBillingCache, invalidateOrderCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 export const generateBill = async (restaurantId, receptionistId, data) => {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: data.orderId, restaurantId },
       include: {
@@ -87,6 +88,13 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       },
     });
   });
+
+  await Promise.all([
+    invalidateBillingCache(restaurantId),
+    invalidateOrderCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const createBill = async (restaurantId, receptionistId, data) => {
@@ -128,34 +136,37 @@ export const getBillByOrderId = async (restaurantId, orderId) => {
 };
 
 export const getAllBills = async (restaurantId, status = null, filters = {}) => {
-  const where = { restaurantId };
-  if (status) where.status = status;
+  const cacheKey = buildCacheKey(restaurantId, 'billing', { status, ...filters });
+  return await cachedQuery(cacheKey, 15, async () => {
+    const where = { restaurantId };
+    if (status) where.status = status;
 
-  const result = await findManyPaginated(prisma.bill, {
-    where,
-    include: {
-      order: {
-        include: {
-          table: true,
-          items: {
-            include: {
-              menuItem: true,
+    const result = await findManyPaginated(prisma.bill, {
+      where,
+      include: {
+        order: {
+          include: {
+            table: true,
+            items: {
+              include: {
+                menuItem: true,
+              },
             },
           },
         },
+        payments: { orderBy: { createdAt: 'desc' } },
+        receptionist: { select: { id: true, name: true } },
       },
-      payments: { orderBy: { createdAt: 'desc' } },
-      receptionist: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filters);
+      orderBy: { createdAt: 'desc' },
+    }, filters);
 
-  result.items = result.items.map((b) => ({
-    ...b,
-    paymentStatus: b.status,
-  }));
+    result.items = result.items.map((b) => ({
+      ...b,
+      paymentStatus: b.status,
+    }));
 
-  return result;
+    return result;
+  });
 };
 
 export const getBills = async (restaurantId, status = null, filters = {}) => {
@@ -181,7 +192,7 @@ export const updateBill = async (restaurantId, id, data) => {
   const discountAmount = data.discountAmount !== undefined ? Number(data.discountAmount) : Number(bill.discountAmount);
   const totalAmount = Math.max(0, Number((subtotal + taxAmount - discountAmount).toFixed(2)));
 
-  return await prisma.bill.update({
+  const updated = await prisma.bill.update({
     where: { id },
     data: {
       discountAmount,
@@ -192,32 +203,38 @@ export const updateBill = async (restaurantId, id, data) => {
       payments: true,
     },
   });
+
+  await invalidateBillingCache(restaurantId);
+  return updated;
 };
 
 export const getPendingBillingOrders = async (restaurantId, filters = {}) => {
-  return await findManyPaginated(
-    prisma.order,
-    {
-      where: {
-        restaurantId,
-        bill: null,
-        OR: [
-          { billRequested: true, status: { notIn: ['CANCELLED', 'COMPLETED'] } },
-          { status: { in: ['READY', 'SERVED', 'COMPLETED'] } },
+  const cacheKey = buildCacheKey(restaurantId, 'billing', { type: 'pending-orders', ...filters });
+  return await cachedQuery(cacheKey, 8, async () => {
+    return await findManyPaginated(
+      prisma.order,
+      {
+        where: {
+          restaurantId,
+          bill: null,
+          OR: [
+            { billRequested: true, status: { notIn: ['CANCELLED', 'COMPLETED'] } },
+            { status: { in: ['READY', 'SERVED', 'COMPLETED'] } },
+          ],
+        },
+        include: {
+          table: true,
+          waiter: { select: { id: true, name: true } },
+          items: { include: { menuItem: true } },
+        },
+        orderBy: [
+          { billRequested: 'desc' },
+          { createdAt: 'desc' },
         ],
       },
-      include: {
-        table: true,
-        waiter: { select: { id: true, name: true } },
-        items: { include: { menuItem: true } },
-      },
-      orderBy: [
-        { billRequested: 'desc' },
-        { createdAt: 'desc' },
-      ],
-    },
-    filters
-  );
+      filters
+    );
+  });
 };
 
 export const deliverBill = async (restaurantId, id, waiterId) => {
@@ -236,7 +253,7 @@ export const deliverBill = async (restaurantId, id, waiterId) => {
     throw error;
   }
 
-  return await prisma.bill.update({
+  const updated = await prisma.bill.update({
     where: { id },
     data: {
       isDelivered: true,
@@ -249,6 +266,9 @@ export const deliverBill = async (restaurantId, id, waiterId) => {
       deliveredBy: { select: { id: true, name: true } },
     },
   });
+
+  await invalidateBillingCache(restaurantId);
+  return updated;
 };
 
 export default {

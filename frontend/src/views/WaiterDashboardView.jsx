@@ -59,40 +59,37 @@ function TableVisual({ image, tableNumber, capacity }) {
   );
 }
 
+import { useWaiterDashboard, usePosMutations } from '../hooks/usePosQueries';
+
 export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrder }) {
   const { restaurant, user, addToast } = useAuth();
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
+  const {
+    data: dashboardData = null,
+    isLoading,
+    isRefetching: refreshing,
+    refetch,
+  } = useWaiterDashboard(restaurant?.id);
+
+  const { invalidateOrders, invalidateBilling } = usePosMutations(restaurant?.id);
+  const loading = isLoading && !dashboardData;
+
   const fetchDashboard = async (isManual = false) => {
-    if (isManual) setRefreshing(true);
     try {
-      const res = await posService.waiter.getDashboard();
-      if (res.success && res.data) {
-        setDashboardData(res.data);
-      }
+      await refetch();
+      if (isManual) addToast('Waiter dashboard refreshed', 'success');
     } catch (err) {
       if (isManual) addToast(err.message || 'Failed to refresh dashboard', 'error');
-    } finally {
-      setLoading(false);
-      if (isManual) setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    fetchDashboard();
-    const interval = setInterval(() => fetchDashboard(false), 8000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleServeOrder = async (orderId, tableNumber) => {
     setActionLoading(`serve-${orderId}`);
     try {
       await posService.waiter.serveOrder(orderId);
       addToast(`Order for Table #${tableNumber} marked SERVED to customer!`, 'success');
-      fetchDashboard(false);
+      invalidateOrders();
     } catch (err) {
       addToast(err.message || 'Failed to serve order', 'error');
     } finally {
@@ -105,7 +102,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
     try {
       await posService.waiter.deliverBill(billId);
       addToast(`Bill delivered to Table #${tableNumber}!`, 'success');
-      fetchDashboard(false);
+      invalidateBilling();
     } catch (err) {
       addToast(err.message || 'Failed to mark bill delivered', 'error');
     } finally {
@@ -118,7 +115,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
     try {
       await posService.orders.requestBill(orderId);
       addToast(`Bill requested from Reception for Table #${tableNumber}!`, 'success');
-      fetchDashboard(false);
+      invalidateOrders();
     } catch (err) {
       addToast(err.message || 'Failed to request bill', 'error');
     } finally {

@@ -4,6 +4,7 @@ export const posService = {
   // Auth
   auth: {
     login: (credentials) => api.post('/auth/login', credentials),
+    logout: () => api.post('/auth/logout', {}),
     register: (data) => api.post('/auth/register', data),
     me: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/profile', data),

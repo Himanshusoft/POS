@@ -19,52 +19,33 @@ const STATUS_TABS = [
   { id: 'COMPLETED', label: 'Completed' },
 ];
 
+import { useKitchenOrders, usePosMutations } from '../hooks/usePosQueries';
+
 export default function KitchenOrdersView() {
-  const { addToast } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { restaurant, addToast } = useAuth();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const fetchOrders = useCallback(async (isSilent = false) => {
-    if (!isSilent && orders.length === 0) {
-      setInitialLoading(true);
-    } else {
-      setRefreshing(true);
-    }
-    try {
-      const params = {};
-      if (statusFilter === 'COMPLETED') {
-        params.status = 'COMPLETED';
-      }
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-      const res = await posService.kitchen.getOrders(params);
-      if (res.success && res.data) {
-        const orderList = Array.isArray(res.data) ? res.data : res.data.items || [];
-        setOrders(orderList);
-      }
-    } catch (err) {
-      if (!isSilent) {
-        addToast(err.message || 'Failed to fetch kitchen orders', 'error');
-      }
-    } finally {
-      setInitialLoading(false);
-      setRefreshing(false);
-    }
-  }, [statusFilter, searchQuery, orders.length, addToast]);
+  const queryParams = useMemo(() => {
+    const params = {};
+    if (statusFilter === 'COMPLETED') params.status = 'COMPLETED';
+    if (searchQuery.trim()) params.search = searchQuery.trim();
+    return params;
+  }, [statusFilter, searchQuery]);
 
-  useEffect(() => {
-    fetchOrders(orders.length > 0);
-    const interval = setInterval(() => {
-      fetchOrders(true);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [fetchOrders, orders.length]);
+  const {
+    data: orders = [],
+    isLoading,
+    isRefetching: refreshing,
+    refetch,
+  } = useKitchenOrders(restaurant?.id, queryParams);
+
+  const { invalidateOrders, invalidateInventory } = usePosMutations(restaurant?.id);
+  const initialLoading = isLoading && orders.length === 0;
+
+  const fetchOrders = () => refetch();
 
   const handleAccept = async (orderId) => {
     setActionLoading(orderId);

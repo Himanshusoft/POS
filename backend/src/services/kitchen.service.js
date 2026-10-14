@@ -2,14 +2,23 @@ import { prisma } from '../config/env.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { convertQuantity } from '../utils/unitConversion.js';
+import {
+  cachedQuery,
+  buildCacheKey,
+  invalidateOrderCache,
+  invalidateInventoryCache,
+  invalidateTableCache,
+} from '../utils/cache.js';
 
 /**
  * Returns analytical and operational dashboard metrics for Kitchen Admin.
  * All metrics are live and derived from the Neon PostgreSQL database.
  */
 export const getKitchenDashboard = async (restaurantId) => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const cacheKey = buildCacheKey(restaurantId, 'kitchen', { type: 'dashboard' });
+  return await cachedQuery(cacheKey, 8, async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
   const [
     newOrdersCount,
@@ -173,28 +182,31 @@ export const getKitchenDashboard = async (restaurantId) => {
     };
   });
 
-  return {
-    kpis: {
-      newOrders: newOrdersCount,
-      preparingOrders: preparingOrdersCount,
-      readyOrders: readyOrdersCount,
-      completedOrders: completedTodayCount,
-      lowStockIngredients: lowStockItems.length,
-      outOfStockIngredients: outOfStockItems.length,
-      averagePrepTimeMinutes: avgPrepTimeMinutes,
-    },
-    tableOrders,
-    lowStockList: lowStockItems.slice(0, 5),
-    outOfStockList: outOfStockItems.slice(0, 5),
-    recentActivity: recentTransactions,
-  };
+    return {
+      kpis: {
+        newOrders: newOrdersCount,
+        preparingOrders: preparingOrdersCount,
+        readyOrders: readyOrdersCount,
+        completedOrders: completedTodayCount,
+        lowStockIngredients: lowStockItems.length,
+        outOfStockIngredients: outOfStockItems.length,
+        averagePrepTimeMinutes: avgPrepTimeMinutes,
+      },
+      tableOrders,
+      lowStockList: lowStockItems.slice(0, 5),
+      outOfStockList: outOfStockItems.slice(0, 5),
+      recentActivity: recentTransactions,
+    };
+  });
 };
 
 /**
  * Returns kitchen orders with pagination and filtering.
  */
 export const getKitchenOrders = async (restaurantId, filters = {}) => {
-  const where = { restaurantId };
+  const cacheKey = buildCacheKey(restaurantId, 'kitchen', { type: 'orders', ...filters });
+  return await cachedQuery(cacheKey, 8, async () => {
+    const where = { restaurantId };
 
   if (filters.status && filters.status !== 'ALL') {
     where.status = filters.status;
@@ -289,7 +301,8 @@ export const getKitchenOrders = async (restaurantId, filters = {}) => {
     };
   });
 
-  return result;
+    return result;
+  });
 };
 
 /**
@@ -374,7 +387,7 @@ export const getPendingOrders = async (restaurantId, filters = {}) => {
  * Transitions order: PENDING -> ACCEPTED
  */
 export const acceptOrder = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({ where: { id: orderId, restaurantId } });
     if (!order) {
       const error = new Error('Order not found');
@@ -395,13 +408,16 @@ export const acceptOrder = async (restaurantId, orderId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 /**
  * Transitions order: ACCEPTED (or PENDING) -> IN_PREPARATION
  */
 export const startPreparation = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({ where: { id: orderId, restaurantId } });
     if (!order) {
       const error = new Error('Order not found');
@@ -426,6 +442,9 @@ export const startPreparation = async (restaurantId, orderId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 export const prepareOrder = startPreparation;
@@ -437,7 +456,7 @@ export const prepareOrder = startPreparation;
  * Idempotent: Repeated calls do NOT deduct stock again.
  */
 export const markOrderReady = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
       include: {
@@ -616,6 +635,13 @@ export const markOrderReady = async (restaurantId, orderId) => {
       },
     });
   });
+
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateInventoryCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const markReady = markOrderReady;
@@ -624,7 +650,7 @@ export const markReady = markOrderReady;
  * Transitions order: READY -> SERVED
  */
 export const markOrderServed = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({ where: { id: orderId, restaurantId } });
     if (!order) {
       const error = new Error('Order not found');
@@ -649,13 +675,16 @@ export const markOrderServed = async (restaurantId, orderId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 /**
  * Completes order: SERVED (or READY) -> COMPLETED
  */
 export const completeOrder = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
     });
@@ -679,13 +708,20 @@ export const completeOrder = async (restaurantId, orderId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 /**
  * Cancels a kitchen order.
  */
 export const cancelKitchenOrder = async (restaurantId, orderId) => {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
     });
@@ -724,6 +760,13 @@ export const cancelKitchenOrder = async (restaurantId, orderId) => {
 
     return updated;
   });
+
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 /**
@@ -779,11 +822,14 @@ export const updateItemStatus = async (restaurantId, itemId, status) => {
     throw error;
   }
 
-  return await prisma.orderItem.update({
+  const updated = await prisma.orderItem.update({
     where: { id: itemId },
     data: { status },
     include: { menuItem: true },
   });
+
+  await invalidateOrderCache(restaurantId);
+  return updated;
 };
 
 /**

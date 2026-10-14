@@ -21,10 +21,15 @@ import {
   X
 } from 'lucide-react';
 
+import { useUsers, usePosMutations } from '../hooks/usePosQueries';
+
 export default function StaffView() {
-  const { addToast } = useAuth();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
+  const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(restaurant?.id);
+  const { invalidateUsers } = usePosMutations(restaurant?.id);
+
+  const staff = Array.isArray(staffData) ? staffData : (staffData.items || []);
+  const loading = isLoading && staff.length === 0;
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,23 +53,7 @@ export default function StaffView() {
     password: '',
   });
 
-  const fetchStaff = async () => {
-    setLoading(true);
-    try {
-      const res = await posService.users.getAll();
-      if (res.success && res.data) {
-        setStaff(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load staff roster', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStaff();
-  }, []);
+  const fetchStaff = () => refetch();
 
   // Compute counts by role
   const waiterCount = staff.filter((u) => u.role === 'WAITER').length;
@@ -87,6 +76,7 @@ export default function StaffView() {
       addToast(`Staff member "${form.name}" added successfully!`, 'success');
       setShowAddModal(false);
       setForm({ name: '', email: '', password: '', phone: '', role: 'WAITER' });
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to create staff member', 'error');
@@ -127,6 +117,7 @@ export default function StaffView() {
       await posService.users.update(editingStaff.id, payload);
       addToast(`Staff details for "${editForm.name}" updated!`, 'success');
       setShowEditModal(false);
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to update staff member', 'error');
@@ -143,6 +134,7 @@ export default function StaffView() {
     try {
       await posService.users.toggleStatus(usr.id, nextState);
       addToast(`Account for "${usr.name}" is now ${nextState ? 'ACTIVE' : 'DEACTIVATED'}`, 'success');
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to update account status', 'error');
@@ -154,6 +146,7 @@ export default function StaffView() {
     try {
       await posService.users.delete(id);
       addToast(`${name} removed from roster`, 'success');
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to remove user', 'error');

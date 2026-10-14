@@ -18,11 +18,43 @@ export const env = {
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || '',
   RAZORPAY_CURRENCY: process.env.RAZORPAY_CURRENCY || 'INR',
+  REDIS_URL: process.env.REDIS_URL || '',
+  SLOW_REQUEST_THRESHOLD_MS: parseInt(process.env.SLOW_REQUEST_THRESHOLD_MS || '500', 10),
+  SLOW_QUERY_THRESHOLD_MS: parseInt(process.env.SLOW_QUERY_THRESHOLD_MS || '200', 10),
+  ENABLE_PROFILING: process.env.ENABLE_PROFILING === 'true',
+  PERF_LOGS_ENABLED: process.env.PERF_LOGS_ENABLED === 'true',
 };
 
-// Singleton PrismaClient setup
+// Singleton PrismaClient setup with opt-in slow-query profiling
 const globalForPrisma = globalThis;
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+const createPrismaClient = () => {
+  const baseClient = new PrismaClient();
+  const shouldProfile = env.PERF_LOGS_ENABLED || env.ENABLE_PROFILING;
+
+  if (!shouldProfile) {
+    return baseClient;
+  }
+
+  return baseClient.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ model, operation, args, query }) {
+          const start = performance.now();
+          const result = await query(args);
+          const duration = Math.round(performance.now() - start);
+          if (duration >= (env.SLOW_QUERY_THRESHOLD_MS || 200)) {
+            console.warn(
+              `[SLOW QUERY] ${model}.${operation} took ${duration}ms (threshold=${env.SLOW_QUERY_THRESHOLD_MS || 200}ms)`
+            );
+          }
+          return result;
+        },
+      },
+    },
+  });
+};
+
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

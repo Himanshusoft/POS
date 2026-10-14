@@ -31,6 +31,20 @@ export const setActiveUser = (user) => {
   else localStorage.removeItem('pos_user');
 };
 
+export const getActiveRestaurant = () => {
+  try {
+    const raw = localStorage.getItem('pos_restaurant');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const setActiveRestaurant = (restaurant) => {
+  if (restaurant) localStorage.setItem('pos_restaurant', JSON.stringify(restaurant));
+  else localStorage.removeItem('pos_restaurant');
+};
+
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const token = getAuthToken();
@@ -72,6 +86,7 @@ async function request(endpoint, options = {}) {
     error.data = json;
     const isAuthRoute =
       endpoint.includes('/auth/login') ||
+      endpoint.includes('/auth/logout') ||
       endpoint.includes('/auth/forgot-password') ||
       endpoint.includes('/auth/resend-reset-otp') ||
       endpoint.includes('/auth/verify-reset-otp') ||

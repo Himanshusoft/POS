@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import posService from '../services/pos.service';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import {
+  useAdminDashboardSummary,
+  useReportsSales,
+  useReportsInventory,
+  useReportsWastage,
+  useReportsFinancials,
+} from '../hooks/usePosQueries';
 import {
   BarChart3,
   TrendingUp,
@@ -24,12 +30,14 @@ import {
 export default function ReportsView() {
   const { restaurant, addToast } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'financials'
-  const [dashboard, setDashboard] = useState(null);
-  const [salesReport, setSalesReport] = useState(null);
-  const [inventoryReport, setInventoryReport] = useState(null);
-  const [wastageReport, setWastageReport] = useState(null);
-  const [financials, setFinancials] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  const { data: dashboard = null, isLoading: loadingDash, refetch: refetchDash } = useAdminDashboardSummary(restaurant?.id);
+  const { data: salesReport = null, isLoading: loadingSales, refetch: refetchSales } = useReportsSales(restaurant?.id);
+  const { data: inventoryReport = null, isLoading: loadingInv, refetch: refetchInv } = useReportsInventory(restaurant?.id);
+  const { data: wastageReport = null, isLoading: loadingWst, refetch: refetchWst } = useReportsWastage(restaurant?.id);
+  const { data: financials = null, isLoading: loadingFin, refetch: refetchFin } = useReportsFinancials(restaurant?.id);
+
+  const loading = (loadingDash && !dashboard) || (loadingSales && !salesReport);
 
   // Financial Ledger Filter
   const [ledgerSearch, setLedgerSearch] = useState('');
@@ -38,30 +46,13 @@ export default function ReportsView() {
   const currency = restaurant?.currency || '₹';
 
   const loadReports = async () => {
-    setLoading(true);
     try {
-      const [dash, sales, inv, wst, fin] = await Promise.all([
-        posService.reports.getDashboard(),
-        posService.reports.getSales(),
-        posService.reports.getInventory(),
-        posService.reports.getWastage(),
-        posService.reports.getFinancials(),
-      ]);
-      if (dash.success) setDashboard(dash.data);
-      if (sales.success) setSalesReport(sales.data);
-      if (inv.success) setInventoryReport(inv.data);
-      if (wst.success) setWastageReport(wst.data);
-      if (fin.success) setFinancials(fin.data);
+      await Promise.all([refetchDash(), refetchSales(), refetchInv(), refetchWst(), refetchFin()]);
+      addToast('Analytical reports refreshed', 'success');
     } catch (err) {
       addToast(err.message || 'Failed to compile analytical reports', 'error');
-    } finally {
-      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadReports();
-  }, []);
 
   const filteredLedger = financials?.ledger?.filter((entry) => {
     const matchSearch =

@@ -1,12 +1,15 @@
 import { prisma } from '../config/env.js';
+import { cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 /**
  * Returns comprehensive, real-time database-derived operational KPIs and table telemetry for the Waiter.
  * Scoped strictly by restaurantId.
  */
 export const getWaiterDashboard = async (restaurantId, waiterId) => {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const cacheKey = buildCacheKey(restaurantId, 'waiter', { waiterId, type: 'dashboard' });
+  return await cachedQuery(cacheKey, 8, async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
   // 1. Concurrent DB queries for tables, orders, and bills
   const [
@@ -252,6 +255,7 @@ export const getWaiterDashboard = async (restaurantId, waiterId) => {
     billNotifications,
     readyBills: billNotifications,
   };
+  });
 };
 
 export default {

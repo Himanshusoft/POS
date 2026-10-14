@@ -2,9 +2,10 @@ import { prisma } from '../config/env.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { validateOrderInventory } from './inventoryAvailability.service.js';
+import { invalidateOrderCache, invalidateTableCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 export const createOrder = async (restaurantId, waiterId, data) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     // 1. Validate table if tableId is provided
     let table = null;
     if (data.tableId) {
@@ -104,45 +105,58 @@ export const createOrder = async (restaurantId, waiterId, data) => {
       },
     });
   });
+
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const getOrders = async (restaurantId, filter = {}) => {
-  const where = { restaurantId };
-  if (filter.status) where.status = filter.status;
-  if (filter.tableId) where.tableId = filter.tableId;
-  if (filter.waiterId) where.waiterId = filter.waiterId;
-  if (filter.startDate || filter.endDate) {
-    where.createdAt = {};
-    if (filter.startDate) where.createdAt.gte = new Date(filter.startDate);
-    if (filter.endDate) where.createdAt.lte = new Date(filter.endDate);
-  }
+  const cacheKey = buildCacheKey(restaurantId, 'orders', { ...filter });
+  return await cachedQuery(cacheKey, 10, async () => {
+    const where = { restaurantId };
+    if (filter.status) where.status = filter.status;
+    if (filter.tableId) where.tableId = filter.tableId;
+    if (filter.waiterId) where.waiterId = filter.waiterId;
+    if (filter.startDate || filter.endDate) {
+      where.createdAt = {};
+      if (filter.startDate) where.createdAt.gte = new Date(filter.startDate);
+      if (filter.endDate) where.createdAt.lte = new Date(filter.endDate);
+    }
 
-  return await findManyPaginated(prisma.order, {
-    where,
-    include: {
-      table: true,
-      waiter: { select: { id: true, name: true } },
-      items: { include: { menuItem: true } },
-      bill: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filter);
+    return await findManyPaginated(prisma.order, {
+      where,
+      include: {
+        table: true,
+        waiter: { select: { id: true, name: true } },
+        items: { include: { menuItem: true } },
+        bill: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }, filter);
+  });
 };
 
 export const getActiveOrders = async (restaurantId, filters = {}) => {
-  return await findManyPaginated(prisma.order, {
-    where: {
-      restaurantId,
-      status: { notIn: ['COMPLETED', 'CANCELLED'] },
-    },
-    include: {
-      table: true,
-      waiter: { select: { id: true, name: true } },
-      items: { include: { menuItem: true } },
-      bill: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filters);
+  const cacheKey = buildCacheKey(restaurantId, 'orders', { type: 'active', ...filters });
+  return await cachedQuery(cacheKey, 8, async () => {
+    return await findManyPaginated(prisma.order, {
+      where: {
+        restaurantId,
+        status: { notIn: ['COMPLETED', 'CANCELLED'] },
+      },
+      include: {
+        table: true,
+        waiter: { select: { id: true, name: true } },
+        items: { include: { menuItem: true } },
+        bill: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }, filters);
+  });
 };
 
 export const getOrderById = async (restaurantId, id) => {
@@ -177,7 +191,7 @@ export const updateOrder = async (restaurantId, id, data) => {
     throw error;
   }
 
-  return await prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id },
     data: {
       notes: data.notes !== undefined ? data.notes : undefined,
@@ -188,10 +202,13 @@ export const updateOrder = async (restaurantId, id, data) => {
       items: { include: { menuItem: true } },
     },
   });
+
+  await invalidateOrderCache(restaurantId);
+  return updated;
 };
 
 export const cancelOrder = async (restaurantId, id) => {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({
       where: { id, restaurantId },
     });
@@ -231,6 +248,13 @@ export const cancelOrder = async (restaurantId, id) => {
 
     return updatedOrder;
   });
+
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const addItemsToExistingOrder = async (tx, restaurantId, orderId, items, additionalNotes) => {
@@ -330,13 +354,18 @@ export const addItemsToExistingOrder = async (tx, restaurantId, orderId, items, 
 };
 
 export const addItemsToOrder = async (restaurantId, waiterId, orderId, data) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     return await addItemsToExistingOrder(tx, restaurantId, orderId, data.items || [], data.notes);
   });
+  await Promise.all([
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+  return result;
 };
 
 export const requestBill = async (restaurantId, waiterId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
       include: {
@@ -382,10 +411,13 @@ export const requestBill = async (restaurantId, waiterId, orderId) => {
       },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 export const cancelBillRequest = async (restaurantId, orderId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
       include: { bill: true },
@@ -417,10 +449,13 @@ export const cancelBillRequest = async (restaurantId, orderId) => {
       },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 export const markServed = async (restaurantId, orderId, waiterId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({ where: { id: orderId, restaurantId } });
     if (!order) {
       const error = new Error('Order not found');
@@ -449,10 +484,13 @@ export const markServed = async (restaurantId, orderId, waiterId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 export const sendToKitchen = async (restaurantId, orderId, waiterId) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const order = await tx.order.findFirst({
       where: { id: orderId, restaurantId },
       include: { items: true, table: true },
@@ -475,6 +513,9 @@ export const sendToKitchen = async (restaurantId, orderId, waiterId) => {
       include: { table: true, items: { include: { menuItem: true } } },
     });
   });
+
+  await invalidateOrderCache(restaurantId);
+  return result;
 };
 
 export const updateOrderStatus = async (restaurantId, orderId, nextStatus) => {

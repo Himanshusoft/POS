@@ -18,15 +18,25 @@ import {
   Archive,
 } from 'lucide-react';
 
+import { useInventory, usePosMutations } from '../hooks/usePosQueries';
+
 export default function InventoryView() {
   const { restaurant, addToast, role } = useAuth();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'consumption' | 'audit' | 'wastage'
-  const [items, setItems] = useState([]);
+
+  const {
+    data: inventoryData = [],
+    isLoading: loadingInventory,
+    refetch: refetchInventory,
+  } = useInventory(restaurant?.id);
+  const { invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const items = Array.isArray(inventoryData) ? inventoryData : (inventoryData.items || []);
   const [wastages, setWastages] = useState([]);
   const [consumptions, setConsumptions] = useState([]);
   const [auditTransactions, setAuditTransactions] = useState([]);
   const [auditFilter, setAuditFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
+  const [loadingExtra, setLoadingExtra] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
@@ -72,33 +82,70 @@ export default function InventoryView() {
 
   const currency = restaurant?.currency || '₹';
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadWastages = async () => {
+    setLoadingExtra(true);
     try {
-      const [invRes, wstRes, kRes, txRes] = await Promise.all([
-        posService.inventory.getAll(),
-        posService.wastage.getAll(),
-        posService.kitchen.getDashboard().catch(() => ({})),
-        posService.inventory.getTransactions({ limit: 100 }).catch(() => ({})),
-      ]);
-      if (invRes.success) setItems(invRes.data || []);
-      if (wstRes.success) setWastages(wstRes.data || []);
-      if (kRes?.success && kRes.data?.recentActivity) {
-        setConsumptions(kRes.data.recentActivity || []);
-      }
-      if (txRes?.success && txRes.data) {
-        setAuditTransactions(Array.isArray(txRes.data) ? txRes.data : (txRes.data.transactions || []));
-      }
+      const res = await posService.wastage.getAll();
+      if (res.success) setWastages(res.data || []);
     } catch (err) {
-      addToast(err.message || 'Failed to load inventory', 'error');
+      addToast(err.message || 'Failed to load wastage records', 'error');
     } finally {
-      setLoading(false);
+      setLoadingExtra(false);
     }
   };
 
+  const loadConsumptions = async () => {
+    setLoadingExtra(true);
+    try {
+      const res = await posService.kitchen.getDashboard();
+      if (res.success && res.data?.recentActivity) {
+        setConsumptions(res.data.recentActivity || []);
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to load consumption activity', 'error');
+    } finally {
+      setLoadingExtra(false);
+    }
+  };
+
+  const loadAudit = async () => {
+    setLoadingExtra(true);
+    try {
+      const res = await posService.inventory.getTransactions({ limit: 100 });
+      if (res.success && res.data) {
+        setAuditTransactions(Array.isArray(res.data) ? res.data : (res.data.transactions || []));
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to load audit transactions', 'error');
+    } finally {
+      setLoadingExtra(false);
+    }
+  };
+
+  // Lazy-load sub-tab data only when that tab is actually viewed
   useEffect(() => {
-    loadData();
-  }, []);
+    if (activeTab === 'wastage' && wastages.length === 0) {
+      loadWastages();
+    } else if (activeTab === 'consumption' && consumptions.length === 0) {
+      loadConsumptions();
+    } else if (activeTab === 'audit' && auditTransactions.length === 0) {
+      loadAudit();
+    }
+  }, [activeTab]);
+
+  const loadData = async (force = true) => {
+    try {
+      if (force) invalidateInventory();
+      await refetchInventory();
+      if (activeTab === 'wastage') await loadWastages();
+      if (activeTab === 'consumption') await loadConsumptions();
+      if (activeTab === 'audit') await loadAudit();
+    } catch (err) {
+      addToast(err.message || 'Failed to refresh inventory', 'error');
+    }
+  };
+
+  const loading = (loadingInventory && items.length === 0) || (loadingExtra && activeTab !== 'stock');
 
   const handleCreateItem = async (e) => {
     e.preventDefault();

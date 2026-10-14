@@ -55,33 +55,18 @@ function MenuItemImage({ image, name, categoryName }) {
   );
 }
 
+import { useMenuCategories, useMenuItems } from '../hooks/usePosQueries';
+
 export default function WaiterMenuView() {
   const { restaurant, addToast } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: categories = [], isLoading: loadingCategories } = useMenuCategories(restaurant?.id);
+  const { data: menuItems = [], isLoading: loadingMenuItems } = useMenuItems(restaurant?.id);
+
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const loadMenu = async () => {
-    try {
-      const [catsRes, itemsRes] = await Promise.all([
-        posService.menu.getCategories(),
-        posService.menu.getItems(),
-      ]);
-      if (catsRes.success && catsRes.data) setCategories(catsRes.data);
-      if (itemsRes.success && itemsRes.data) setMenuItems(itemsRes.data);
-    } catch (err) {
-      addToast(err.message || 'Failed to load restaurant menu', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadMenu();
-  }, []);
-
+  const loading = (loadingCategories && categories.length === 0) || (loadingMenuItems && menuItems.length === 0);
   const currency = restaurant?.currency || '₹';
 
   const filteredItems = menuItems.filter((item) => {

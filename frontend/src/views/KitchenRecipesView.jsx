@@ -13,12 +13,20 @@ import {
 } from 'lucide-react';
 import { INVENTORY_UNITS } from '../constants/inventory.constants';
 
+import { useMenuItems, useRecipes, useInventory, usePosMutations } from '../hooks/usePosQueries';
+
 export default function KitchenRecipesView() {
-  const { addToast } = useAuth();
-  const [menuItems, setMenuItems] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
+  const { data: menuItemsData = [], isLoading: loadingMenu, refetch: refetchMenu } = useMenuItems(restaurant?.id);
+  const { data: inventoryData = [], isLoading: loadingInventory, refetch: refetchInventory } = useInventory(restaurant?.id);
+  const { data: recipesData = [], isLoading: loadingRecipes, refetch: refetchRecipes } = useRecipes(restaurant?.id);
+  const { invalidateMenu, invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const menuItems = Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData.items || []);
+  const inventoryItems = Array.isArray(inventoryData) ? inventoryData : (inventoryData.items || []);
+  const recipes = Array.isArray(recipesData) ? recipesData : (recipesData.items || []);
+
+  const loading = (loadingMenu && menuItems.length === 0) || (loadingInventory && inventoryItems.length === 0) || (loadingRecipes && recipes.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Recipe Modal State
@@ -32,35 +40,12 @@ export default function KitchenRecipesView() {
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [itemsRes, invRes, recRes] = await Promise.all([
-        posService.menu.getItems(),
-        posService.kitchen.getInventory(),
-        posService.recipes.getAll(),
-      ]);
-
-      if (itemsRes.success) {
-        const list = Array.isArray(itemsRes.data) ? itemsRes.data : itemsRes.data.items || [];
-        setMenuItems(list);
-      }
-      if (invRes.success) {
-        setInventoryItems(invRes.data || []);
-      }
-      if (recRes.success) {
-        const rList = Array.isArray(recRes.data) ? recRes.data : recRes.data.items || [];
-        setRecipes(rList);
-      }
+      await Promise.all([refetchMenu(), refetchInventory(), refetchRecipes()]);
     } catch (err) {
-      addToast(err.message || 'Failed to load recipe data', 'error');
-    } finally {
-      setLoading(false);
+      addToast(err.message || 'Failed to refresh recipe data', 'error');
     }
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const openRecipeEditor = async (menuItem) => {
     setSelectedMenuItem(menuItem);
@@ -161,6 +146,8 @@ export default function KitchenRecipesView() {
       await posService.recipes.create(payload);
       addToast(`Recipe for '${selectedMenuItem.name}' saved successfully!`, 'success');
       setShowModal(false);
+      invalidateMenu();
+      invalidateInventory();
       loadData();
     } catch (err) {
       addToast(err.message || 'Failed to save recipe', 'error');

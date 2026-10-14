@@ -42,14 +42,36 @@ function DishThumbnail({ image, name }) {
   );
 }
 
+import { useMenuCategories, useMenuItems, useInventory, usePosMutations } from '../hooks/usePosQueries';
+
 export default function MenuView() {
   const { restaurant, addToast, role } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [items, setItems] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
+  const { invalidateMenu } = usePosMutations(restaurant?.id);
+
+  const {
+    data: categories = [],
+    isLoading: loadingCategories,
+    refetch: refetchCategories,
+  } = useMenuCategories(restaurant?.id);
+
+  const {
+    data: items = [],
+    isLoading: loadingItems,
+    refetch: refetchItems,
+  } = useMenuItems(restaurant?.id);
+
+  const {
+    data: inventoryItems = [],
+    isLoading: loadingInventory,
+    refetch: refetchInventory,
+  } = useInventory(restaurant?.id);
+
   const [selectedCatId, setSelectedCatId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  const loading = (loadingCategories && categories.length === 0) ||
+    (loadingItems && items.length === 0) ||
+    (loadingInventory && inventoryItems.length === 0);
 
   // Modals
   const [showItemModal, setShowItemModal] = useState(false);
@@ -83,26 +105,9 @@ export default function MenuView() {
   const currency = restaurant?.currency || '₹';
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const [catRes, itmRes, invRes] = await Promise.all([
-        posService.menu.getCategories(),
-        posService.menu.getItems(),
-        posService.inventory.getAll(),
-      ]);
-      if (catRes.success) setCategories(catRes.data || []);
-      if (itmRes.success) setItems(itmRes.data || []);
-      if (invRes.success) setInventoryItems(invRes.data || []);
-    } catch (err) {
-      addToast(err.message || 'Failed to load menu data', 'error');
-    } finally {
-      setLoading(false);
-    }
+    invalidateMenu();
+    await Promise.all([refetchCategories(), refetchItems(), refetchInventory()]);
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleToggleAvailability = async (item) => {
     try {

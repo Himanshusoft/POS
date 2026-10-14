@@ -40,7 +40,7 @@ export default function Navbar({
   mobileSidebarOpen,
   setMobileSidebarOpen,
 }) {
-  const { user, restaurant, logout, role } = useAuth();
+  const { user, restaurant, logout, loggingOut, role } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -244,14 +244,16 @@ export default function Navbar({
 
                 {/* 2. Sign Out */}
                 <button
-                  onClick={() => {
+                  type="button"
+                  disabled={loggingOut}
+                  onClick={async () => {
                     setDropdownOpen(false);
-                    logout();
+                    await logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors text-left cursor-pointer disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{loggingOut ? 'Signing Out...' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>

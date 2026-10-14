@@ -3,7 +3,7 @@ import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import ReceiptModal from '../components/ReceiptModal';
 import { loadRazorpayScript } from '../utils/razorpay';
-import { Modal, SkeletonTable, EmptyState, Badge, Button } from '../components/ui';
+import { Modal, SkeletonTable, EmptyState, Button } from '../components/ui';
 import {
   Receipt,
   CreditCard,
@@ -15,11 +15,11 @@ import {
   Printer,
   Search,
   DollarSign,
-  AlertTriangle,
   Eye,
   Utensils,
-  Clock,
 } from 'lucide-react';
+
+import { usePendingBillingOrders, useBills, usePayments, usePosMutations } from '../hooks/usePosQueries';
 
 export default function BillingView({ preSelectedTable, initialTab }) {
   const { restaurant, addToast } = useAuth();
@@ -27,11 +27,6 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   const [activeTab, setActiveTab] = useState(() => {
     return initialTab || sessionStorage.getItem('pos_billing_subtab') || 'bills';
   });
-  const [pendingOrders, setPendingOrders] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Synchronize initialTab if provided externally
   useEffect(() => {
@@ -74,39 +69,37 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
   const currency = restaurant?.currency || '₹';
 
-  const loadData = async (isBackground = false) => {
-    if (!isBackground) {
-      if (bills.length === 0 && payments.length === 0 && pendingOrders.length === 0) {
-        setInitialLoading(true);
-      } else {
-        setRefreshing(true);
-      }
-    }
-    try {
-      const [ordRes, billRes, payRes] = await Promise.all([
-        posService.billing.getPendingOrders(),
-        posService.billing.getBills({ limit: 100 }),
-        posService.payments.getAll({ limit: 100 }),
-      ]);
-      if (ordRes.success) setPendingOrders(ordRes.data?.items || (Array.isArray(ordRes.data) ? ordRes.data : []));
-      if (billRes.success) setBills(billRes.data?.items || (Array.isArray(billRes.data) ? billRes.data : []));
-      if (payRes.success) setPayments(payRes.data?.items || (Array.isArray(payRes.data) ? payRes.data : []));
-    } catch (err) {
-      if (!isBackground) {
-        addToast(err.message || 'Failed to load billing records', 'error');
-      }
-    } finally {
-      setInitialLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const {
+    data: pendingOrders = [],
+    isLoading: loadingPending,
+    isRefetching: refetchingPending,
+    refetch: refetchPending,
+  } = usePendingBillingOrders(restaurant?.id);
 
-  useEffect(() => {
-    loadData(false);
-    // Background polling every 6 seconds without resetting loading state or active tab
-    const interval = setInterval(() => loadData(true), 6000);
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    data: bills = [],
+    isLoading: loadingBills,
+    isRefetching: refetchingBills,
+    refetch: refetchBills,
+  } = useBills(restaurant?.id, { limit: 100 });
+
+  const {
+    data: payments = [],
+    isLoading: loadingPayments,
+    isRefetching: refetchingPayments,
+    refetch: refetchPayments,
+  } = usePayments(restaurant?.id, { limit: 100 });
+
+  const { invalidateBilling, invalidateTables } = usePosMutations(restaurant?.id);
+
+  const initialLoading = (loadingPending && pendingOrders.length === 0) ||
+    (loadingBills && bills.length === 0) ||
+    (loadingPayments && payments.length === 0);
+  const refreshing = refetchingPending || refetchingBills || refetchingPayments;
+
+  const loadData = async () => {
+    await Promise.all([refetchPending(), refetchBills(), refetchPayments()]);
+  };
 
   const openGenerateModal = (order) => {
     setSelectedOrderForBill(order);

@@ -62,11 +62,16 @@ function MenuItemImage({ image, name, categoryName }) {
   );
 }
 
+import { useMenuCategories, useMenuItems, useTables, usePosMutations } from '../hooks/usePosQueries';
+
 export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   const { restaurant, addToast } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [tables, setTables] = useState([]);
+  const { invalidateOrders } = usePosMutations(restaurant?.id);
+
+  const { data: categories = [], isLoading: loadingCategories } = useMenuCategories(restaurant?.id);
+  const { data: menuItems = [], isLoading: loadingMenuItems } = useMenuItems(restaurant?.id);
+  const { data: tables = [], isLoading: loadingTables } = useTables(restaurant?.id);
+
   const [selectedTableId, setSelectedTableId] = useState(preSelectedTable?.id || '');
   const [activeCategoryId, setActiveCategoryId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,7 +79,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   const [orderType, setOrderType] = useState('DINE_IN');
   const [specialNotes, setSpecialNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
+
+  const loading = (loadingCategories && categories.length === 0) ||
+    (loadingMenuItems && menuItems.length === 0) ||
+    (loadingTables && tables.length === 0);
 
   // Orders History Drawer
   const [showHistory, setShowHistory] = useState(false);
@@ -89,33 +97,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
     }
   }, [preSelectedTable]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [catRes, itemRes, tblRes] = await Promise.all([
-        posService.menu.getCategories(),
-        posService.menu.getItems(),
-        posService.tables.getAll(),
-      ]);
-      if (catRes.success) setCategories(catRes.data || []);
-      if (itemRes.success) setMenuItems(itemRes.data || []);
-      if (tblRes.success) {
-        setTables(tblRes.data || []);
-        if (!selectedTableId && tblRes.data?.length > 0) {
-          const avail = tblRes.data.find((t) => t.status === 'AVAILABLE') || tblRes.data[0];
-          setSelectedTableId(avail.id);
-        }
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load POS catalog', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!selectedTableId && tables.length > 0) {
+      const avail = tables.find((t) => t.status === 'AVAILABLE') || tables[0];
+      setSelectedTableId(avail.id);
+    }
+  }, [tables, selectedTableId]);
+
 
   const fetchActiveOrders = async () => {
     setLoadingOrders(true);
@@ -272,6 +260,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
       const res = await posService.orders.create(payload);
       if (res.success) {
+        invalidateOrders();
         addToast(
           activeOrderOnTable
             ? `New items added to active order #${res.data?.orderNumber || activeOrderOnTable.orderNumber}!`

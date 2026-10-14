@@ -1,6 +1,7 @@
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { serializableTransaction } from '../utils/transaction.js';
+import { invalidateInventoryCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 export const createInventoryItem = async (restaurantId, data) => {
   const name = data.name.trim();
@@ -30,8 +31,8 @@ export const createInventoryItem = async (restaurantId, data) => {
   const minThreshold = rawMin !== undefined && rawMin !== null && rawMin !== '' ? Number(rawMin) : 5;
   const cost = rawCost !== undefined && rawCost !== null && rawCost !== '' ? Number(rawCost) : 0;
 
-  return await serializableTransaction(prisma, async (tx) => {
-    const item = await tx.inventoryItem.create({
+  const item = await serializableTransaction(prisma, async (tx) => {
+    const createdItem = await tx.inventoryItem.create({
       data: {
         restaurantId,
         name,
@@ -47,10 +48,10 @@ export const createInventoryItem = async (restaurantId, data) => {
       await tx.inventoryTransaction.create({
         data: {
           restaurantId,
-          inventoryItemId: item.id,
+          inventoryItemId: createdItem.id,
           type: 'PURCHASE',
           quantity: initialStock,
-          unit: item.unit,
+          unit: createdItem.unit,
           previousBalance: 0,
           remainingBalance: initialStock,
           reason: 'Initial Opening Stock',
@@ -59,8 +60,11 @@ export const createInventoryItem = async (restaurantId, data) => {
       });
     }
 
-    return item;
+    return createdItem;
   });
+
+  await invalidateInventoryCache(restaurantId);
+  return item;
 };
 
 export const getInventoryTransactions = async (restaurantId, filters = {}) => {
@@ -89,26 +93,32 @@ export const getInventoryTransactions = async (restaurantId, filters = {}) => {
 };
 
 export const getInventoryItems = async (restaurantId, filters = {}) => {
-  const where = { restaurantId };
-  if (filters.unit) where.unit = filters.unit;
-  if (filters.search) {
-    where.OR = [
-      { name: { contains: String(filters.search), mode: 'insensitive' } },
-      { sku: { contains: String(filters.search), mode: 'insensitive' } },
-    ];
-  }
-  return await findManyPaginated(prisma.inventoryItem, {
-    where,
-    orderBy: { name: 'asc' },
-  }, filters);
+  const cacheKey = buildCacheKey(restaurantId, 'inventory:items', filters);
+  return await cachedQuery(cacheKey, 20, async () => {
+    const where = { restaurantId };
+    if (filters.unit) where.unit = filters.unit;
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: String(filters.search), mode: 'insensitive' } },
+        { sku: { contains: String(filters.search), mode: 'insensitive' } },
+      ];
+    }
+    return await findManyPaginated(prisma.inventoryItem, {
+      where,
+      orderBy: { name: 'asc' },
+    }, filters);
+  });
 };
 
 export const getLowStockItems = async (restaurantId) => {
-  const items = await prisma.inventoryItem.findMany({
-    where: { restaurantId },
-    orderBy: { currentStock: 'asc' },
+  const cacheKey = buildCacheKey(restaurantId, 'inventory', { type: 'low-stock' });
+  return await cachedQuery(cacheKey, 30, async () => {
+    const items = await prisma.inventoryItem.findMany({
+      where: { restaurantId },
+      orderBy: { currentStock: 'asc' },
+    });
+    return items.filter((i) => Number(i.currentStock) <= Number(i.minStockThreshold));
   });
-  return items.filter((i) => Number(i.currentStock) <= Number(i.minStockThreshold));
 };
 
 export const getInventoryItemById = async (restaurantId, id) => {
@@ -137,7 +147,7 @@ export const updateInventoryItem = async (restaurantId, id, data) => {
     ? data.costPerUnit
     : (data.costPrice !== undefined ? data.costPrice : data.cost);
 
-  return await prisma.inventoryItem.update({
+  const updated = await prisma.inventoryItem.update({
     where: { id },
     data: {
       name: data.name ? data.name.trim() : undefined,
@@ -148,6 +158,9 @@ export const updateInventoryItem = async (restaurantId, id, data) => {
       costPerUnit: rawCost !== undefined ? Number(rawCost) : undefined,
     },
   });
+
+  await invalidateInventoryCache(restaurantId);
+  return updated;
 };
 
 export const updateStock = async (restaurantId, id, data) => {
@@ -166,6 +179,7 @@ export const updateStock = async (restaurantId, id, data) => {
     throw error;
   }
 
+  let updatedItem;
   if (data.adjustment !== undefined) {
     const result = await prisma.inventoryItem.updateMany({
       where: {
@@ -180,13 +194,17 @@ export const updateStock = async (restaurantId, id, data) => {
       error.statusCode = 422;
       throw error;
     }
-    return await getInventoryItemById(restaurantId, id);
+    updatedItem = await getInventoryItemById(restaurantId, id);
+  } else {
+    await prisma.inventoryItem.updateMany({
+      where: { id, restaurantId },
+      data: { currentStock: newStock },
+    });
+    updatedItem = await getInventoryItemById(restaurantId, id);
   }
 
-  return await prisma.inventoryItem.updateMany({
-    where: { id, restaurantId },
-    data: { currentStock: newStock },
-  }).then(() => getInventoryItemById(restaurantId, id));
+  await invalidateInventoryCache(restaurantId);
+  return updatedItem;
 };
 
 export const deleteInventoryItem = async (restaurantId, id) => {
@@ -204,9 +222,12 @@ export const deleteInventoryItem = async (restaurantId, id) => {
     error.statusCode = 409;
     throw error;
   }
-  return await prisma.inventoryItem.delete({
+  const deleted = await prisma.inventoryItem.delete({
     where: { id },
   });
+
+  await invalidateInventoryCache(restaurantId);
+  return deleted;
 };
 
 export const adjustStock = async (restaurantId, id, data, user = {}) => {
@@ -230,7 +251,7 @@ export const adjustStock = async (restaurantId, id, data, user = {}) => {
   const reason = data.reason ? String(data.reason).trim() : 'Manual Stock Adjustment';
   const auditNotes = data.auditNotes !== undefined ? data.auditNotes : (data.notes !== undefined ? data.notes : null);
 
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const item = await tx.inventoryItem.findFirst({
       where: { id, restaurantId },
       include: {
@@ -295,6 +316,9 @@ export const adjustStock = async (restaurantId, id, data, user = {}) => {
       },
     });
   });
+
+  await invalidateInventoryCache(restaurantId);
+  return result;
 };
 
 export default {

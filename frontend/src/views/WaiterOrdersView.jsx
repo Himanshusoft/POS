@@ -3,6 +3,7 @@ import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { SkeletonTable } from '../components/ui/Skeleton';
+import { useOrders, usePosMutations } from '../hooks/usePosQueries';
 import {
   ClipboardList,
   Search,
@@ -14,37 +15,19 @@ import {
 
 export default function WaiterOrdersView({ onSelectTableForOrder }) {
   const { restaurant, addToast } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: orders = [], isLoading: loading, refetch: fetchOrders } = useOrders(restaurant?.id);
+  const { invalidateOrders } = usePosMutations(restaurant?.id);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await posService.orders.getAll();
-      if (res.success && res.data) {
-        setOrders(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to fetch orders', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 8000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleServe = async (orderId, tableNumber) => {
     setActionLoading(`serve-${orderId}`);
     try {
       await posService.waiter.serveOrder(orderId);
       addToast(`Order for Table #${tableNumber} marked SERVED!`, 'success');
+      invalidateOrders();
       fetchOrders();
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder((prev) => ({ ...prev, status: 'SERVED' }));
@@ -64,6 +47,7 @@ export default function WaiterOrdersView({ onSelectTableForOrder }) {
     try {
       await posService.orders.cancel(orderId, reason.trim());
       addToast('Order cancelled successfully', 'info');
+      invalidateOrders();
       fetchOrders();
       setSelectedOrder(null);
     } catch (err) {

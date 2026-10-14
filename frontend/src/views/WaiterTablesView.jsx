@@ -59,35 +59,23 @@ function TableVisual({ image, tableNumber, capacity }) {
   );
 }
 
+import { useTables, usePosMutations } from '../hooks/usePosQueries';
+
 export default function WaiterTablesView({ onSelectTableForOrder }) {
   const { restaurant, addToast } = useAuth();
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: tables = [],
+    isLoading: loading,
+    refetch: fetchTables,
+  } = useTables(restaurant?.id, { refetchInterval: 8000 });
+  const { invalidateOrders, invalidateBilling } = usePosMutations(restaurant?.id);
+
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
 
   const currency = restaurant?.currency || '₹';
-
-  const fetchTables = async () => {
-    try {
-      const res = await posService.tables.getAll();
-      if (res.success && res.data) {
-        setTables(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to fetch restaurant tables', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTables();
-    const interval = setInterval(fetchTables, 6000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleServeOrder = async (orderId, tableNumber) => {
     setActionLoading(`serve-${orderId}`);

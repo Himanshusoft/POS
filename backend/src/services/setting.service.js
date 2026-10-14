@@ -1,4 +1,5 @@
 import { prisma } from '../config/env.js';
+import { cachedQuery, buildCacheKey, invalidateSettingsCache } from '../utils/cache.js';
 
 // Default configuration blueprints per scope and key
 export const DEFAULT_SETTINGS = {
@@ -69,11 +70,13 @@ export const buildScopeKey = (scope, identifier, key) => {
  * Retrieve all settings relevant to the authenticated user's role and tenant
  */
 export const getSettingsForUser = async (user) => {
-  const result = {
-    scope: user.role === 'RESTAURANT_REGISTRATION_ADMIN' ? 'PLATFORM' : 'RESTAURANT',
-    role: user.role,
-    settings: {},
-  };
+  const cacheKey = buildCacheKey(user.restaurantId || 'global', 'settings', { userId: user.id });
+  return await cachedQuery(cacheKey, 60, async () => {
+    const result = {
+      scope: user.role === 'RESTAURANT_REGISTRATION_ADMIN' ? 'PLATFORM' : 'RESTAURANT',
+      role: user.role,
+      settings: {},
+    };
 
   // 1. Fetch user's personal preferences
   const userSettings = await prisma.setting.findMany({
@@ -163,7 +166,8 @@ export const getSettingsForUser = async (user) => {
     },
   };
 
-  return result;
+    return result;
+  });
 };
 
 /**
@@ -246,6 +250,7 @@ export const updateSetting = async (user, { scope, key, value }) => {
     },
   });
 
+  await invalidateSettingsCache(restaurantId);
   return updatedSetting;
 };
 

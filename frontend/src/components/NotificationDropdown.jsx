@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import posService from '../services/pos.service';
+import { queryKeys } from '../config/queryKeys';
 import {
   Bell,
   CheckCircle2,
@@ -29,12 +31,15 @@ function formatRelativeTime(dateString) {
   return `${diffDays}d ago`;
 }
 
-// Safely extract array items from responses (both paginated { items: [] } and raw [])
+// Safely extract array items from responses (both paginated { items: [] }, query client cache, and raw [])
 function extractItems(response) {
-  if (!response?.success) return [];
-  const payload = response.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.items)) return payload.items;
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  if (response?.success && response?.data) {
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data.items)) return response.data.items;
+  }
   return [];
 }
 
@@ -90,22 +95,57 @@ export default function NotificationDropdown() {
     }
   };
 
-  // Fetch live, dynamic notifications directly from active system data
-  const fetchDynamicNotifications = useCallback(async (isSilent = false) => {
+  const queryClient = useQueryClient();
+  const restId = restaurant?.id || 'current';
+
+  // Helper to read from React Query cache first, or fetch with deduplicating queryKey if dropdown is opened
+  const getOrFetchQuery = useCallback(async (queryKey, fetcherFn, shouldFetch = false) => {
+    const cached = queryClient.getQueryData(queryKey);
+    if (cached !== undefined && cached !== null) {
+      return cached;
+    }
+    if (shouldFetch) {
+      return await queryClient.fetchQuery({
+        queryKey,
+        queryFn: fetcherFn,
+        staleTime: 30 * 1000,
+      }).catch(() => null);
+    }
+    return null;
+  }, [queryClient]);
+
+  // Fetch live notifications by reusing React Query cache or performing deduplicated fetch
+  const fetchDynamicNotifications = useCallback(async (isSilent = false, forceFetch = false) => {
     if (!isSilent) setLoading(true);
     setError(null);
+
+    const allowNetwork = forceFetch || isOpen;
 
     try {
       let list = [];
 
       if (role === 'WAITER') {
         const [dashRes, ordersRes] = await Promise.all([
-          posService.waiter.getDashboard().catch(() => null),
-          posService.orders.getAll({ limit: 15 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.waiter.dashboard(restId),
+            async () => {
+              const res = await posService.waiter.getDashboard();
+              return res.success && res.data ? res.data : null;
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.orders.all(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.orders.getAll({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         // 1. Ready Order Notifications from Kitchen
-        const readyItems = dashRes?.data?.readyNotifications || [];
+        const readyItems = (dashRes?.readyNotifications || dashRes?.data?.readyNotifications) || [];
         readyItems.forEach((n) => {
           list.push({
             id: `waiter-ready-${n.orderId || n.id}`,
@@ -118,7 +158,7 @@ export default function NotificationDropdown() {
         });
 
         // 2. Bills ready for delivery
-        const billItems = dashRes?.data?.billNotifications || [];
+        const billItems = (dashRes?.billNotifications || dashRes?.data?.billNotifications) || [];
         billItems.forEach((b) => {
           list.push({
             id: `waiter-bill-${b.billId || b.id}`,
@@ -156,8 +196,22 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'KITCHEN_ADMIN') {
         const [ordersRes, lowStockRes] = await Promise.all([
-          posService.kitchen.getOrders({ limit: 15 }).catch(() => null),
-          posService.inventory.getLowStockAlerts().catch(() => null),
+          getOrFetchQuery(
+            queryKeys.kitchen.orders(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.kitchen.getOrders({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.inventory.lowStock(restId),
+            async () => {
+              const res = await posService.inventory.getLowStockAlerts();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         const rawOrders = extractItems(ordersRes);
@@ -209,9 +263,30 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'RESTAURANT_OWNER') {
         const [ordersRes, lowStockRes, billsRes] = await Promise.all([
-          posService.orders.getAll({ limit: 15 }).catch(() => null),
-          posService.inventory.getLowStockAlerts().catch(() => null),
-          posService.billing.getBills({ limit: 8 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.orders.all(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.orders.getAll({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.inventory.lowStock(restId),
+            async () => {
+              const res = await posService.inventory.getLowStockAlerts();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.billing.bills(restId, { limit: 100 }),
+            async () => {
+              const res = await posService.billing.getBills({ limit: 100 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         // Real-time Order Events
@@ -289,8 +364,22 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'RECEPTIONIST') {
         const [pendingOrdersRes, billsRes] = await Promise.all([
-          posService.billing.getPendingOrders().catch(() => null),
-          posService.billing.getBills({ limit: 12 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.billing.pendingOrders(restId),
+            async () => {
+              const res = await posService.billing.getPendingOrders();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.billing.bills(restId, { limit: 100 }),
+            async () => {
+              const res = await posService.billing.getBills({ limit: 100 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         const rawPending = extractItems(pendingOrdersRes);
@@ -320,7 +409,14 @@ export default function NotificationDropdown() {
           });
         });
       } else if (role === 'RESTAURANT_REGISTRATION_ADMIN') {
-        const res = await posService.registrationAdmin.getRestaurants({ limit: 10 }).catch(() => null);
+        const res = await getOrFetchQuery(
+          queryKeys.superAdmin.restaurants({ limit: 10 }),
+          async () => {
+            const r = await posService.registrationAdmin.getRestaurants({ limit: 10 });
+            return r.success && r.data ? r.data : [];
+          },
+          allowNetwork
+        );
         const restaurants = extractItems(res);
         restaurants.forEach((r) => {
           list.push({
@@ -356,18 +452,16 @@ export default function NotificationDropdown() {
     } finally {
       if (!isSilent) setLoading(false);
     }
-  }, [role, currency]);
+  }, [role, currency, restId, isOpen, getOrFetchQuery]);
 
-  // Initial load, live reactive poll every 4 seconds, and auto-refresh on window focus / custom events
+  // Initial load and instant refresh on window focus / custom events
   useEffect(() => {
-    fetchDynamicNotifications(false);
+    fetchDynamicNotifications(true, false);
 
-    const interval = setInterval(() => {
-      fetchDynamicNotifications(true);
-    }, 4000);
-
-    const handleFocus = () => fetchDynamicNotifications(true);
-    const handleCustomRefresh = () => fetchDynamicNotifications(true);
+    const handleFocus = () => {
+      if (isOpen) fetchDynamicNotifications(true, true);
+    };
+    const handleCustomRefresh = () => fetchDynamicNotifications(true, true);
 
     window.addEventListener('focus', handleFocus);
     window.addEventListener('pos:refresh_notifications', handleCustomRefresh);
@@ -375,13 +469,19 @@ export default function NotificationDropdown() {
     window.addEventListener('pos:order_updated', handleCustomRefresh);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('pos:refresh_notifications', handleCustomRefresh);
       window.removeEventListener('pos:order_created', handleCustomRefresh);
       window.removeEventListener('pos:order_updated', handleCustomRefresh);
     };
-  }, [fetchDynamicNotifications]);
+  }, [fetchDynamicNotifications, isOpen]);
+
+  // Refresh immediately whenever user opens the notifications dropdown
+  useEffect(() => {
+    if (isOpen) {
+      fetchDynamicNotifications(false, true);
+    }
+  }, [isOpen, fetchDynamicNotifications]);
 
   // Close dropdown on outside click or Escape
   useEffect(() => {

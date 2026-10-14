@@ -28,15 +28,27 @@ import {
   DollarSign
 } from 'lucide-react';
 
+import {
+  useSuperAdminOverview,
+  useSuperAdminRestaurants,
+  useSuperAdminPlans,
+  usePosMutations
+} from '../hooks/usePosQueries';
+
 export default function RegistrationAdminDashboard() {
   const { addToast } = useAuth();
   const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'plans'
-  const [restaurants, setRestaurants] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [overview, setOverview] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const { data: overview = null, isLoading: loadingOverview, refetch: refetchOverview } = useSuperAdminOverview();
+  const { data: restData = [], isLoading: loadingRest, refetch: refetchRestaurants } = useSuperAdminRestaurants();
+  const { data: plansData = [], isLoading: loadingPlans, refetch: refetchPlans } = useSuperAdminPlans();
+  const { invalidateSuperAdmin } = usePosMutations();
+
+  const restaurants = Array.isArray(restData) ? restData : (restData.items || []);
+  const plans = Array.isArray(plansData) ? plansData : (plansData.items || []);
+  const loading = (loadingOverview && !overview) || (loadingRest && restaurants.length === 0) || (loadingPlans && plans.length === 0);
 
   // Onboarding Modal State
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -91,39 +103,21 @@ export default function RegistrationAdminDashboard() {
 
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [overviewRes, restRes, plansRes] = await Promise.all([
-        posService.superAdmin.getOverview(),
-        posService.superAdmin.getRestaurants(),
-        posService.superAdmin.getPlans(),
-      ]);
+  useEffect(() => {
+    if (!onboardForm.planId && plans.length > 0) {
+      setOnboardForm((prev) => ({ ...prev, planId: plans[0].id }));
+    }
+  }, [plans, onboardForm.planId]);
 
-      if (overviewRes.success && overviewRes.data) {
-        setOverview(overviewRes.data);
-      }
-      if (restRes.success && restRes.data) {
-        setRestaurants(restRes.data);
-      }
-      if (plansRes.success && plansRes.data) {
-        setPlans(plansRes.data);
-        if (!onboardForm.planId && plansRes.data.length > 0) {
-          setOnboardForm((prev) => ({ ...prev, planId: plansRes.data[0].id }));
-        }
-      }
+  const fetchData = async () => {
+    try {
+      invalidateSuperAdmin();
+      await Promise.all([refetchOverview(), refetchRestaurants(), refetchPlans()]);
     } catch (err) {
-      setError(err.message || 'Unable to load platform data');
-      addToast(err.message || 'Failed to load platform data', 'error');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Unable to refresh platform data');
+      addToast(err.message || 'Failed to refresh platform data', 'error');
     }
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const handleToggleStatus = async (restaurant) => {
     const nextStatus = !restaurant.isActive;

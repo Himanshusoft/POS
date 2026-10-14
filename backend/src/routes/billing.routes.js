@@ -17,9 +17,9 @@ router.use(validateQuery);
 
 router.get('/pending-orders', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getPendingOrders);
 router.get('/order/:orderId', billingController.getBillByOrderId);
-router.get('/bills', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBills);
+router.get('/bills', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER, ROLES.WAITER), billingController.getBills);
 router.get('/bills/:id', billingController.getBillById);
-router.get('/', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), billingController.getBills);
+router.get('/', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER, ROLES.WAITER), billingController.getBills);
 router.get('/:id', billingController.getBillById);
 router.post('/generate', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateGenerateBill), billingController.createBill);
 router.post('/bills', authorizeRoles(ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER), validateRequest(validateGenerateBill), billingController.createBill);
