@@ -689,7 +689,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                             {order.itemsSummary}
                           </p>
                         )}
-                        {order.bill && (
+                        {order.bill ? (
                           <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between text-[11px]">
                             <span className="text-[#657168] dark:text-[#9FB29E]">Bill: #{order.bill.billNumber}</span>
                             <span className="font-bold text-[#173F36] dark:text-[#9FB29E] font-mono tabular-nums">

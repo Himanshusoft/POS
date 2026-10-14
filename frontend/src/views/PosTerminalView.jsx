@@ -419,7 +419,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                           !isOrderable ? 'text-[#657168] dark:text-[#9FB29E]' : 'text-[#17251F] dark:text-[#F7EFE4] group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E]'
                         }`}>
                           {item.name}
-                        </h3>
+                        </span>
                         {(item.dietary || item.isVeg !== undefined) && (
                           <span
                             className={`w-3.5 h-3.5 rounded-xs border p-0.5 flex items-center justify-center shrink-0 mt-0.5 ${
