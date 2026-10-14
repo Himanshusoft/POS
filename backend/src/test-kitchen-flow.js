@@ -180,6 +180,10 @@ async function runTests() {
       data: { restaurantId, tableNumber: 'T-10', capacity: 4, status: 'AVAILABLE' },
     });
   } else {
+    await prisma.order.updateMany({
+      where: { tableId: table.id, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+      data: { status: 'CANCELLED' },
+    });
     table = await prisma.table.update({
       where: { id: table.id },
       data: { status: 'AVAILABLE' },
@@ -341,7 +345,7 @@ async function runTests() {
     data: {
       restaurantId,
       name: `Expensive Truffle ${Date.now().toString().slice(-4)}`,
-      currentStock: 0.1,
+      currentStock: 1.0,
       minStockThreshold: 1.0,
       unit: 'KG',
     },
@@ -376,6 +380,12 @@ async function runTests() {
   await request(`/kitchen/orders/${insuffOrderId}/accept`, { method: 'PATCH', token: chefToken });
   await request(`/kitchen/orders/${insuffOrderId}/prepare`, { method: 'PATCH', token: chefToken });
 
+  // Simulate stock dropping while in preparation (e.g. spoilage or manual deduction)
+  await prisma.inventoryItem.update({
+    where: { id: lowItem.id },
+    data: { currentStock: 0.1 },
+  });
+
   const failReady = await request(`/kitchen/orders/${insuffOrderId}/ready`, {
     method: 'PATCH',
     token: chefToken,
@@ -389,14 +399,19 @@ async function runTests() {
   const tableNoRecipe = await prisma.table.create({
     data: { restaurantId, tableNumber: `T-NOREC-${Date.now().toString().slice(-5)}`, status: 'AVAILABLE' },
   });
-  const noRecipeOrder = await request('/orders', {
-    method: 'POST',
-    token: waiterToken,
-    body: { tableId: tableNoRecipe.id, items: [{ menuItemId: noRecipeDish.id, quantity: 1 }] },
+  const noRecipeOrder = await prisma.order.create({
+    data: {
+      restaurantId,
+      tableId: tableNoRecipe.id,
+      waiterId: waiterUser.id,
+      orderNumber: `ORD-NOREC-${Date.now().toString().slice(-4)}`,
+      status: 'IN_PREPARATION',
+      items: {
+        create: [{ menuItemId: noRecipeDish.id, quantity: 1, unitPrice: 20, subtotal: 20, status: 'COOKING' }],
+      },
+    },
   });
-  const noRecipeOrderId = noRecipeOrder.data.data.id;
-  await request(`/kitchen/orders/${noRecipeOrderId}/accept`, { method: 'PATCH', token: chefToken });
-  await request(`/kitchen/orders/${noRecipeOrderId}/prepare`, { method: 'PATCH', token: chefToken });
+  const noRecipeOrderId = noRecipeOrder.id;
 
   const failNoRecipe = await request(`/kitchen/orders/${noRecipeOrderId}/ready`, {
     method: 'PATCH',
@@ -455,7 +470,7 @@ async function runTests() {
   assert(recipeCreate.status === 201 || recipeCreate.status === 200, '23. Kitchen Admin can create/update recipes for menu items');
 
   // 24. Multiple ingredients calculated correctly
-  let oilItem = await prisma.inventoryItem.findFirst({ where: { restaurantId, name: { contains: 'Oil', mode: 'insensitive' } } });
+  let oilItem = await prisma.inventoryItem.findFirst({ where: { restaurantId, name: { contains: 'Oil', mode: 'insensitive' }, unit: { in: ['LITER', 'MILLILITER'] } } });
   if (!oilItem) {
     oilItem = await prisma.inventoryItem.create({
       data: {

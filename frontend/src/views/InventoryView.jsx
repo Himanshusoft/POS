@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
-import { INVENTORY_UNITS, getUnitLabel } from '../constants/inventory.constants';
+import { INVENTORY_UNITS } from '../constants/inventory.constants';
 import { Modal, SkeletonTable, EmptyState, Badge, Button } from '../components/ui';
 import {
   Boxes,
@@ -14,19 +14,27 @@ import {
   Scale,
   TrendingDown,
   History,
-  ArrowUpDown,
-  Archive,
 } from 'lucide-react';
+
+import { useInventory, usePosMutations } from '../hooks/usePosQueries';
 
 export default function InventoryView() {
   const { restaurant, addToast, role } = useAuth();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'consumption' | 'audit' | 'wastage'
-  const [items, setItems] = useState([]);
+
+  const {
+    data: inventoryData = [],
+    isLoading: loadingInventory,
+    refetch: refetchInventory,
+  } = useInventory(restaurant?.id);
+  const { invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const items = Array.isArray(inventoryData) ? inventoryData : (inventoryData.items || []);
   const [wastages, setWastages] = useState([]);
   const [consumptions, setConsumptions] = useState([]);
   const [auditTransactions, setAuditTransactions] = useState([]);
   const [auditFilter, setAuditFilter] = useState('ALL');
-  const [loading, setLoading] = useState(true);
+  const [loadingExtra, setLoadingExtra] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
@@ -72,33 +80,70 @@ export default function InventoryView() {
 
   const currency = restaurant?.currency || '₹';
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadWastages = async () => {
+    setLoadingExtra(true);
     try {
-      const [invRes, wstRes, kRes, txRes] = await Promise.all([
-        posService.inventory.getAll(),
-        posService.wastage.getAll(),
-        posService.kitchen.getDashboard().catch(() => ({})),
-        posService.inventory.getTransactions({ limit: 100 }).catch(() => ({})),
-      ]);
-      if (invRes.success) setItems(invRes.data || []);
-      if (wstRes.success) setWastages(wstRes.data || []);
-      if (kRes?.success && kRes.data?.recentActivity) {
-        setConsumptions(kRes.data.recentActivity || []);
-      }
-      if (txRes?.success && txRes.data) {
-        setAuditTransactions(Array.isArray(txRes.data) ? txRes.data : (txRes.data.transactions || []));
-      }
+      const res = await posService.wastage.getAll();
+      if (res.success) setWastages(res.data || []);
     } catch (err) {
-      addToast(err.message || 'Failed to load inventory', 'error');
+      addToast(err.message || 'Failed to load wastage records', 'error');
     } finally {
-      setLoading(false);
+      setLoadingExtra(false);
     }
   };
 
+  const loadConsumptions = async () => {
+    setLoadingExtra(true);
+    try {
+      const res = await posService.kitchen.getDashboard();
+      if (res.success && res.data?.recentActivity) {
+        setConsumptions(res.data.recentActivity || []);
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to load consumption activity', 'error');
+    } finally {
+      setLoadingExtra(false);
+    }
+  };
+
+  const loadAudit = async () => {
+    setLoadingExtra(true);
+    try {
+      const res = await posService.inventory.getTransactions({ limit: 100 });
+      if (res.success && res.data) {
+        setAuditTransactions(Array.isArray(res.data) ? res.data : (res.data.transactions || []));
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to load audit transactions', 'error');
+    } finally {
+      setLoadingExtra(false);
+    }
+  };
+
+  // Lazy-load sub-tab data only when that tab is actually viewed
   useEffect(() => {
-    loadData();
-  }, []);
+    if (activeTab === 'wastage' && wastages.length === 0) {
+      loadWastages();
+    } else if (activeTab === 'consumption' && consumptions.length === 0) {
+      loadConsumptions();
+    } else if (activeTab === 'audit' && auditTransactions.length === 0) {
+      loadAudit();
+    }
+  }, [activeTab]);
+
+  const loadData = async (force = true) => {
+    try {
+      if (force) invalidateInventory();
+      await refetchInventory();
+      if (activeTab === 'wastage') await loadWastages();
+      if (activeTab === 'consumption') await loadConsumptions();
+      if (activeTab === 'audit') await loadAudit();
+    } catch (err) {
+      addToast(err.message || 'Failed to refresh inventory', 'error');
+    }
+  };
+
+  const loading = (loadingInventory && items.length === 0) || (loadingExtra && activeTab !== 'stock');
 
   const handleCreateItem = async (e) => {
     e.preventDefault();
@@ -289,17 +334,21 @@ export default function InventoryView() {
   );
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
-            <Boxes className="w-6 h-6 text-[#92400E]" />
-            <span>Inventory, Stock & Wastage Control</span>
-          </h1>
-          <p className="text-sm text-[#5B6470] mt-0.5">
-            Real-time raw material balances, threshold reorder alerts, and spoilage tracking
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
+            <Boxes className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
+              Inventory, Stock & Wastage Control
+            </h1>
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
+              Real-time raw material balances, threshold reorder alerts, and spoilage tracking
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -316,9 +365,9 @@ export default function InventoryView() {
               }
               setShowWastageModal(true);
             }}
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+            className="border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
           >
-            <TrendingDown className="w-4 h-4 mr-1.5 text-red-600" />
+            <TrendingDown className="w-4 h-4 mr-1.5 text-rose-600 dark:text-rose-400" />
             <span>Log Wastage</span>
           </Button>
           <Button
@@ -333,16 +382,16 @@ export default function InventoryView() {
 
       {/* Low Stock Warning Banner */}
       {lowStockItems.length > 0 && (
-        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm animate-fade-in" role="alert">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
-              <AlertTriangle className="w-5 h-5 text-[#D97706]" />
+        <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-editorial animate-fade-in" role="alert">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800/50">
+              <AlertTriangle className="w-5 h-5 text-amber-700 dark:text-amber-400" />
             </div>
             <div>
-              <div className="text-sm font-bold text-[#92400E]">
-                Low Stock Warning: {lowStockItems.length} ingredient{lowStockItems.length > 1 ? 's' : ''} below safe reorder threshold!
+              <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Low Stock Alert: {lowStockItems.length} ingredient{lowStockItems.length > 1 ? 's' : ''} below safe reorder threshold!
               </div>
-              <div className="text-xs text-[#B45309] mt-0.5 font-medium">
+              <div className="text-xs text-amber-700 dark:text-amber-300/80 mt-0.5 font-medium">
                 {lowStockItems.map((i) => `${i.name} (${Number(i.currentStock).toFixed(1)} ${i.unit})`).slice(0, 4).join(', ')}
                 {lowStockItems.length > 4 ? ` and ${lowStockItems.length - 4} more...` : ''}
               </div>
@@ -353,7 +402,7 @@ export default function InventoryView() {
               setActiveTab('stock');
               setSearchQuery('');
             }}
-            className="text-xs font-semibold text-[#92400E] underline hover:text-[#78350F] shrink-0 px-2 py-1"
+            className="text-xs font-semibold text-amber-800 dark:text-amber-300 underline hover:text-amber-900 dark:hover:text-amber-200 shrink-0 px-2 py-1 cursor-pointer"
           >
             Review Items
           </button>
@@ -361,75 +410,75 @@ export default function InventoryView() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto" role="tablist">
+      <div className="flex gap-2 border-b border-[#E4DCD0] dark:border-[#1E362E] pb-3 overflow-x-auto" role="tablist">
         <button
           role="tab"
           aria-selected={activeTab === 'stock'}
           onClick={() => setActiveTab('stock')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'stock'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+              ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
           }`}
         >
-          Raw Materials Stock <span className="tabular-nums">({items.length})</span>
+          Raw Materials Stock <span className="tabular-nums font-mono">({items.length})</span>
         </button>
         <button
           role="tab"
           aria-selected={activeTab === 'consumption'}
           onClick={() => setActiveTab('consumption')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'consumption'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+              ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
           }`}
         >
-          Consumption History <span className="tabular-nums">({consumptions.length})</span>
+          Consumption History <span className="tabular-nums font-mono">({consumptions.length})</span>
         </button>
         <button
           role="tab"
           aria-selected={activeTab === 'audit'}
           onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'audit'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+              ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
           }`}
         >
-          Stock Movements & Audit <span className="tabular-nums">({auditTransactions.length})</span>
+          Stock Movements & Audit <span className="tabular-nums font-mono">({auditTransactions.length})</span>
         </button>
         {role !== 'KITCHEN_ADMIN' && (
           <button
             role="tab"
             aria-selected={activeTab === 'wastage'}
             onClick={() => setActiveTab('wastage')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
               activeTab === 'wastage'
-                ? 'bg-[#92400E] text-white shadow-sm font-bold'
-                : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+                ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+                : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
             }`}
           >
-            Wastage Log History <span className="tabular-nums">({wastages.length})</span>
+            Wastage Log History <span className="tabular-nums font-mono">({wastages.length})</span>
           </button>
         )}
       </div>
 
       {/* TAB 1: STOCK ITEMS */}
       {activeTab === 'stock' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5D8C6] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
+          <div className="p-4 border-b border-[#E4DCD0] dark:border-[#1E362E] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-[#5B6470] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search raw material or SKU..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-3 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-9 pr-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
-            <div className="text-xs text-[#5B6470] font-medium">
-              Showing <span className="font-bold text-[#1F2937] tabular-nums">{filteredItems.length}</span> of <span className="tabular-nums">{items.length}</span> ingredients
+            <div className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
+              Showing <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums font-mono">{filteredItems.length}</span> of <span className="tabular-nums font-mono">{items.length}</span> ingredients
             </div>
           </div>
 
@@ -448,7 +497,7 @@ export default function InventoryView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Raw Material / Ingredient</th>
                     <th className="px-5 py-3.5">SKU / Code</th>
@@ -459,26 +508,26 @@ export default function InventoryView() {
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {filteredItems.map((it) => {
                     const minSafe = Number(it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minStockLevel !== undefined ? it.minStockLevel : 5));
                     const currentStock = Number(it.currentStock ?? 0);
                     const isLow = currentStock <= minSafe;
                     const cost = Number(it.costPerUnit !== undefined ? it.costPerUnit : (it.costPrice !== undefined ? it.costPrice : 0));
                     return (
-                      <tr key={it.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
+                      <tr key={it.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors group">
                         <td className="px-5 py-4">
-                          <div className="font-bold text-[#1F2937] text-sm">{it.name}</div>
-                          <div className="text-[11px] text-[#5B6470] font-mono mt-0.5">Unit: {it.unit}</div>
+                          <div className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E] transition-colors">{it.name}</div>
+                          <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">Unit: {it.unit}</div>
                         </td>
-                        <td className="px-5 py-4 font-mono text-[#5B6470] text-xs">
+                        <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] text-xs">
                           {it.sku || '—'}
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <span
                               className={`font-mono font-bold text-sm tabular-nums ${
-                                isLow ? 'text-red-600' : 'text-emerald-700'
+                                isLow ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'
                               }`}
                             >
                               {currentStock % 1 === 0 ? currentStock : currentStock.toFixed(2)} {it.unit}
@@ -490,13 +539,13 @@ export default function InventoryView() {
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-[#5B6470] font-mono tabular-nums">
+                        <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                           {minSafe % 1 === 0 ? minSafe : minSafe.toFixed(2)} {it.unit}
                         </td>
-                        <td className="px-5 py-4 text-[#1F2937] font-mono font-medium tabular-nums">
+                        <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4] font-mono font-medium tabular-nums">
                           {currency}{cost.toFixed(2)} / {it.unit}
                         </td>
-                        <td className="px-5 py-4 text-[#5B6470]">
+                        <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E]">
                           {it.storageLocation || 'Main Warehouse'}
                         </td>
                         <td className="px-5 py-4 text-right">
@@ -509,15 +558,15 @@ export default function InventoryView() {
                                 setAdjustNotes('');
                                 setShowAdjustModal(true);
                               }}
-                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-white hover:bg-[#FAF7F2] text-[#92400E] hover:text-[#78350F] px-3 py-1.5 rounded-lg border border-[#E5D8C6] font-semibold transition-all shadow-xs text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] text-[#173F36] dark:text-[#9FB29E] px-3 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] font-semibold transition-all shadow-editorial text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] cursor-pointer"
                               title="Adjust Stock"
                             >
-                              <Scale className="w-3.5 h-3.5 text-[#92400E]" />
+                              <Scale className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                               <span>Adjust</span>
                             </button>
                             <button
                               onClick={() => openEditModal(it)}
-                              className="p-2 min-h-[36px] min-w-[36px] bg-white hover:bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] rounded-lg border border-[#E5D8C6] transition-colors shadow-xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              className="p-2 min-h-[36px] min-w-[36px] bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] transition-colors shadow-editorial flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] cursor-pointer"
                               title="Edit Item"
                               aria-label={`Edit ${it.name}`}
                             >
@@ -526,7 +575,7 @@ export default function InventoryView() {
                             {role === 'RESTAURANT_OWNER' && (
                               <button
                                 onClick={() => handleDeleteItem(it)}
-                                className="p-2 min-h-[36px] min-w-[36px] bg-white hover:bg-rose-50 text-[#5B6470] hover:text-red-600 rounded-lg border border-[#E5D8C6] hover:border-red-200 transition-colors shadow-xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                                className="p-2 min-h-[36px] min-w-[36px] bg-[#FFFDF9] dark:bg-[#152320] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] hover:border-rose-200 transition-colors shadow-editorial flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 cursor-pointer"
                                 title="Delete Item"
                                 aria-label={`Delete ${it.name}`}
                               >
@@ -547,7 +596,7 @@ export default function InventoryView() {
 
       {/* TAB 2: WASTAGE LOGS */}
       {activeTab === 'wastage' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
           {loading ? (
             <div className="p-4">
               <SkeletonTable rows={5} columns={6} />
@@ -573,7 +622,7 @@ export default function InventoryView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Ingredient</th>
                     <th className="px-5 py-3.5">Wasted Quantity</th>
@@ -583,13 +632,13 @@ export default function InventoryView() {
                     <th className="px-5 py-3.5">Notes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {wastages.map((wst) => (
-                    <tr key={wst.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
-                      <td className="px-5 py-4 font-bold text-[#1F2937]">
+                    <tr key={wst.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                      <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         {wst.inventoryItem?.name || 'Raw Ingredient'}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-red-600 tabular-nums">
+                      <td className="px-5 py-4 font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
                         {wst.quantity} {wst.inventoryItem?.unit || 'units'}
                       </td>
                       <td className="px-5 py-4">
@@ -597,13 +646,13 @@ export default function InventoryView() {
                           {wst.reason}
                         </Badge>
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#1F2937] font-semibold tabular-nums">
+                      <td className="px-5 py-4 font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
                         {currency}{Number(wst.totalCost || wst.cost || 0).toFixed(2)}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
+                      <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums whitespace-nowrap">
                         {new Date(wst.createdAt).toLocaleString()}
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470] italic">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] italic">
                         {wst.notes || '—'}
                       </td>
                     </tr>
@@ -617,10 +666,10 @@ export default function InventoryView() {
 
       {/* TAB 3: CONSUMPTION HISTORY */}
       {activeTab === 'consumption' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5D8C6]">
-            <h3 className="text-sm font-bold text-[#1F2937]">Recipe Ingredient Depletion Audit Trail</h3>
-            <p className="text-xs text-[#5B6470] mt-0.5">Traceable log of stock automatically deducted when food tickets are marked READY in kitchen</p>
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
+          <div className="p-4 border-b border-[#E4DCD0] dark:border-[#1E362E]">
+            <h3 className="text-sm font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Recipe Ingredient Depletion Audit Trail</h3>
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5">Traceable log of stock automatically deducted when food tickets are marked READY in kitchen</p>
           </div>
 
           {loading ? (
@@ -636,7 +685,7 @@ export default function InventoryView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Date / Time</th>
                     <th className="px-5 py-3.5">Ingredient</th>
@@ -647,28 +696,28 @@ export default function InventoryView() {
                     <th className="px-5 py-3.5">Reason / Dishes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {consumptions.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
-                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
+                    <tr key={entry.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                      <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums whitespace-nowrap">
                         {new Date(entry.createdAt).toLocaleString()}
                       </td>
-                      <td className="px-5 py-4 font-bold text-[#1F2937]">
+                      <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         {entry.inventoryItem?.name || 'Raw Material'}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-red-600 tabular-nums">
+                      <td className="px-5 py-4 font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
                         -{Number(entry.quantity).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums">
+                      <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums">
                         {Number(entry.previousBalance).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono font-bold text-emerald-700 tabular-nums">
+                      <td className="px-5 py-4 font-mono font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
                         {Number(entry.remainingBalance).toFixed(4)} {entry.unit}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#D97706] font-semibold tabular-nums">
+                      <td className="px-5 py-4 font-mono text-[#173F36] dark:text-[#9FB29E] font-semibold tabular-nums">
                         {entry.reference || '—'}
                       </td>
-                      <td className="px-5 py-4 text-[#1F2937]">
+                      <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4]">
                         {entry.reason || 'Order consumption'}
                       </td>
                     </tr>
@@ -682,21 +731,21 @@ export default function InventoryView() {
 
       {/* TAB 4: STOCK MOVEMENTS & AUDIT TRAIL */}
       {activeTab === 'audit' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5D8C6] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
+          <div className="p-4 border-b border-[#E4DCD0] dark:border-[#1E362E] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-[#1F2937]">Stock Movements & Transaction Audit Trail</h3>
-              <p className="text-xs text-[#5B6470] mt-0.5">Traceable ledger of inward receipts, manual adjustments, transfers, and opening balances</p>
+              <h3 className="text-sm font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Stock Movements & Transaction Audit Trail</h3>
+              <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5">Traceable ledger of inward receipts, manual adjustments, transfers, and opening balances</p>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#FAF7F2] p-1 rounded-xl border border-[#E5D8C6]">
+            <div className="flex items-center gap-1.5 bg-[#F7EFE4] dark:bg-[#101A18] p-1 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E]">
               {['ALL', 'PURCHASE', 'ADJUSTMENT', 'TRANSFER'].map((f) => (
                 <button
                   key={f}
                   onClick={() => setAuditFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#92400E] ${
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#173F36] ${
                     auditFilter === f
-                      ? 'bg-[#92400E] text-white shadow-xs font-bold'
-                      : 'text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB]'
+                      ? 'bg-[#173F36] text-white shadow-xs font-bold'
+                      : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0] dark:hover:bg-[#1E362E]'
                   }`}
                 >
                   {f === 'ALL' ? 'All Movements' : f === 'PURCHASE' ? 'Inward / Opening' : f === 'ADJUSTMENT' ? 'Adjustments' : 'Transfers'}
@@ -718,7 +767,7 @@ export default function InventoryView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Date / Time</th>
                     <th className="px-5 py-3.5">Ingredient / SKU</th>
@@ -730,52 +779,52 @@ export default function InventoryView() {
                     <th className="px-5 py-3.5">User</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {auditTransactions
                     .filter((t) => auditFilter === 'ALL' || t.type === auditFilter)
                     .map((entry) => {
                       const isPositive = Number(entry.quantity) >= 0;
                       const unit = entry.unit || entry.inventoryItem?.unit || 'units';
                       return (
-                        <tr key={entry.id} className="hover:bg-[#FAF7F2]/60 transition-colors">
-                          <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums whitespace-nowrap">
+                        <tr key={entry.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                          <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums whitespace-nowrap">
                             {new Date(entry.createdAt).toLocaleString()}
                           </td>
-                          <td className="px-5 py-4 font-bold text-[#1F2937]">
+                          <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
                             <div>{entry.inventoryItem?.name || 'Raw Material'}</div>
                             {entry.inventoryItem?.sku && (
-                              <div className="text-[10px] text-[#5B6470] font-mono mt-0.5">{entry.inventoryItem.sku}</div>
+                              <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">{entry.inventoryItem.sku}</div>
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider ${
                               entry.type === 'PURCHASE'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40'
                                 : entry.type === 'TRANSFER'
-                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40'
                                 : entry.type === 'CONSUMPTION'
-                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                : 'bg-purple-50 text-purple-800 border border-purple-200'
+                                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40'
+                                : 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40'
                             }`}>
                               {entry.reason?.includes('Opening') ? 'Opening Stock' : entry.type}
                             </span>
                           </td>
-                          <td className={`px-5 py-4 font-mono font-bold tabular-nums ${isPositive ? 'text-emerald-700' : 'text-red-600'}`}>
+                          <td className={`px-5 py-4 font-mono font-bold tabular-nums ${isPositive ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-400'}`}>
                             {isPositive ? `+${Number(entry.quantity).toFixed(2)}` : Number(entry.quantity).toFixed(2)} {unit}
                           </td>
-                          <td className="px-5 py-4 font-mono text-[#5B6470] tabular-nums">
+                          <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums">
                             {Number(entry.previousBalance).toFixed(2)} {unit}
                           </td>
-                          <td className="px-5 py-4 font-mono font-bold text-[#1F2937] tabular-nums">
+                          <td className="px-5 py-4 font-mono font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                             {Number(entry.remainingBalance).toFixed(2)} {unit}
                           </td>
-                          <td className="px-5 py-4 text-[#1F2937]">
+                          <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4]">
                             <div className="font-medium">{entry.reason || 'Manual Adjustment'}</div>
                             {entry.reference && (
-                              <div className="text-[11px] text-[#5B6470] italic mt-0.5">{entry.reference}</div>
+                              <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] italic mt-0.5">{entry.reference}</div>
                             )}
                           </td>
-                          <td className="px-5 py-4 font-mono text-[#5B6470]">
+                          <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E]">
                             {entry.user?.name || entry.user?.email?.split('@')[0] || 'System'}
                           </td>
                         </tr>
@@ -798,34 +847,34 @@ export default function InventoryView() {
       >
         <form onSubmit={handleCreateItem} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Item Name *</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Item Name *</label>
             <input
               type="text"
               required
               placeholder="e.g. Arabica Coffee Beans"
               value={itemForm.name}
               onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">SKU / Code</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">SKU / Code</label>
               <input
                 type="text"
                 placeholder="ING-COF-01"
                 value={itemForm.sku}
                 onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Unit of Measure *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Unit of Measure *</label>
               <select
                 value={itemForm.unit}
                 onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               >
                 {INVENTORY_UNITS.map((u) => (
                   <option key={u.value} value={u.value}>
@@ -838,41 +887,41 @@ export default function InventoryView() {
 
           <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Opening Stock</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Opening Stock</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={itemForm.currentStock}
                 onChange={(e) => setItemForm({ ...itemForm, currentStock: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Min Safe Level</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={itemForm.minStockThreshold}
                 onChange={(e) => setItemForm({ ...itemForm, minStockThreshold: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Cost ({currency})</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={itemForm.costPerUnit}
                 onChange={(e) => setItemForm({ ...itemForm, costPerUnit: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"
@@ -900,32 +949,32 @@ export default function InventoryView() {
       >
         <form onSubmit={handleUpdateItem} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Item Name *</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Item Name *</label>
             <input
               type="text"
               required
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">SKU / Code</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">SKU / Code</label>
               <input
                 type="text"
                 value={editForm.sku}
                 onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Unit of Measure *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Unit of Measure *</label>
               <select
                 value={editForm.unit}
                 onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               >
                 {INVENTORY_UNITS.map((u) => (
                   <option key={u.value} value={u.value}>
@@ -938,41 +987,41 @@ export default function InventoryView() {
 
           <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Current Stock</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Current Stock</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={editForm.currentStock}
                 onChange={(e) => setEditForm({ ...editForm, currentStock: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Min Safe Level</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Min Safe Level</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={editForm.minStockThreshold}
                 onChange={(e) => setEditForm({ ...editForm, minStockThreshold: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#1F2937] mb-1">Cost ({currency})</label>
+              <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Cost ({currency})</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={editForm.costPerUnit}
                 onChange={(e) => setEditForm({ ...editForm, costPerUnit: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"
@@ -998,7 +1047,7 @@ export default function InventoryView() {
         subtitle={
           selectedItemForAdjust ? (
             <span>
-              Current Balance: <strong className="text-emerald-700 font-mono tabular-nums">
+              Current Balance: <strong className="text-emerald-700 dark:text-emerald-300 font-mono tabular-nums">
                 {Number(selectedItemForAdjust.currentStock) % 1 === 0 ? Number(selectedItemForAdjust.currentStock) : Number(selectedItemForAdjust.currentStock).toFixed(2)} {selectedItemForAdjust.unit}
               </strong>
             </span>
@@ -1008,7 +1057,7 @@ export default function InventoryView() {
       >
         <form onSubmit={handleAdjustStock} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
               Quantity Adjustment (positive to add, negative to deduct) *
             </label>
             <input
@@ -1019,17 +1068,17 @@ export default function InventoryView() {
               value={adjustQuantity}
               onChange={(e) => setAdjustQuantity(e.target.value)}
               disabled={adjustLoading}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-sm text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Reason *</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Reason *</label>
             <select
               value={adjustReason}
               onChange={(e) => setAdjustReason(e.target.value)}
               disabled={adjustLoading}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] disabled:opacity-50"
             >
               <option value="Purchase Inward Receipt">Purchase Inward Receipt</option>
               <option value="Physical Inventory Audit / Reconciliation">Physical Inventory Audit / Reconciliation</option>
@@ -1040,18 +1089,18 @@ export default function InventoryView() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Audit Notes</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Audit Notes</label>
             <input
               type="text"
               placeholder="e.g. Month-end count correction"
               value={adjustNotes}
               onChange={(e) => setAdjustNotes(e.target.value)}
               disabled={adjustLoading}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] disabled:opacity-50"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] disabled:opacity-50"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"
@@ -1082,12 +1131,12 @@ export default function InventoryView() {
       >
         <form onSubmit={handleLogWastage} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Raw Ingredient *</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Raw Ingredient *</label>
             <select
               required
               value={wastageForm.inventoryItemId}
               onChange={(e) => setWastageForm({ ...wastageForm, inventoryItemId: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
             >
               {items.map((it) => (
                 <option key={it.id} value={it.id}>
@@ -1099,7 +1148,7 @@ export default function InventoryView() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Quantity Lost *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Quantity Lost *</label>
               <input
                 type="number"
                 step="0.01"
@@ -1107,15 +1156,15 @@ export default function InventoryView() {
                 required
                 value={wastageForm.quantity}
                 onChange={(e) => setWastageForm({ ...wastageForm, quantity: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Reason</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Reason</label>
               <select
                 value={wastageForm.reason}
                 onChange={(e) => setWastageForm({ ...wastageForm, reason: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
               >
                 <option value="SPOILAGE">Spoiled / Rotten</option>
                 <option value="EXPIRATION">Expired Shelf Date</option>
@@ -1127,17 +1176,17 @@ export default function InventoryView() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Incident Notes</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Incident Notes</label>
             <input
               type="text"
               placeholder="e.g. Refrigerator temperature failure overnight"
               value={wastageForm.notes}
               onChange={(e) => setWastageForm({ ...wastageForm, notes: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"

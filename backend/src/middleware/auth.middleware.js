@@ -1,6 +1,7 @@
 import { verifyToken } from '../utils/jwt.js';
 import { sendError } from '../utils/response.js';
 import { prisma } from '../config/env.js';
+import { cachedQuery, isTokenRevoked } from '../utils/cache.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -10,7 +11,7 @@ export const authenticate = async (req, res, next) => {
         code: 'UNAUTHORIZED',
         details: 'Authorization header must follow Bearer <token> format',
       });
-    }
+    }   
 
     const token = authHeader.split(' ')[1];
     let decoded;
@@ -23,30 +24,38 @@ export const authenticate = async (req, res, next) => {
       return sendError(res, 401, 'Invalid authentication token', { code: 'INVALID_TOKEN' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId || decoded.id },
-      select: {
-        id: true,
-        restaurantId: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-            currency: true,
-            taxRate: true,
-            subscription: {
-              include: {
-                plan: true,
+    const isRevoked = await isTokenRevoked(token);
+    if (isRevoked) {
+      return sendError(res, 401, 'Authentication token has been revoked / logged out', { code: 'TOKEN_REVOKED' });
+    }
+
+    const userId = decoded.userId || decoded.id;
+    const user = await cachedQuery(`pos:auth:user:${userId}`, 30, async () => {
+      return prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          restaurantId: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              currency: true,
+              taxRate: true,
+              subscription: {
+                include: {
+                  plan: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     if (!user) {

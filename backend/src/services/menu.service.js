@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { evaluateMenuItemAvailability } from './inventoryAvailability.service.js';
+import { cachedQuery, buildCacheKey, invalidateMenuCache } from '../utils/cache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,23 +42,28 @@ export const createCategory = async (restaurantId, data) => {
     throw error;
   }
 
-  return await prisma.menuCategory.create({
+  const result = await prisma.menuCategory.create({
     data: {
       restaurantId,
       name,
       description: data.description || null,
     },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export const getCategories = async (restaurantId, filters = {}) => {
-  return await findManyPaginated(prisma.menuCategory, {
-    where: { restaurantId },
-    include: {
-      _count: { select: { menuItems: true } },
-    },
-    orderBy: { name: 'asc' },
-  }, filters);
+  const cacheKey = buildCacheKey(restaurantId, 'menu:categories', filters);
+  return await cachedQuery(cacheKey, 300, async () => {
+    return await findManyPaginated(prisma.menuCategory, {
+      where: { restaurantId },
+      include: {
+        _count: { select: { menuItems: true } },
+      },
+      orderBy: { name: 'asc' },
+    }, filters);
+  });
 };
 
 export const getCategoryById = async (restaurantId, id) => {
@@ -79,21 +85,25 @@ export const getCategoryById = async (restaurantId, id) => {
 export const updateCategory = async (restaurantId, id, data) => {
   await getCategoryById(restaurantId, id);
 
-  return await prisma.menuCategory.update({
+  const result = await prisma.menuCategory.update({
     where: { id },
     data: {
       name: data.name ? data.name.trim() : undefined,
       description: data.description !== undefined ? data.description : undefined,
     },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export const deleteCategory = async (restaurantId, id) => {
   await getCategoryById(restaurantId, id);
 
-  return await prisma.menuCategory.delete({
+  const result = await prisma.menuCategory.delete({
     where: { id },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 // Menu Items
@@ -139,7 +149,7 @@ export const createMenuItem = async (restaurantId, data) => {
     }
   }
 
-  return await prisma.menuItem.create({
+  const result = await prisma.menuItem.create({
     data: {
       restaurantId,
       categoryId: data.categoryId || null,
@@ -161,39 +171,44 @@ export const createMenuItem = async (restaurantId, data) => {
       },
     },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export const getMenuItems = async (restaurantId, filters = {}) => {
-  const where = { restaurantId };
-  if (filters.categoryId) where.categoryId = filters.categoryId;
-  if (filters.dietary) where.dietary = filters.dietary;
-  if (filters.isAvailable !== undefined) {
-    where.isAvailable = filters.isAvailable === 'true' || filters.isAvailable === true;
-  }
-  if (filters.search) {
-    where.name = { contains: String(filters.search), mode: 'insensitive' };
-  }
+  const cacheKey = buildCacheKey(restaurantId, 'menu:items', filters);
+  return await cachedQuery(cacheKey, 30, async () => {
+    const where = { restaurantId };
+    if (filters.categoryId) where.categoryId = filters.categoryId;
+    if (filters.dietary) where.dietary = filters.dietary;
+    if (filters.isAvailable !== undefined) {
+      where.isAvailable = filters.isAvailable === 'true' || filters.isAvailable === true;
+    }
+    if (filters.search) {
+      where.name = { contains: String(filters.search), mode: 'insensitive' };
+    }
 
-  const result = await findManyPaginated(prisma.menuItem, {
-      where,
-      include: {
-        category: true,
-        recipe: { include: { ingredients: { include: { inventoryItem: true } } } },
-      },
-      orderBy: { name: 'asc' },
-  }, filters);
+    const result = await findManyPaginated(prisma.menuItem, {
+        where,
+        include: {
+          category: true,
+          recipe: { include: { ingredients: { include: { inventoryItem: true } } } },
+        },
+        orderBy: { name: 'asc' },
+    }, filters);
 
-  result.items = result.items.map((item) => {
-    const availability = evaluateMenuItemAvailability(item, 1);
-    return {
-      ...item,
-      inventoryAvailability: availability,
-      isOrderable: availability.isOrderable,
-      maxOrderableQuantity: availability.maxOrderableQuantity,
-    };
+    result.items = result.items.map((item) => {
+      const availability = evaluateMenuItemAvailability(item, 1);
+      return {
+        ...item,
+        inventoryAvailability: availability,
+        isOrderable: availability.isOrderable,
+        maxOrderableQuantity: availability.maxOrderableQuantity,
+      };
+    });
+
+    return result;
   });
-
-  return result;
 };
 
 export const getMenuItemById = async (restaurantId, id) => {
@@ -269,16 +284,20 @@ export const updateMenuItem = async (restaurantId, id, data) => {
       recipe: true,
     },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export const updateMenuItemAvailability = async (restaurantId, id, isAvailable) => {
   await getMenuItemById(restaurantId, id);
 
-  return await prisma.menuItem.update({
+  const result = await prisma.menuItem.update({
     where: { id },
     data: { isAvailable },
     include: { category: true },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export const deleteMenuItem = async (restaurantId, id) => {
@@ -301,9 +320,11 @@ export const deleteMenuItem = async (restaurantId, id) => {
     removeLocalUploadFile(item.imageUrl);
   }
 
-  return await prisma.menuItem.delete({
+  const result = await prisma.menuItem.delete({
     where: { id },
   });
+  await invalidateMenuCache(restaurantId);
+  return result;
 };
 
 export default {

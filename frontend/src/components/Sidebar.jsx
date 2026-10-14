@@ -35,7 +35,7 @@ export default function Sidebar({
   mobileOpen = false,
   setMobileOpen,
 }) {
-  const { role, user, logout } = useAuth();
+  const { role, user, logout, loggingOut } = useAuth();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileMenuRef = useRef(null);
 
@@ -172,15 +172,15 @@ export default function Sidebar({
     const isIconOnly = collapsed && !isMobileDrawer;
 
     return (
-      <div className="flex flex-col h-full select-none bg-white dark:bg-[#161310] transition-colors duration-200">
-        <div className="py-4 px-3 space-y-1 flex-1 overflow-y-auto">
+      <div className="flex flex-col h-full select-none bg-[#FFFDF9] dark:bg-[#0E1815] transition-colors duration-200">
+        <div className="py-4 px-3 space-y-1.5 flex-1 overflow-y-auto">
           {/* Mobile Drawer Close Header */}
           {isMobileDrawer && (
-            <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#E5D8C6] dark:border-[#382F26] px-2">
-              <span className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] uppercase tracking-wider">Navigation Menu</span>
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#E4DCD0] dark:border-[#233630] px-2">
+              <span className="font-serif text-sm font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-wider">Navigation Menu</span>
               <button
                 onClick={() => setMobileOpen && setMobileOpen(false)}
-                className="p-1 rounded-lg text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] cursor-pointer transition-colors"
+                className="p-1 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] cursor-pointer transition-colors"
                 title="Close Menu"
               >
                 <X className="w-5 h-5" />
@@ -190,7 +190,7 @@ export default function Sidebar({
 
           {/* Section Header */}
           {!isIconOnly && (
-            <div className="px-3 pb-2 text-[11px] font-bold text-[#6B6258] dark:text-[#8C7E72] uppercase tracking-wider flex items-center justify-between">
+            <div className="px-3 pb-2 text-[10.5px] font-bold text-[#8D9890] dark:text-[#657168] uppercase tracking-widest flex items-center justify-between">
               <span>Operations</span>
             </div>
           )}
@@ -210,14 +210,14 @@ export default function Sidebar({
                   isIconOnly ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
                 } ${
                   isActive
-                    ? 'bg-[#92400E] text-white shadow-md shadow-[#92400E]/20 font-bold'
-                    : 'text-[#4B5563] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#FAF7F2] dark:hover:bg-[#201C18]'
+                    ? 'bg-[#173F36] text-[#FFFDF9] shadow-sm shadow-[#173F36]/20 font-bold'
+                    : 'text-[#55635B] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#F3ECE0] dark:hover:bg-[#1A2B26]'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <Icon
-                    className={`w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                      isActive ? 'text-white' : 'text-[#6B6258] dark:text-[#8C7E72] group-hover:text-[#92400E] dark:group-hover:text-[#D97706]'
+                    className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                      isActive ? 'text-[#FFFDF9]' : 'text-[#657168] dark:text-[#9FB29E] group-hover:text-[#173F36] dark:group-hover:text-[#4EBA87]'
                     }`}
                   />
                   {!isIconOnly && <span className="truncate whitespace-nowrap">{item.label}</span>}
@@ -226,8 +226,8 @@ export default function Sidebar({
                   <span
                     className={`text-[9.5px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ml-2 tracking-wider whitespace-nowrap ${
                       isActive
-                        ? 'bg-[#78350F] text-[#FDE68A] border border-[#B45309]'
-                        : 'bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#92400E] dark:text-[#D97706] border border-[#D97706]/20 dark:border-[#D97706]/35'
+                        ? 'bg-[#12332C] text-[#E8EFEA] border border-[#235A4D]'
+                        : 'bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border border-[#C8DDD2] dark:border-[#233630]'
                     }`}
                   >
                     {item.badge}
@@ -241,12 +241,12 @@ export default function Sidebar({
         {/* Dynamic Role Profile Footer at Sidebar Bottom */}
         <div
           ref={profileMenuRef}
-          className="relative mt-auto border-t border-[#E5D8C6] dark:border-[#382F26] p-2.5 bg-white dark:bg-[#161310] shrink-0"
+          className="relative mt-auto border-t border-[#E4DCD0] dark:border-[#233630] p-2.5 bg-[#FFFDF9] dark:bg-[#0E1815] shrink-0"
         >
           {/* Upward Interactive Dropdown Menu */}
           {profileDropdownOpen && (
             <div
-              className={`absolute mb-2 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-xl p-2 z-50 animate-scale-in ${
+              className={`absolute mb-2 bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl shadow-editorial-lg p-2 z-50 animate-scale-in ${
                 isIconOnly
                   ? 'bottom-0 left-full ml-2 w-64'
                   : 'bottom-full left-2 right-2'
@@ -254,14 +254,14 @@ export default function Sidebar({
               role="menu"
             >
               {/* Profile Card Header */}
-              <div className="p-2.5 bg-[#FAF7F2] dark:bg-[#201C18] rounded-xl border border-[#E5D8C6] dark:border-[#382F26] mb-2">
-                <div className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-xs truncate">
+              <div className="p-2.5 bg-[#F7EFE4] dark:bg-[#111D1A] rounded-xl border border-[#E4DCD0] dark:border-[#233630] mb-2">
+                <div className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-xs truncate">
                   {userName}
                 </div>
-                <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] truncate mt-0.5">
+                <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] truncate mt-0.5">
                   {userEmail || 'staff@pos.com'}
                 </div>
-                <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/20 dark:border-[#92400E]/40">
+                <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border border-[#C8DDD2] dark:border-[#233630]">
                   {roleLabel}
                 </div>
               </div>
@@ -270,14 +270,15 @@ export default function Sidebar({
               <div className="pt-0.5">
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={loggingOut}
+                  onClick={async () => {
                     setProfileDropdownOpen(false);
-                    logout();
+                    await logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#C53030] dark:text-[#F87171] hover:bg-[#FDF0ED] dark:hover:bg-[#361A1A] transition-colors cursor-pointer text-left disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{loggingOut ? 'Signing Out...' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>
@@ -288,12 +289,12 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setProfileDropdownOpen((prev) => !prev)}
-              className="w-full flex items-center justify-center p-1 rounded-xl hover:bg-[#FAF7F2] dark:hover:bg-[#201C18] transition-all cursor-pointer group"
+              className="w-full flex items-center justify-center p-1 rounded-xl hover:bg-[#F4ECE0] dark:hover:bg-[#1A2B26] transition-all cursor-pointer group"
               title={`${userName} • ${roleLabel}`}
               aria-label={`${userName} (${roleLabel}) Account Menu`}
               aria-expanded={profileDropdownOpen}
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FAF7F2] to-[#E7DCCB] dark:from-[#25201A] dark:to-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center font-bold text-[#92400E] dark:text-[#D97706] text-sm shadow-xs group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E8EFEA] to-[#D0DDD0] dark:from-[#1A2B26] dark:to-[#14221E] border border-[#173F36]/20 dark:border-[#233630] flex items-center justify-center font-bold text-[#173F36] dark:text-[#4EBA87] text-sm shadow-xs group-hover:scale-105 transition-transform">
                 {avatarInitial}
               </div>
             </button>
@@ -301,25 +302,25 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setProfileDropdownOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-[#FAF7F2] dark:hover:bg-[#201C18] border border-transparent hover:border-[#E5D8C6] dark:border-[#382F26] transition-all cursor-pointer group text-left"
+              className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-[#F4ECE0] dark:hover:bg-[#1A2B26] border border-transparent hover:border-[#E4DCD0] dark:border-[#233630] transition-all cursor-pointer group text-left"
               aria-label="User Account Menu"
               aria-expanded={profileDropdownOpen}
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FAF7F2] to-[#E7DCCB] dark:from-[#25201A] dark:to-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center font-bold text-[#92400E] dark:text-[#D97706] text-xs shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E8EFEA] to-[#D0DDD0] dark:from-[#1A2B26] dark:to-[#14221E] border border-[#173F36]/20 dark:border-[#233630] flex items-center justify-center font-bold text-[#173F36] dark:text-[#4EBA87] text-xs shadow-xs shrink-0 group-hover:scale-105 transition-transform">
                   {avatarInitial}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] truncate leading-tight">
+                  <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] truncate leading-tight">
                     {userName}
                   </div>
-                  <div className="text-[10.5px] font-medium text-[#5B6470] dark:text-[#A89B8C] truncate leading-tight mt-0.5">
+                  <div className="text-[10.5px] font-medium text-[#657168] dark:text-[#9FB29E] truncate leading-tight mt-0.5">
                     {roleLabel}
                   </div>
                 </div>
               </div>
               <ChevronUp
-                className={`w-3.5 h-3.5 text-[#5B6470] dark:text-[#A89B8C] shrink-0 ml-1 transition-transform duration-200 ${
+                className={`w-3.5 h-3.5 text-[#657168] dark:text-[#9FB29E] shrink-0 ml-1 transition-transform duration-200 ${
                   profileDropdownOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -334,7 +335,7 @@ export default function Sidebar({
     <>
       {/* Desktop Sidebar Container */}
       <aside
-        className={`hidden lg:flex flex-col bg-white dark:bg-[#161310] border-r border-[#E5D8C6] dark:border-[#382F26] shrink-0 transition-all duration-300 ease-in-out shadow-[1px_0_3px_0_rgba(41,35,31,0.02)] dark:shadow-none ${
+        className={`hidden lg:flex flex-col bg-[#FFFDF9] dark:bg-[#0E1815] border-r border-[#E4DCD0] dark:border-[#233630] shrink-0 transition-all duration-300 ease-in-out shadow-[1px_0_4px_0_rgba(23,63,54,0.03)] dark:shadow-none ${
           collapsed
             ? 'w-20'
             : role === 'RESTAURANT_REGISTRATION_ADMIN'
@@ -355,7 +356,7 @@ export default function Sidebar({
           />
 
           {/* Sliding Drawer Container */}
-          <div className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-[#161310] border-r border-[#E5D8C6] dark:border-[#382F26] shadow-2xl z-50 animate-slide-up">
+          <div className="fixed inset-y-0 left-0 w-72 bg-[#FFFDF9] dark:bg-[#0E1815] border-r border-[#E4DCD0] dark:border-[#233630] shadow-2xl z-50 animate-slide-up">
             {renderNavContent(true)}
           </div>
         </div>

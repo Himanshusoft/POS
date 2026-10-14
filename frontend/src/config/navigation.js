@@ -81,7 +81,7 @@ export const ROLE_CONFIG = {
   [ROLES.RESTAURANT_REGISTRATION_ADMIN]: {
     name: 'Platform Super Admin',
     badge: 'SUPER ADMIN',
-    color: 'bg-[#92400E]/10 text-[#92400E] border-[#92400E]/25',
+    color: 'bg-[#173F36]/10 text-[#173F36] border-[#173F36]/25 dark:bg-[#173F36]/30 dark:text-[#9FB29E] dark:border-[#173F36]/40',
     defaultTab: 'registration',
     defaultPath: '/super-admin-dashboard',
     allowedTabs: ['registration', 'dashboard', 'settings'],
@@ -89,7 +89,7 @@ export const ROLE_CONFIG = {
   [ROLES.RESTAURANT_OWNER]: {
     name: 'Restaurant Admin',
     badge: 'OWNER',
-    color: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
+    color: 'bg-[#173F36]/15 text-[#173F36] border-[#173F36]/30 dark:bg-[#173F36]/40 dark:text-[#9FB29E] dark:border-[#173F36]/50',
     defaultTab: 'dashboard',
     defaultPath: '/restaurant-dashboard',
     allowedTabs: [
@@ -110,7 +110,7 @@ export const ROLE_CONFIG = {
   [ROLES.KITCHEN_ADMIN]: {
     name: 'Kitchen Admin',
     badge: 'CHEF',
-    color: 'bg-[#B45309]/10 text-[#B45309] border-[#B45309]/25',
+    color: 'bg-amber-500/10 text-amber-800 border-amber-500/25 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30',
     defaultTab: 'dashboard',
     defaultPath: '/kitchen-dashboard',
     allowedTabs: ['dashboard', 'orders', 'inventory', 'recipes', 'settings'],
@@ -118,7 +118,7 @@ export const ROLE_CONFIG = {
   [ROLES.WAITER]: {
     name: 'Service Waiter',
     badge: 'WAITER',
-    color: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
+    color: 'bg-[#2D6A4F]/10 text-[#2D6A4F] border-[#2D6A4F]/25 dark:bg-[#2D6A4F]/25 dark:text-[#9FB29E] dark:border-[#2D6A4F]/35',
     defaultTab: 'dashboard',
     defaultPath: '/waiter-dashboard',
     allowedTabs: ['dashboard', 'tables', 'orders', 'menu', 'pos', 'settings'],
@@ -126,7 +126,7 @@ export const ROLE_CONFIG = {
   [ROLES.RECEPTIONIST]: {
     name: 'Reception / Cashier',
     badge: 'CASHIER',
-    color: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
+    color: 'bg-emerald-600/10 text-emerald-800 border-emerald-600/25 dark:bg-emerald-600/20 dark:text-emerald-300 dark:border-emerald-600/30',
     defaultTab: 'dashboard',
     defaultPath: '/receptionist-dashboard',
     allowedTabs: ['dashboard', 'billing', 'floor', 'pos', 'settings'],

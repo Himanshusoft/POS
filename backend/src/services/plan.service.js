@@ -1,20 +1,24 @@
 import { prisma } from '../config/env.js';
+import { cachedQuery, buildCacheKey, invalidateSuperAdminCache } from '../utils/cache.js';
 
 export const getPlans = async (onlyActive = true) => {
-  const where = onlyActive ? { isActive: true } : {};
-  const plans = await prisma.plan.findMany({
-    where,
-    orderBy: { price: 'asc' },
-    include: {
-      _count: {
-        select: { subscriptions: true },
+  const cacheKey = buildCacheKey('global', 'superadmin:plans', { onlyActive });
+  return await cachedQuery(cacheKey, 60, async () => {
+    const where = onlyActive ? { isActive: true } : {};
+    const plans = await prisma.plan.findMany({
+      where,
+      orderBy: { price: 'asc' },
+      include: {
+        _count: {
+          select: { subscriptions: true },
+        },
       },
-    },
+    });
+    return plans.map((p) => ({
+      ...p,
+      activeSubscribers: p._count.subscriptions,
+    }));
   });
-  return plans.map((p) => ({
-    ...p,
-    activeSubscribers: p._count.subscriptions,
-  }));
 };
 
 export const getPlanById = async (id) => {
@@ -48,7 +52,7 @@ export const createPlan = async (data) => {
     throw error;
   }
 
-  return await prisma.plan.create({
+  const created = await prisma.plan.create({
     data: {
       name,
       description: data.description?.trim() || null,
@@ -64,6 +68,9 @@ export const createPlan = async (data) => {
       isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
     },
   });
+
+  await invalidateSuperAdminCache();
+  return created;
 };
 
 export const updatePlan = async (id, data) => {
@@ -83,18 +90,24 @@ export const updatePlan = async (id, data) => {
   if (Array.isArray(data.features)) updateData.features = data.features;
   if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
 
-  return await prisma.plan.update({
+  const updated = await prisma.plan.update({
     where: { id },
     data: updateData,
   });
+
+  await invalidateSuperAdminCache();
+  return updated;
 };
 
 export const updatePlanStatus = async (id, isActive) => {
   await getPlanById(id);
-  return await prisma.plan.update({
+  const updated = await prisma.plan.update({
     where: { id },
     data: { isActive: Boolean(isActive) },
   });
+
+  await invalidateSuperAdminCache();
+  return updated;
 };
 
 export default {

@@ -16,27 +16,27 @@ export function ChartCard({
   return (
     <div
       className={`
-        bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 sm:p-6
-        shadow-sandstone card-hover flex flex-col justify-between transition-all duration-200
-        hover:border-[#92400E]/30 dark:hover:border-[#D97706]/40
+        bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl p-5 sm:p-6
+        shadow-editorial card-hover flex flex-col justify-between transition-all duration-200
+        hover:border-[#173F36]/30 dark:hover:border-[#4EBA87]/40
         ${className}
       `}
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 mb-4 border-b border-[#E5D8C6]/50 dark:border-[#382F26]/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 mb-4 border-b border-[#E4DCD0]/70 dark:border-[#233630]/70">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm sm:text-base font-bold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+            <h3 className="font-serif text-base font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
               {title}
             </h3>
             {badge && (
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/20 dark:border-[#92400E]/40">
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border border-[#C8DDD2] dark:border-[#233630]">
                 {badge}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               {subtitle}
             </p>
           )}
@@ -48,7 +48,7 @@ export function ChartCard({
       <div className="flex-1 w-full min-w-0">
         {empty ? (
           <div className="h-48 flex flex-col items-center justify-center text-center p-4">
-            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium max-w-xs">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium max-w-xs">
               {emptyMessage}
             </p>
           </div>
@@ -65,7 +65,7 @@ export function ChartCard({
  */
 export function AreaChart({
   data = [], // [{ label: string, value: number, secondaryValue?: number }]
-  color = '#92400E',
+  color = '#173F36',
   gradientColor,
   height = 200,
   currency = '',
@@ -165,7 +165,7 @@ export function AreaChart({
                 y2={y}
                 stroke="currentColor"
                 strokeDasharray="4 4"
-                className="text-[#E5D8C6]/60 dark:text-[#382F26]/70"
+                className="text-[#E4DCD0]/60 dark:text-[#233630]/70"
                 strokeWidth="1"
               />
               <text
@@ -249,7 +249,7 @@ export function AreaChart({
       {/* Floating Tooltip */}
       {activePoint && (
         <div
-          className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] px-3 py-1.5 rounded-xl shadow-sandstone-md text-xs z-20 min-w-[100px] text-center"
+          className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-white dark:bg-[#1C1815] border border-[#E4DCD0] dark:border-[#233630] px-3 py-1.5 rounded-xl shadow-sandstone-md text-xs z-20 min-w-[100px] text-center"
           style={{
             left: `${(activePoint.x / width) * 100}%`,
             top: `${(activePoint.y / height) * 100}%`,
@@ -283,8 +283,8 @@ export function ComboChart({
   data = [], // [{ label: string, revenue?: number, orders?: number, value?: number }]
   currency = '₹',
   height = 220,
-  barColor = '#92400E',
-  lineColor = '#2563EB',
+  barColor = '#173F36',
+  lineColor = '#2D6A4F',
   revenueLabel = 'Revenue',
   ordersLabel = 'Orders',
   emptyMessage = 'No revenue velocity recorded yet',
@@ -373,30 +373,30 @@ export function ComboChart({
         {/* Legends */}
         <div className="flex items-center gap-4 text-xs">
           {(activeMetric === 'combo' || activeMetric === 'revenue') && (
-            <div className="flex items-center gap-1.5 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
-              <span className="w-3 h-3 rounded-sm bg-[#92400E] shadow-2xs shrink-0" />
-              <span className="text-[11px] font-bold text-[#8C7E72] dark:text-[#A89B8C] uppercase tracking-wider">{revenueLabel}</span>
-              <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C]">(Bars)</span>
+            <div className="flex items-center gap-1.5 font-medium text-[#17251F] dark:text-[#F7EFE4]">
+              <span className="w-3 h-3 rounded-sm bg-[#173F36] shadow-2xs shrink-0" />
+              <span className="text-[11px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider">{revenueLabel}</span>
+              <span className="text-[10px] text-[#8D9890] dark:text-[#657168]">(Bars)</span>
             </div>
           )}
           {(activeMetric === 'combo' || activeMetric === 'orders') && (
-            <div className="flex items-center gap-1.5 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] ring-2 ring-[#2563EB]/20 shrink-0" />
-              <span className="text-[11px] font-bold text-[#8C7E72] dark:text-[#A89B8C] uppercase tracking-wider">{ordersLabel}</span>
-              <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C]">(Line)</span>
+            <div className="flex items-center gap-1.5 font-medium text-[#17251F] dark:text-[#F7EFE4]">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2D6A4F] ring-2 ring-[#2D6A4F]/20 shrink-0" />
+              <span className="text-[11px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider">{ordersLabel}</span>
+              <span className="text-[10px] text-[#8D9890] dark:text-[#657168]">(Line)</span>
             </div>
           )}
         </div>
 
         {/* View Toggle */}
-        <div className="inline-flex items-center p-0.5 rounded-xl bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] text-[11px] font-bold">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-[#F7EFE4] dark:bg-[#111D1A] border border-[#E4DCD0] dark:border-[#233630] text-[11px] font-bold">
           <button
             type="button"
             onClick={() => setActiveMetric('combo')}
             className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
               activeMetric === 'combo'
-                ? 'bg-white dark:bg-[#1C1815] text-[#92400E] dark:text-[#D97706] shadow-xs'
-                : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                ? 'bg-[#FFFDF9] dark:bg-[#14221E] text-[#173F36] dark:text-[#4EBA87] shadow-xs'
+                : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
             }`}
           >
             Combo
@@ -406,8 +406,8 @@ export function ComboChart({
             onClick={() => setActiveMetric('revenue')}
             className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
               activeMetric === 'revenue'
-                ? 'bg-white dark:bg-[#1C1815] text-[#92400E] dark:text-[#D97706] shadow-xs'
-                : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                ? 'bg-[#FFFDF9] dark:bg-[#14221E] text-[#173F36] dark:text-[#4EBA87] shadow-xs'
+                : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
             }`}
           >
             Revenue
@@ -417,8 +417,8 @@ export function ComboChart({
             onClick={() => setActiveMetric('orders')}
             className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
               activeMetric === 'orders'
-                ? 'bg-white dark:bg-[#1C1815] text-[#2563EB] dark:text-blue-400 shadow-xs'
-                : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                ? 'bg-[#FFFDF9] dark:bg-[#14221E] text-[#2D6A4F] dark:text-[#4EBA87] shadow-xs'
+                : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
             }`}
           >
             Orders
@@ -439,16 +439,16 @@ export function ComboChart({
         >
           <defs>
             <linearGradient id="combo-bar-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#B45309" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="#78350F" stopOpacity="0.85" />
+              <stop offset="0%" stopColor="#235A4D" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#173F36" stopOpacity="0.9" />
             </linearGradient>
             <linearGradient id="combo-bar-grad-hover" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#D97706" stopOpacity="1" />
-              <stop offset="100%" stopColor="#92400E" stopOpacity="0.95" />
+              <stop offset="0%" stopColor="#2D6A4F" stopOpacity="1" />
+              <stop offset="100%" stopColor="#12332C" stopOpacity="0.95" />
             </linearGradient>
             <linearGradient id="combo-line-glow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2563EB" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
+              <stop offset="0%" stopColor="#2D6A4F" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#2D6A4F" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -466,7 +466,7 @@ export function ComboChart({
                   y2={y}
                   stroke="currentColor"
                   strokeDasharray="4 4"
-                  className="text-[#E5D8C6]/50 dark:text-[#382F26]/60"
+                  className="text-[#E4DCD0]/50 dark:text-[#233630]/60"
                   strokeWidth="1"
                 />
                 {/* Left Axis: Revenue */}
@@ -521,7 +521,7 @@ export function ComboChart({
                     width={slotWidth - 8}
                     height={chartHeight}
                     fill="currentColor"
-                    className="text-[#92400E]/5 dark:text-[#D97706]/10"
+                    className="text-[#173F36]/5 dark:text-[#9FB29E]/10"
                     rx="6"
                   />
                 )}
@@ -611,7 +611,7 @@ export function ComboChart({
               stroke="currentColor"
               strokeDasharray="3 3"
               strokeWidth="1.5"
-              className="text-[#92400E]/40 dark:text-[#D97706]/40 pointer-events-none"
+              className="text-[#173F36]/40 dark:text-[#4EBA87]/40 pointer-events-none"
             />
           )}
         </svg>
@@ -619,37 +619,37 @@ export function ComboChart({
         {/* Floating Enterprise Tooltip */}
         {activePoint && (
           <div
-            className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] px-3.5 py-2.5 rounded-xl shadow-sandstone-lg text-xs z-30 min-w-[140px]"
+            className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] px-3.5 py-2.5 rounded-xl shadow-editorial text-xs z-30 min-w-[140px]"
             style={{
               left: `${(activePoint.x / width) * 100}%`,
               top: `${Math.min(activePoint.barY, activePoint.lineY) * (100 / height)}%`,
               marginTop: '-12px',
             }}
           >
-            <div className="text-[10.5px] font-bold text-[#8C7E72] dark:text-[#A89B8C] uppercase tracking-wider pb-1.5 border-b border-[#E5D8C6]/50 dark:border-[#382F26]/50">
+            <div className="text-[10.5px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider pb-1.5 border-b border-[#E4DCD0]/50 dark:border-[#233630]/50">
               {activePoint.label}
             </div>
             <div className="pt-1.5 space-y-1">
               <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-1.5 text-[#5B6470] dark:text-[#A89B8C]">
-                  <span className="w-2 h-2 rounded-xs bg-[#92400E]" />
+                <span className="flex items-center gap-1.5 text-[#657168] dark:text-[#9FB29E]">
+                  <span className="w-2 h-2 rounded-xs bg-[#173F36]" />
                   <span>Revenue:</span>
                 </span>
-                <span className="font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC] tabular-nums">
+                <span className="font-mono font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                   {currency}{activePoint.rev.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-1.5 text-[#5B6470] dark:text-[#A89B8C]">
-                  <span className="w-2 h-2 rounded-full bg-[#2563EB]" />
+                <span className="flex items-center gap-1.5 text-[#657168] dark:text-[#9FB29E]">
+                  <span className="w-2 h-2 rounded-full bg-[#2D6A4F]" />
                   <span>Orders:</span>
                 </span>
-                <span className="font-mono font-bold text-[#2563EB] dark:text-blue-400 tabular-nums">
+                <span className="font-mono font-bold text-[#2D6A4F] dark:text-[#4EBA87] tabular-nums">
                   {activePoint.ord}
                 </span>
               </div>
               {activePoint.ord > 0 && (
-                <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#E5D8C6]/40 dark:border-[#382F26]/40 text-[10px] text-[#8C7E72]">
+                <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#E4DCD0]/40 dark:border-[#233630]/40 text-[10px] text-[#657168]">
                   <span>Avg Order Value:</span>
                   <span className="font-mono font-semibold">
                     {currency}{Math.round(activePoint.rev / activePoint.ord).toLocaleString()}
@@ -694,7 +694,7 @@ export function LineChart({
 export function VerticalBarChart({
   data = [], // [{ label: string, value: number, color?: string, sublabel?: string }]
   height = 200,
-  color = '#92400E',
+  color = '#173F36',
   currency = '',
   valueLabel = '',
   formatValue,
@@ -743,7 +743,7 @@ export function VerticalBarChart({
                 y2={y}
                 stroke="currentColor"
                 strokeDasharray="4 4"
-                className="text-[#E5D8C6]/60 dark:text-[#382F26]/70"
+                className="text-[#E4DCD0]/60 dark:text-[#233630]/70"
                 strokeWidth="1"
               />
               <text
@@ -807,7 +807,7 @@ export function VerticalBarChart({
       {/* Floating Tooltip */}
       {hoveredIdx !== null && (
         <div
-          className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] px-3 py-1.5 rounded-xl shadow-sandstone-md text-xs z-20 min-w-[90px] text-center"
+          className="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full bg-white dark:bg-[#1C1815] border border-[#E4DCD0] dark:border-[#233630] px-3 py-1.5 rounded-xl shadow-sandstone-md text-xs z-20 min-w-[90px] text-center"
           style={{
             left: `${
               ((paddingX + hoveredIdx * spacing + spacing / 2) / width) * 100
@@ -852,7 +852,7 @@ export function RadialGauge({
   sublabel = '',
   size = 140,
   strokeWidth = 14,
-  color = '#92400E',
+  color = '#173F36',
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -870,7 +870,7 @@ export function RadialGauge({
             stroke="currentColor"
             strokeWidth={strokeWidth}
             fill="transparent"
-            className="text-[#FAF7F2] dark:text-[#25201A]"
+            className="text-[#F7EFE4] dark:text-[#1E362E]"
           />
           <circle
             cx={size / 2}
@@ -970,7 +970,7 @@ export function DiningFloorOccupancyVisualizer({
               fill="transparent"
               stroke="currentColor"
               strokeWidth={strokeWidth}
-              className="text-[#FAF7F2] dark:text-[#25201A]"
+              className="text-[#E4DCD0]/60 dark:text-[#233630]/60"
             />
             {/* Available segment */}
             <circle
@@ -978,7 +978,7 @@ export function DiningFloorOccupancyVisualizer({
               cy={size / 2}
               r={radius}
               fill="transparent"
-              stroke="#16A34A"
+              stroke="#2D6A4F"
               strokeWidth={strokeWidth}
               strokeDasharray={`${availableDash} ${circumference}`}
               strokeDashoffset={0}
@@ -991,7 +991,7 @@ export function DiningFloorOccupancyVisualizer({
                 cy={size / 2}
                 r={radius}
                 fill="transparent"
-                stroke="#2563EB"
+                stroke="#657168"
                 strokeWidth={strokeWidth}
                 strokeDasharray={`${reservedDash} ${circumference}`}
                 strokeDashoffset={-occupiedDash}
@@ -1005,7 +1005,7 @@ export function DiningFloorOccupancyVisualizer({
                 cy={size / 2}
                 r={radius}
                 fill="transparent"
-                stroke="#92400E"
+                stroke="#173F36"
                 strokeWidth={strokeWidth}
                 strokeDasharray={`${occupiedDash} ${circumference}`}
                 strokeDashoffset={0}
@@ -1017,10 +1017,10 @@ export function DiningFloorOccupancyVisualizer({
 
           {/* Center Label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-            <span className="text-xl font-black font-mono text-[#1F2937] dark:text-[#F7F3EC] tabular-nums leading-none">
+            <span className="text-xl font-black font-mono text-[#17251F] dark:text-[#F7EFE4] tabular-nums leading-none">
               {occupancyRate}%
             </span>
-            <span className="text-[9.5px] font-bold text-[#8C7E72] dark:text-[#998C7F] uppercase tracking-wider mt-0.5">
+            <span className="text-[9.5px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider mt-0.5">
               Occupied
             </span>
           </div>
@@ -1029,48 +1029,48 @@ export function DiningFloorOccupancyVisualizer({
         {/* Status Metric Cards / Legend */}
         <div className="flex-1 w-full grid grid-cols-3 sm:grid-cols-1 gap-2">
           {/* Available */}
-          <div className="p-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <div className="p-2 rounded-xl bg-[#E8F3ED] dark:bg-[#1A2E26] border border-[#C5DED0] dark:border-[#244237] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#16A34A] shrink-0" />
-              <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-300">Available</span>
+              <span className="w-2 h-2 rounded-full bg-[#2D6A4F] shrink-0" />
+              <span className="text-[11px] font-bold text-[#1E4D38] dark:text-[#88D4A8]">Available</span>
             </div>
             <div className="text-right">
-              <span className="font-mono font-bold text-xs text-emerald-800 dark:text-emerald-300 tabular-nums">
+              <span className="font-mono font-bold text-xs text-[#1E4D38] dark:text-[#88D4A8] tabular-nums">
                 {available} <span className="text-[10px] font-normal opacity-80">tbls</span>
               </span>
-              <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400 block sm:hidden font-mono">
+              <span className="text-[10px] text-[#2D6A4F] dark:text-[#88D4A8] block sm:hidden font-mono">
                 {availableSeats} seats
               </span>
             </div>
           </div>
 
           {/* Occupied */}
-          <div className="p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <div className="p-2 rounded-xl bg-[#173F36]/10 dark:bg-[#173F36]/25 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#92400E] shrink-0" />
-              <span className="text-[11px] font-bold text-amber-950 dark:text-amber-300">Occupied</span>
+              <span className="w-2 h-2 rounded-full bg-[#173F36] dark:bg-[#4EBA87] shrink-0" />
+              <span className="text-[11px] font-bold text-[#173F36] dark:text-[#4EBA87]">Occupied</span>
             </div>
             <div className="text-right">
-              <span className="font-mono font-bold text-xs text-amber-900 dark:text-amber-300 tabular-nums">
+              <span className="font-mono font-bold text-xs text-[#173F36] dark:text-[#4EBA87] tabular-nums">
                 {occupied} <span className="text-[10px] font-normal opacity-80">tbls</span>
               </span>
-              <span className="text-[10px] text-amber-800/80 dark:text-amber-400 block sm:hidden font-mono">
+              <span className="text-[10px] text-[#173F36]/80 dark:text-[#4EBA87] block sm:hidden font-mono">
                 {occupiedSeats} seated
               </span>
             </div>
           </div>
 
           {/* Reserved */}
-          <div className="p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <div className="p-2 rounded-xl bg-[#F7EFE4] dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#233630] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />
-              <span className="text-[11px] font-bold text-blue-900 dark:text-blue-300">Reserved</span>
+              <span className="w-2 h-2 rounded-full bg-[#657168] shrink-0" />
+              <span className="text-[11px] font-bold text-[#17251F] dark:text-[#F7EFE4]">Reserved</span>
             </div>
             <div className="text-right">
-              <span className="font-mono font-bold text-xs text-blue-800 dark:text-blue-300 tabular-nums">
+              <span className="font-mono font-bold text-xs text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                 {reserved} <span className="text-[10px] font-normal opacity-80">tbls</span>
               </span>
-              <span className="text-[10px] text-blue-700/80 dark:text-blue-400 block sm:hidden font-mono">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block sm:hidden font-mono">
                 {reservedSeats} booked
               </span>
             </div>
@@ -1080,10 +1080,10 @@ export function DiningFloorOccupancyVisualizer({
 
       {/* Dining Tables Telemetry */}
       {tables && tables.length > 0 && (
-        <div className="pt-2 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 space-y-1.5">
-          <div className="text-[11px] font-bold text-[#5B6470] dark:text-[#A89B8C] uppercase tracking-wider flex items-center justify-between">
+        <div className="pt-2 border-t border-[#E4DCD0]/50 dark:border-[#233630]/50 space-y-1.5">
+          <div className="text-[11px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider flex items-center justify-between">
             <span>Dining Tables Telemetry</span>
-            <span className="font-mono text-[10px] text-[#8C7E72]">{tables.length} Total</span>
+            <span className="font-mono text-[10px] text-[#8D9890]">{tables.length} Total</span>
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-24 overflow-y-auto pr-1">
             {tables.map((t) => {
@@ -1096,10 +1096,10 @@ export function DiningFloorOccupancyVisualizer({
                   title={`Table ${t.tableNumber} • ${t.capacity || 2} Seats • ${st}`}
                   className={`p-1.5 rounded-lg border text-center transition-all ${
                     isOcc
-                      ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/60 text-[#92400E] dark:text-[#D97706]'
+                      ? 'bg-[#173F36]/10 dark:bg-[#173F36]/25 border-[#173F36]/30 text-[#173F36] dark:text-[#4EBA87]'
                       : isRes
-                      ? 'bg-blue-50/80 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800/60 text-[#2563EB] dark:text-blue-400'
-                      : 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/60 text-[#16A34A] dark:text-emerald-400'
+                      ? 'bg-[#F7EFE4] dark:bg-[#1A2622] border-[#E4DCD0] dark:border-[#233630] text-[#657168] dark:text-[#9FB29E]'
+                      : 'bg-[#E8F3ED] dark:bg-[#1A2E26] border-[#C5DED0] dark:border-[#244237] text-[#1E4D38] dark:text-[#88D4A8]'
                   }`}
                 >
                   <div className="text-[11px] font-bold font-mono leading-tight">
@@ -1116,7 +1116,7 @@ export function DiningFloorOccupancyVisualizer({
       )}
 
       {/* Seat Utilization Summary Footer */}
-      <div className="pt-2 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 flex items-center justify-between text-[11px] text-[#5B6470] dark:text-[#A89B8C]">
+      <div className="pt-2 border-t border-[#E4DCD0]/50 dark:border-[#233630]/50 flex items-center justify-between text-[11px] text-[#5B6470] dark:text-[#A89B8C]">
         <span>Seated Guests: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{occupiedSeats} / {totalSeats}</strong></span>
         <span className="font-semibold text-[#16A34A] dark:text-emerald-400">{availableSeats} seats open</span>
       </div>
@@ -1200,7 +1200,7 @@ export function DonutChart({
             fill="transparent"
             stroke="currentColor"
             strokeWidth={strokeWidth}
-            className="text-[#FAF7F2] dark:text-[#25201A]"
+            className="text-[#F7EFE4] dark:text-[#1E362E]"
           />
 
           {/* Segments */}
@@ -1232,7 +1232,7 @@ export function DonutChart({
             {displayVal}
           </span>
           {activeItem && (
-            <span className="text-[10.5px] font-bold text-[#92400E] dark:text-[#D97706] tabular-nums">
+            <span className="text-[10.5px] font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
               {activeItem.percentage}%
             </span>
           )}
@@ -1250,8 +1250,8 @@ export function DonutChart({
               onMouseLeave={() => setHoveredIndex(null)}
               className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
                 isHovered
-                  ? 'bg-[#FAF7F2] dark:bg-[#25201A] font-bold text-[#1F2937] dark:text-[#F7F3EC]'
-                  : 'text-[#5B6470] dark:text-[#A89B8C] hover:bg-[#FAF7F2]/50 dark:hover:bg-[#201C18]'
+                  ? 'bg-[#F7EFE4] dark:bg-[#1E362E] font-bold text-[#17251F] dark:text-[#F7EFE4]'
+                  : 'text-[#657168] dark:text-[#9FB29E] hover:bg-[#F7EFE4]/60 dark:hover:bg-[#1E362E]/60'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -1345,7 +1345,7 @@ export function PaymentDistributionVisualizer({
                 fill="transparent"
                 stroke="currentColor"
                 strokeWidth={strokeWidth}
-                className="text-[#FAF7F2] dark:text-[#25201A]"
+                className="text-[#E4DCD0]/60 dark:text-[#233630]/60"
               />
 
               {/* Segments */}
@@ -1370,14 +1370,14 @@ export function PaymentDistributionVisualizer({
 
             {/* Center Content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
-              <span className="text-[9.5px] font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[100px]">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E] truncate max-w-[100px]">
                 {activeItem ? activeItem.label : 'Total Collected'}
               </span>
-              <span className="text-sm font-black text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono truncate max-w-[110px] mt-0.5">
+              <span className="text-sm font-black text-[#17251F] dark:text-[#F7EFE4] tabular-nums font-mono truncate max-w-[110px] mt-0.5">
                 {activeItem ? `${currency}${Number(activeItem.value).toLocaleString()}` : `${currency}${total.toLocaleString()}`}
               </span>
               {activeItem && (
-                <span className="text-[10px] font-bold text-[#92400E] dark:text-[#D97706] tabular-nums">
+                <span className="text-[10px] font-bold text-[#173F36] dark:text-[#4EBA87] tabular-nums">
                   {activeItem.percentage}%
                 </span>
               )}
@@ -1396,8 +1396,8 @@ export function PaymentDistributionVisualizer({
                 onMouseLeave={() => setHoveredIndex(null)}
                 className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
                   isHovered
-                    ? 'bg-white dark:bg-[#201C18] border-[#92400E]/40 dark:border-[#D97706]/40 shadow-xs'
-                    : 'bg-[#FAF7F2]/80 dark:bg-[#201C18]/60 border-[#E5D8C6]/70 dark:border-[#382F26]/70 hover:border-[#92400E]/20'
+                    ? 'bg-[#FFFDF9] dark:bg-[#152320] border-[#173F36]/40 dark:border-[#4EBA87]/40 shadow-editorial'
+                    : 'bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border-[#E4DCD0]/70 dark:border-[#233630]/70 hover:border-[#173F36]/30'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs mb-1.5">
@@ -1409,13 +1409,13 @@ export function PaymentDistributionVisualizer({
                     {getMethodIcon && (
                       <span className="shrink-0">{getMethodIcon(seg.label)}</span>
                     )}
-                    <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] uppercase tracking-wide truncate">
+                    <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] uppercase tracking-wide truncate">
                       {seg.label}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 tabular-nums shrink-0 font-mono text-xs">
-                    <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                    <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">
                       {currency}{Number(seg.value).toLocaleString()}
                     </span>
                     <span
@@ -1428,7 +1428,7 @@ export function PaymentDistributionVisualizer({
                 </div>
 
                 {/* Mini Progress Bar */}
-                <div className="h-1.5 w-full bg-[#E7DCCB] dark:bg-[#332A22] rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-[#E4DCD0] dark:bg-[#233630] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{
@@ -1456,7 +1456,7 @@ export function HorizontalBarChart({
   if (!data || data.length === 0) {
     return (
       <div className="h-44 flex flex-col items-center justify-center text-center p-4">
-        <p className="text-xs text-[#5B6470] dark:text-[#A89B8C]">No performance ranking data available</p>
+        <p className="text-xs text-[#657168] dark:text-[#9FB29E]">No performance ranking data available</p>
       </div>
     );
   }
@@ -1468,29 +1468,29 @@ export function HorizontalBarChart({
       {data.map((item, idx) => {
         const val = Number(item.value) || 0;
         const pct = Math.min(100, Math.round((val / maxValue) * 100));
-        const color = item.color || '#92400E';
+        const color = item.color || '#173F36';
 
-        // Metallic accented rank styling for top 3
+        // Accented rank badge styling
         const rankStyles = [
-          'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-          'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-          'bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800',
+          'bg-[#173F36] text-[#FFFDF9] border-[#173F36]',
+          'bg-[#2D6A4F] text-[#FFFDF9] border-[#2D6A4F]',
+          'bg-[#657168] text-[#FFFDF9] border-[#657168]',
         ];
-        const rankBadge = rankStyles[idx] || 'bg-[#FAF7F2] text-[#8C7E72] border-[#E5D8C6] dark:bg-[#201C18] dark:text-[#A89B8C] dark:border-[#382F26]';
+        const rankBadge = rankStyles[idx] || 'bg-[#F7EFE4] text-[#657168] border-[#E4DCD0] dark:bg-[#1A2622] dark:text-[#9FB29E] dark:border-[#233630]';
 
         return (
           <div
             key={idx}
-            className="space-y-1.5 p-2 rounded-xl hover:bg-[#FAF7F2]/70 dark:hover:bg-[#201C18]/60 transition-colors group"
+            className="space-y-1.5 p-2 rounded-xl hover:bg-[#F7EFE4]/60 dark:hover:bg-[#1A2622]/60 transition-colors group"
           >
-            <div className="flex items-center justify-between text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] gap-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] gap-3">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 {/* When image exists: [Dish Image] -> Dish Name */}
                 {item.image ? (
                   <img
                     src={item.image}
                     alt={item.label}
-                    className="w-8 h-8 rounded-lg object-cover border border-[#E5D8C6] dark:border-[#382F26] shrink-0 shadow-2xs"
+                    className="w-8 h-8 rounded-lg object-cover border border-[#E4DCD0] dark:border-[#233630] shrink-0 shadow-2xs"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                     }}
@@ -1502,11 +1502,11 @@ export function HorizontalBarChart({
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <span className="truncate block font-bold text-[#1F2937] dark:text-[#F7F3EC] leading-tight group-hover:text-[#92400E] dark:group-hover:text-[#D97706] transition-colors">
+                  <span className="truncate block font-bold text-[#17251F] dark:text-[#F7EFE4] leading-tight group-hover:text-[#173F36] dark:group-hover:text-[#4EBA87] transition-colors">
                     {item.label}
                   </span>
                   {item.category && (
-                    <span className="text-[10px] text-[#8C7E72] dark:text-[#998C7F] font-medium block truncate">
+                    <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium block truncate">
                       {item.category}
                     </span>
                   )}
@@ -1515,11 +1515,11 @@ export function HorizontalBarChart({
 
               {/* Right side: Orders -> Revenue -> Ranking (if image was on left) */}
               <div className="flex items-center gap-2 shrink-0 font-mono text-xs tabular-nums text-right">
-                <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">
                   {val.toLocaleString()} {valueLabel}
                 </span>
                 {item.sublabel && (
-                  <span className="text-[11px] font-bold text-[#92400E] dark:text-[#D97706] bg-[#92400E]/10 dark:bg-[#92400E]/20 px-2 py-0.5 rounded-md border border-[#92400E]/20 dark:border-[#92400E]/30">
+                  <span className="text-[11px] font-bold text-[#173F36] dark:text-[#4EBA87] bg-[#173F36]/10 dark:bg-[#173F36]/20 px-2 py-0.5 rounded-md border border-[#173F36]/20 dark:border-[#4EBA87]/30">
                     {item.sublabel}
                   </span>
                 )}
@@ -1532,7 +1532,7 @@ export function HorizontalBarChart({
             </div>
 
             {/* Bar Track */}
-            <div className="h-2 w-full bg-[#FAF7F2] dark:bg-[#25201A] border border-[#E5D8C6]/60 dark:border-[#382F26]/60 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-[#E4DCD0]/40 dark:bg-[#1A2622] border border-[#E4DCD0]/60 dark:border-[#233630]/60 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500 ease-out"
                 style={{
@@ -1558,7 +1558,7 @@ export function StatusDistributionBar({
 
   if (total <= 0) {
     return (
-      <div className="py-2 text-center text-xs text-[#5B6470] dark:text-[#A89B8C]">
+      <div className="py-2 text-center text-xs text-[#657168] dark:text-[#9FB29E]">
         Queue is currently idle
       </div>
     );
@@ -1567,7 +1567,7 @@ export function StatusDistributionBar({
   return (
     <div className="space-y-3">
       {/* Multi-segment stacked bar */}
-      <div className="h-3 w-full bg-[#FAF7F2] dark:bg-[#25201A] rounded-full overflow-hidden flex border border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+      <div className="h-3 w-full bg-[#E4DCD0]/40 dark:bg-[#1A2622] rounded-full overflow-hidden flex border border-[#E4DCD0]/60 dark:border-[#233630]/60">
         {segments.map((seg, idx) => {
           const val = Number(seg.count) || 0;
           if (val <= 0) return null;
@@ -1594,16 +1594,16 @@ export function StatusDistributionBar({
           return (
             <div
               key={idx}
-              className="bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-2.5 flex items-center justify-between"
+              className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl p-2.5 flex items-center justify-between"
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                <span className="text-[11px] font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate">
+                <span className="text-[11px] font-semibold text-[#657168] dark:text-[#9FB29E] truncate">
                   {seg.label}
                 </span>
               </div>
-              <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono pl-1">
-                {val} <span className="text-[9.5px] text-[#8C7E72] font-normal">({pct}%)</span>
+              <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums font-mono pl-1">
+                {val} <span className="text-[9.5px] text-[#657168] font-normal">({pct}%)</span>
               </div>
             </div>
           );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/api';
@@ -14,11 +14,11 @@ import {
   RefreshCw,
   FolderPlus,
   Layers,
-  X,
-  Utensils,
   Camera,
   UtensilsCrossed
 } from 'lucide-react';
+
+import { useMenuCategories, useMenuItems, useInventory, usePosMutations } from '../hooks/usePosQueries';
 
 function DishThumbnail({ image, name }) {
   const [imgError, setImgError] = useState(false);
@@ -30,13 +30,13 @@ function DishThumbnail({ image, name }) {
         src={resolvedUrl}
         alt={name}
         onError={() => setImgError(true)}
-        className="w-10 h-10 rounded-xl object-cover border border-[#E5D8C6] dark:border-[#382F26] shadow-2xs shrink-0"
+        className="w-10 h-10 rounded-xl object-cover border border-[#E4DCD0] dark:border-[#1E362E] shadow-2xs shrink-0"
       />
     );
   }
 
   return (
-    <div className="w-10 h-10 rounded-xl bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0">
+    <div className="w-10 h-10 rounded-xl bg-[#F7EFE4] dark:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#254238] flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0">
       <UtensilsCrossed className="w-4 h-4 opacity-70" />
     </div>
   );
@@ -44,12 +44,32 @@ function DishThumbnail({ image, name }) {
 
 export default function MenuView() {
   const { restaurant, addToast, role } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [items, setItems] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
+  const { invalidateMenu } = usePosMutations(restaurant?.id);
+
+  const {
+    data: categories = [],
+    isLoading: loadingCategories,
+    refetch: refetchCategories,
+  } = useMenuCategories(restaurant?.id);
+
+  const {
+    data: items = [],
+    isLoading: loadingItems,
+    refetch: refetchItems,
+  } = useMenuItems(restaurant?.id);
+
+  const {
+    data: inventoryItems = [],
+    isLoading: loadingInventory,
+    refetch: refetchInventory,
+  } = useInventory(restaurant?.id);
+
   const [selectedCatId, setSelectedCatId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  const loading = (loadingCategories && categories.length === 0) ||
+    (loadingItems && items.length === 0) ||
+    (loadingInventory && inventoryItems.length === 0);
 
   // Modals
   const [showItemModal, setShowItemModal] = useState(false);
@@ -83,33 +103,17 @@ export default function MenuView() {
   const currency = restaurant?.currency || '₹';
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const [catRes, itmRes, invRes] = await Promise.all([
-        posService.menu.getCategories(),
-        posService.menu.getItems(),
-        posService.inventory.getAll(),
-      ]);
-      if (catRes.success) setCategories(catRes.data || []);
-      if (itmRes.success) setItems(itmRes.data || []);
-      if (invRes.success) setInventoryItems(invRes.data || []);
-    } catch (err) {
-      addToast(err.message || 'Failed to load menu data', 'error');
-    } finally {
-      setLoading(false);
-    }
+    invalidateMenu();
+    await Promise.all([refetchCategories(), refetchItems(), refetchInventory()]);
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleToggleAvailability = async (item) => {
     try {
       const nextState = !item.isAvailable;
       await posService.menu.toggleAvailability(item.id, nextState);
       addToast(`${item.name} is now ${nextState ? 'Available' : 'Marked 86 (Out of Stock)'}`, 'info');
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isAvailable: nextState } : i)));
+      refetchItems();
+      invalidateMenu();
     } catch (err) {
       addToast(err.message || 'Failed to toggle availability', 'error');
     }
@@ -261,7 +265,7 @@ export default function MenuView() {
       } else {
         setRecipeIngredients([]);
       }
-    } catch (err) {
+    } catch {
       setRecipeIngredients([]);
     }
   };
@@ -312,23 +316,23 @@ export default function MenuView() {
   });
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Menu & Recipe Engineering
               </h1>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/20 dark:border-[#92400E]/30 shadow-2xs">
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/30 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20 tracking-wider">
                 Catalog Active
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
               Configure dishes, categories, live availability switches, and automated inventory depletion recipes
             </p>
           </div>
@@ -382,15 +386,15 @@ export default function MenuView() {
       </div>
 
       {/* Categories & Filter Bar */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] p-3.5 sm:p-4 rounded-2xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] p-3.5 sm:p-4 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
         <div className="flex gap-2 overflow-x-auto max-w-3xl pb-1 md:pb-0 scrollbar-none">
           <button
             type="button"
             onClick={() => setSelectedCatId('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
               selectedCatId === 'ALL'
-                ? 'bg-[#92400E] text-white shadow-sm'
-                : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2822] border border-[#E5D8C6] dark:border-[#382F26]'
+                ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+                : 'bg-[#F7EFE4] dark:bg-[#1E362E] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] border border-[#E4DCD0] dark:border-[#254238]'
             }`}
           >
             All Categories ({items.length})
@@ -400,10 +404,10 @@ export default function MenuView() {
               <button
                 type="button"
                 onClick={() => setSelectedCatId(c.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                   selectedCatId === c.id
-                    ? 'bg-[#92400E] text-white shadow-sm'
-                    : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2822] border border-[#E5D8C6] dark:border-[#382F26]'
+                    ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+                    : 'bg-[#F7EFE4] dark:bg-[#1E362E] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] border border-[#E4DCD0] dark:border-[#254238]'
                 }`}
               >
                 {c.name}
@@ -412,7 +416,7 @@ export default function MenuView() {
                 <button
                   type="button"
                   onClick={() => handleDeleteCategory(c.id, c.name)}
-                  className="opacity-0 group-hover:opacity-100 text-[#5B6470] dark:text-[#A89B8C] hover:text-[#EF4444] p-1.5 transition-opacity ml-0.5 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  className="opacity-0 group-hover:opacity-100 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 p-1.5 transition-opacity ml-0.5 cursor-pointer rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
                   title="Delete category"
                   aria-label={`Delete ${c.name} category`}
                 >
@@ -424,23 +428,23 @@ export default function MenuView() {
         </div>
 
         <div className="relative w-full md:w-64">
-          <Search className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search items..."
+            placeholder="Search dishes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl pl-10 pr-3.5 py-2 text-xs sm:text-sm text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#5B6470] dark:placeholder-[#A89B8C] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+            className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-10 pr-3.5 py-2 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
           />
         </div>
       </div>
 
       {/* Menu Items Table */}
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sandstone">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
         {loading ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] sticky top-0 z-10 tracking-wider">
+              <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] sticky top-0 z-10 tracking-wider">
                 <tr>
                   <th className="px-5 py-3.5">Dish</th>
                   <th className="px-5 py-3.5">Category</th>
@@ -481,7 +485,7 @@ export default function MenuView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] sticky top-0 z-10 tracking-wider">
+              <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] sticky top-0 z-10 tracking-wider">
                 <tr>
                   <th className="px-5 py-3.5">Dish</th>
                   <th className="px-5 py-3.5">Category</th>
@@ -492,39 +496,39 @@ export default function MenuView() {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5D8C6]/60 dark:divide-[#382F26]">
+              <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                 {filteredItems.map((itm) => {
                   const cat = categories.find((c) => c.id === itm.categoryId);
                   const dietaryType = itm.dietary || (itm.isVeg !== undefined ? (itm.isVeg ? 'VEG' : 'NON-VEG') : '');
                   return (
-                    <tr key={itm.id} className="hover:bg-[#F1E8DB]/40 dark:hover:bg-[#25201C]/60 transition-colors">
+                    <tr key={itm.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors group">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <DishThumbnail image={itm.imageUrl} name={itm.name} />
                           <div className="min-w-0">
-                            <div className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-sm truncate">{itm.name}</div>
+                            <div className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm truncate group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E] transition-colors">{itm.name}</div>
                             {itm.description && (
-                              <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] line-clamp-1 max-w-xs mt-0.5">
+                              <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] line-clamp-1 max-w-xs mt-0.5">
                                 {itm.description}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-semibold text-[#1F2937] dark:text-[#F7F3EC]">
+                      <td className="px-5 py-4 font-semibold text-[#17251F] dark:text-[#F7EFE4]">
                         {cat?.name || 'Unassigned'}
                       </td>
                       <td className="px-5 py-4">
                         {dietaryType ? (
                           <Badge variant={dietaryType} status={dietaryType} size="sm" dot={false} />
                         ) : (
-                          <span className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] italic">Unassigned</span>
+                          <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] italic">Unassigned</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 font-mono tabular-nums font-bold text-[#1F2937] dark:text-[#F7F3EC] text-sm">
+                      <td className="px-5 py-4 font-mono tabular-nums font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm">
                         {currency}{Number(itm.price).toFixed(2)}
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                         {itm.preparationTime || 15} mins
                       </td>
                       <td className="px-5 py-4">
@@ -532,20 +536,20 @@ export default function MenuView() {
                           type="button"
                           onClick={() => handleToggleAvailability(itm)}
                           aria-label={`Toggle availability for ${itm.name}`}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                             itm.isAvailable
-                              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-[#16A34A] dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/50'
-                              : 'bg-rose-50 dark:bg-rose-950/30 text-[#EF4444] dark:text-rose-400 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-950/50'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40 hover:bg-rose-100 dark:hover:bg-rose-950/60'
                           }`}
                         >
                           {itm.isAvailable ? (
                             <>
-                              <ToggleRight className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
+                              <ToggleRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                               <span>In Stock</span>
                             </>
                           ) : (
                             <>
-                              <ToggleLeft className="w-4 h-4 text-[#EF4444] dark:text-rose-400" />
+                              <ToggleLeft className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                               <span>86 Out</span>
                             </>
                           )}
@@ -555,7 +559,7 @@ export default function MenuView() {
                         <button
                           type="button"
                           onClick={() => openRecipeModal(itm)}
-                          className="inline-flex items-center gap-1 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2822] text-[#D97706] px-2.5 py-1.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] text-xs font-bold transition-all shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                          className="inline-flex items-center gap-1.5 bg-[#F7EFE4] dark:bg-[#1E362E] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] text-[#173F36] dark:text-[#9FB29E] px-2.5 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#254238] text-xs font-semibold transition-all shadow-editorial cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                           title="Manage Recipe BOM"
                         >
                           <Layers className="w-3.5 h-3.5" />
@@ -580,7 +584,7 @@ export default function MenuView() {
                             setShowItemModal(true);
                           }}
                           aria-label={`Edit ${itm.name}`}
-                          className="p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                          className="p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                           title="Edit Dish"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -589,7 +593,7 @@ export default function MenuView() {
                           type="button"
                           onClick={() => handleDeleteItem(itm.id, itm.name)}
                           aria-label={`Delete ${itm.name}`}
-                          className="p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#EF4444] hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#EF4444]"
+                          className="p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                           title="Delete Dish"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -615,23 +619,23 @@ export default function MenuView() {
         <form onSubmit={handleSaveItem} className="space-y-4">
           {/* FOOD IMAGE UPLOAD SECTION */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-[#1F2937]">Food Image</label>
+            <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Food Image</label>
             {itemForm.imagePreview ? (
-              <div className="relative rounded-2xl border border-[#E5D8C6] bg-[#FAF7F2] p-3 flex items-center gap-4">
+              <div className="relative rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] bg-[#F7EFE4] dark:bg-[#101A18] p-3 flex items-center gap-4">
                 <img
                   src={itemForm.imagePreview}
                   alt="Dish preview"
-                  className="w-20 h-20 rounded-xl object-cover border border-[#E5D8C6] shadow-2xs shrink-0"
+                  className="w-20 h-20 rounded-xl object-cover border border-[#E4DCD0] dark:border-[#1E362E] shadow-2xs shrink-0"
                 />
                 <div className="flex flex-col gap-2 min-w-0 flex-1">
-                  <div className="text-xs font-bold text-[#1F2937] truncate">
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] truncate">
                     {itemForm.imageFile ? itemForm.imageFile.name : 'Current Food Image'}
                   </div>
-                  <div className="text-[11px] text-[#5B6470]">
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
                     JPG, PNG or WEBP • Max 5 MB
                   </div>
                   <div className="flex items-center gap-2 pt-0.5">
-                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#92400E] border border-[#E5D8C6] hover:bg-[#F1E8DB] transition-colors shadow-2xs">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#FFFDF9] dark:bg-[#152320] text-[#173F36] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] transition-colors shadow-editorial">
                       <span>Replace</span>
                       <input
                         type="file"
@@ -643,7 +647,7 @@ export default function MenuView() {
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-[#EF4444] hover:bg-rose-50 transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Remove</span>
@@ -652,12 +656,12 @@ export default function MenuView() {
                 </div>
               </div>
             ) : (
-              <label className="border-2 border-dashed border-[#E5D8C6] hover:border-[#92400E] bg-[#FAF7F2] hover:bg-[#F1E8DB]/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group">
-                <div className="w-10 h-10 rounded-xl bg-white border border-[#E5D8C6] flex items-center justify-center text-[#92400E] mb-2 shadow-2xs group-hover:scale-105 transition-transform">
+              <label className="border-2 border-dashed border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36] dark:hover:border-[#9FB29E] bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E]/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] mb-2 shadow-2xs group-hover:scale-105 transition-transform">
                   <Camera className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-bold text-[#1F2937]">Upload Food Image</span>
-                <span className="text-[11px] text-[#5B6470] mt-0.5">
+                <span className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Upload Food Image</span>
+                <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                   JPG, PNG or WEBP • Max 5 MB
                 </span>
                 <input
@@ -679,13 +683,13 @@ export default function MenuView() {
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-[#1F2937]">Description</label>
+            <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Description</label>
             <textarea
               rows="2"
               placeholder="Fresh arborio rice with wild forest mushrooms and aged parmesan"
               value={itemForm.description}
               onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] focus:bg-white transition-all"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] focus:bg-[#FFFDF9] dark:focus:bg-[#152320] transition-all"
             />
           </div>
 
@@ -700,12 +704,12 @@ export default function MenuView() {
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#1F2937]">Category *</label>
+              <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Category *</label>
               <select
                 required
                 value={itemForm.categoryId}
                 onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
               >
                 <option value="">Select Category</option>
                 {categories.map((c) => (
@@ -727,12 +731,12 @@ export default function MenuView() {
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#1F2937]">Dietary Type *</label>
+              <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Dietary Type *</label>
               <select
                 required
                 value={itemForm.dietary}
                 onChange={(e) => setItemForm({ ...itemForm, dietary: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
               >
                 <option value="">Select Dietary Type</option>
                 <option value="VEG">VEG</option>
@@ -743,7 +747,7 @@ export default function MenuView() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"
@@ -787,7 +791,7 @@ export default function MenuView() {
             onChange={(e) => setNewCatDesc(e.target.value)}
           />
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"
@@ -830,12 +834,12 @@ export default function MenuView() {
         }
       >
         <div className="space-y-4">
-          <p className="text-xs text-[#5B6470] leading-relaxed bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E5D8C6]">
+          <p className="text-xs text-[#657168] dark:text-[#9FB29E] leading-relaxed bg-[#F7EFE4] dark:bg-[#101A18] p-3.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E]">
             Whenever the kitchen completes an order containing this dish, these inventory raw materials will be automatically decremented from warehouse stocks.
           </p>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#1F2937]">Ingredients Breakdown</span>
+            <span className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Ingredients Breakdown</span>
             <Button
               variant="ghost"
               size="sm"
@@ -847,7 +851,7 @@ export default function MenuView() {
           </div>
 
           {recipeIngredients.length === 0 ? (
-            <div className="text-center py-10 text-[#5B6470] text-xs font-medium">
+            <div className="text-center py-10 text-[#657168] dark:text-[#9FB29E] text-xs font-medium">
               No recipe ingredients configured yet. Click "Add Ingredient" to link raw materials.
             </div>
           ) : (
@@ -855,7 +859,7 @@ export default function MenuView() {
               {recipeIngredients.map((ing, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl p-3 flex items-center gap-3"
+                  className="bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex items-center gap-3"
                 >
                   <select
                     value={ing.inventoryItemId}
@@ -869,7 +873,7 @@ export default function MenuView() {
                         )
                       );
                     }}
-                    className="flex-1 bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-2 text-xs text-[#1F2937]"
+                    className="flex-1 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4]"
                   >
                     {inventoryItems.map((inv) => (
                       <option key={inv.id} value={inv.id}>
@@ -889,10 +893,10 @@ export default function MenuView() {
                         prev.map((r, i) => (i === idx ? { ...r, quantityRequired: e.target.value } : r))
                       )
                     }
-                    className="w-24 bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-2 text-xs text-[#1F2937] font-mono tabular-nums"
+                    className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums"
                   />
 
-                  <span className="text-xs text-[#5B6470] font-mono tabular-nums w-12">{ing.unit || 'unit'}</span>
+                  <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12">{ing.unit || 'unit'}</span>
 
                   <button
                     type="button"
@@ -900,7 +904,7 @@ export default function MenuView() {
                       setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx))
                     }
                     aria-label="Remove ingredient"
-                    className="p-1.5 text-[#5B6470] hover:text-[#EF4444] rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="p-1.5 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

@@ -16,72 +16,64 @@ export function Badge({
 
   // Semantic color configurations
   const variantStyles = {
-    // Green / Available / Paid / Completed / Active
-    success: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    AVAILABLE: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    PAID: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    COMPLETED: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    SERVED: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
-    ACTIVE: 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/25',
+    // Soft Sage & Deep Forest Green / Available / Paid / Completed / Active
+    success: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    AVAILABLE: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    PAID: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    COMPLETED: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    SERVED: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    ACTIVE: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
 
-    // Amber / Warning / In Progress / Occupied
-    warning: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
-    OCCUPIED: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
-    PREPARING: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
-    IN_PREPARATION: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
-    PENDING: 'bg-amber-100/80 text-amber-800 border-amber-300',
-    NEW: 'bg-amber-100/80 text-amber-800 border-amber-300',
+    // Warm Amber / In Progress / Occupied
+    warning: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    OCCUPIED: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    PREPARING: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    IN_PREPARATION: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    PENDING: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    NEW: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
 
-    // Blue / Info / Ready / Billing / Out for Delivery
-    info: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
-    READY: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
-    BILLING: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
-    ACCEPTED: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
-    DELIVERED: 'bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/25',
+    // Subtle Forest Tint / Info / Ready / Billing
+    info: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
+    READY: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#173F36] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    BILLING: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
+    ACCEPTED: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
+    DELIVERED: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
 
-    // Red / Danger / Cancelled / Failed / Out of Service
-    danger: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    CANCELLED: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    FAILED: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    OUT_OF_SERVICE: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    REFUNDED: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    INACTIVE: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    OUT_OF_STOCK: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25',
-    LOW_STOCK: 'bg-[#D97706]/10 text-[#92400E] border-[#D97706]/25',
+    // Muted Terracotta / Danger / Cancelled / Low Stock
+    danger: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    CANCELLED: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    FAILED: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    OUT_OF_SERVICE: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    REFUNDED: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    INACTIVE: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    OUT_OF_STOCK: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    LOW_STOCK: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
 
     // Dietary
-    VEG: 'bg-emerald-50 text-[#16A34A] border-emerald-300',
-    'NON-VEG': 'bg-rose-50 text-[#EF4444] border-rose-300',
-    NON_VEG: 'bg-rose-50 text-[#EF4444] border-rose-300',
-    JAIN: 'bg-amber-50 text-[#D97706] border-amber-300',
-    EGG: 'bg-amber-50 text-amber-800 border-amber-300',
+    VEG: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
+    'NON-VEG': 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    NON_VEG: 'bg-[#FDF0ED] dark:bg-[#361A1A] text-[#C53030] dark:text-[#F87171] border-[#F5C6BE] dark:border-[#572727]',
+    JAIN: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    EGG: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
 
-    // Neutral / Sandstone Gray / Reserved
-    neutral: 'bg-[#FAF7F2] text-[#4B5563] border-[#E5D8C6]',
-    RESERVED: 'bg-[#8B5CF6]/10 text-[#7C3AED] border-[#8B5CF6]/25',
-    GUEST: 'bg-[#FAF7F2] text-[#4B5563] border-[#E5D8C6]',
-    DINE_IN: 'bg-amber-50 text-[#92400E] border-amber-200',
-    TAKEAWAY: 'bg-blue-50 text-[#2563EB] border-blue-200',
-    DELIVERY: 'bg-purple-50 text-purple-700 border-purple-200',
+    // Neutral / Warm Linen
+    neutral: 'bg-[#F4ECE1] dark:bg-[#1A2521] text-[#55635B] dark:text-[#A0ABA2] border-[#DDD3C5] dark:border-[#233630]',
+    RESERVED: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
+    GUEST: 'bg-[#F4ECE1] dark:bg-[#1A2521] text-[#55635B] dark:text-[#A0ABA2] border-[#DDD3C5] dark:border-[#233630]',
+    DINE_IN: 'bg-[#E8EFEA] dark:bg-[#172D28] text-[#173F36] dark:text-[#5FA596] border-[#C8DDD2] dark:border-[#2A4B43]',
+    TAKEAWAY: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
+    DELIVERY: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
   };
 
   const currentStyle =
     variantStyles[variant] ||
     variantStyles[normalized] ||
-    'bg-[#FAF7F2] text-[#5B6470] border-[#E5D8C6]';
+    'bg-[#F4ECE1] dark:bg-[#1A2521] text-[#55635B] dark:text-[#A0ABA2] border-[#DDD3C5] dark:border-[#233630]';
 
   const sizeStyles = {
     sm: 'text-[10px] px-2 py-0.5',
     md: 'text-xs px-2.5 py-0.5',
     lg: 'text-xs px-3 py-1 font-bold',
-  };
-
-  const dotColors = {
-    success: 'bg-[#16A34A]',
-    warning: 'bg-[#D97706]',
-    info: 'bg-[#2563EB]',
-    danger: 'bg-[#EF4444]',
-    neutral: 'bg-[#8C7E72]',
   };
 
   return (
@@ -96,15 +88,15 @@ export function Badge({
       {dot && (
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            currentStyle.includes('text-[#16A34A]')
-              ? 'bg-[#16A34A]'
-              : currentStyle.includes('text-[#EF4444]')
-              ? 'bg-[#EF4444]'
-              : currentStyle.includes('text-[#2563EB]')
-              ? 'bg-[#2563EB]'
-              : currentStyle.includes('text-[#92400E]')
-              ? 'bg-[#D97706]'
-              : 'bg-[#8C7E72]'
+            currentStyle.includes('text-[#2D6A4F]') || currentStyle.includes('text-[#173F36]')
+              ? 'bg-[#2D6A4F]'
+              : currentStyle.includes('text-[#C53030]')
+              ? 'bg-[#C53030]'
+              : currentStyle.includes('text-[#1E5248]')
+              ? 'bg-[#1E5248]'
+              : currentStyle.includes('text-[#9A5B13]')
+              ? 'bg-[#C07D37]'
+              : 'bg-[#7A8C82]'
           }`}
         />
       )}

@@ -1,62 +1,66 @@
 import { prisma } from '../config/env.js';
+import { cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 export const getSalesReport = async (restaurantId, filters = {}) => {
-  const where = { restaurantId, status: 'PAID' };
-  if (filters.startDate || filters.endDate) {
-    where.createdAt = {};
-    if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
-    if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
-  }
+  const cacheKey = buildCacheKey(restaurantId, 'reports:sales', filters);
+  return await cachedQuery(cacheKey, 30, async () => {
+    const where = { restaurantId, status: 'PAID' };
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
+      if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
+    }
 
-  const [bills, payments, totalOrders] = await Promise.all([
-    prisma.bill.findMany({
-      where,
-      select: {
-        totalAmount: true,
-        taxAmount: true,
-        discountAmount: true,
-        subtotal: true,
-        createdAt: true,
-      },
-    }),
-    prisma.payment.findMany({
-      where: { bill: where, status: 'COMPLETED' },
-      select: { amount: true, method: true },
-    }),
-    prisma.order.count({
-      where: {
-        restaurantId,
-        ...(filters.startDate || filters.endDate
-          ? {
-              createdAt: {
-                ...(filters.startDate ? { gte: new Date(filters.startDate) } : {}),
-                ...(filters.endDate ? { lte: new Date(filters.endDate) } : {}),
-              },
-            }
-          : {}),
-      },
-    }),
-  ]);
+    const [bills, payments, totalOrders] = await Promise.all([
+      prisma.bill.findMany({
+        where,
+        select: {
+          totalAmount: true,
+          taxAmount: true,
+          discountAmount: true,
+          subtotal: true,
+          createdAt: true,
+        },
+      }),
+      prisma.payment.findMany({
+        where: { bill: where, status: 'COMPLETED' },
+        select: { amount: true, method: true },
+      }),
+      prisma.order.count({
+        where: {
+          restaurantId,
+          ...(filters.startDate || filters.endDate
+            ? {
+                createdAt: {
+                  ...(filters.startDate ? { gte: new Date(filters.startDate) } : {}),
+                  ...(filters.endDate ? { lte: new Date(filters.endDate) } : {}),
+                },
+              }
+            : {}),
+        },
+      }),
+    ]);
 
-  const totalRevenue = bills.reduce((acc, b) => acc + Number(b.totalAmount), 0);
-  const totalTax = bills.reduce((acc, b) => acc + Number(b.taxAmount), 0);
-  const totalDiscount = bills.reduce((acc, b) => acc + Number(b.discountAmount), 0);
-  const totalSubtotal = bills.reduce((acc, b) => acc + Number(b.subtotal), 0);
+    const totalRevenue = bills.reduce((acc, b) => acc + Number(b.totalAmount), 0);
+    const totalTax = bills.reduce((acc, b) => acc + Number(b.taxAmount), 0);
+    const totalDiscount = bills.reduce((acc, b) => acc + Number(b.discountAmount), 0);
+    const totalSubtotal = bills.reduce((acc, b) => acc + Number(b.subtotal), 0);
 
-  const paymentBreakdown = payments.reduce((acc, p) => {
-    acc[p.method] = (acc[p.method] || 0) + Number(p.amount);
-    return acc;
-  }, {});
+    const paymentBreakdown = payments.reduce((acc, p) => {
+      acc[p.method] = (acc[p.method] || 0) + Number(p.amount);
+      return acc;
+    }, {});
 
-  return {
-    totalRevenue: Number(totalRevenue.toFixed(2)),
-    totalSubtotal: Number(totalSubtotal.toFixed(2)),
-    totalTax: Number(totalTax.toFixed(2)),
-    totalDiscount: Number(totalDiscount.toFixed(2)),
-    totalPaidBills: bills.length,
-    totalOrders,
-    paymentBreakdown,
-  };
+    return {
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      totalSubtotal: Number(totalSubtotal.toFixed(2)),
+      totalTax: Number(totalTax.toFixed(2)),
+      totalDiscount: Number(totalDiscount.toFixed(2)),
+      totalPaidBills: bills.length,
+      totalOrders,
+      paymentBreakdown,
+    };
+  });
 };
 
 export const getOrdersReport = async (restaurantId, filters = {}) => {
@@ -183,14 +187,16 @@ export const getPurchasesReport = async (restaurantId, filters = {}) => {
 };
 
 export const getFinancialReport = async (restaurantId, filters = {}) => {
-  const dateFilter = {};
-  if (filters.startDate) dateFilter.gte = new Date(filters.startDate);
-  if (filters.endDate) dateFilter.lte = new Date(filters.endDate);
-  const hasDateFilter = Boolean(filters.startDate || filters.endDate);
+  const cacheKey = buildCacheKey(restaurantId, 'reports:financials', filters);
+  return await cachedQuery(cacheKey, 30, async () => {
+    const dateFilter = {};
+    if (filters.startDate) dateFilter.gte = new Date(filters.startDate);
+    if (filters.endDate) dateFilter.lte = new Date(filters.endDate);
+    const hasDateFilter = Boolean(filters.startDate || filters.endDate);
 
-  const [payments, purchases, wastages] = await Promise.all([
-    // 1. REVENUE (Money in)
-    prisma.payment.findMany({
+    const [payments, purchases, wastages] = await Promise.all([
+      // 1. REVENUE (Money in)
+      prisma.payment.findMany({
       where: {
         bill: { restaurantId },
         status: 'COMPLETED',
@@ -311,13 +317,16 @@ export const getFinancialReport = async (restaurantId, filters = {}) => {
     },
     ledger: ledger.slice(0, 100), // Return recent 100 ledger transactions
   };
+  });
 };
 
 export const getPurchaseReport = getPurchasesReport;
 
 export const getAdminDashboardSummary = async (restaurantId) => {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const cacheKey = buildCacheKey(restaurantId, 'reports:dashboard', {});
+  return await cachedQuery(cacheKey, 30, async () => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
   const [
     billsAll,
@@ -482,6 +491,7 @@ export const getAdminDashboardSummary = async (restaurantId) => {
     },
     staff: staffStats,
   };
+  });
 };
 
 export default {

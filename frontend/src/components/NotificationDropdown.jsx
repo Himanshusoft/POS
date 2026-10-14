@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import posService from '../services/pos.service';
+import { queryKeys } from '../config/queryKeys';
 import {
   Bell,
   CheckCircle2,
@@ -29,12 +31,15 @@ function formatRelativeTime(dateString) {
   return `${diffDays}d ago`;
 }
 
-// Safely extract array items from responses (both paginated { items: [] } and raw [])
+// Safely extract array items from responses (both paginated { items: [] }, query client cache, and raw [])
 function extractItems(response) {
-  if (!response?.success) return [];
-  const payload = response.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.items)) return payload.items;
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  if (response?.success && response?.data) {
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data.items)) return response.data.items;
+  }
   return [];
 }
 
@@ -90,22 +95,57 @@ export default function NotificationDropdown() {
     }
   };
 
-  // Fetch live, dynamic notifications directly from active system data
-  const fetchDynamicNotifications = useCallback(async (isSilent = false) => {
+  const queryClient = useQueryClient();
+  const restId = restaurant?.id || 'current';
+
+  // Helper to read from React Query cache first, or fetch with deduplicating queryKey if dropdown is opened
+  const getOrFetchQuery = useCallback(async (queryKey, fetcherFn, shouldFetch = false) => {
+    const cached = queryClient.getQueryData(queryKey);
+    if (cached !== undefined && cached !== null) {
+      return cached;
+    }
+    if (shouldFetch) {
+      return await queryClient.fetchQuery({
+        queryKey,
+        queryFn: fetcherFn,
+        staleTime: 30 * 1000,
+      }).catch(() => null);
+    }
+    return null;
+  }, [queryClient]);
+
+  // Fetch live notifications by reusing React Query cache or performing deduplicated fetch
+  const fetchDynamicNotifications = useCallback(async (isSilent = false, forceFetch = false) => {
     if (!isSilent) setLoading(true);
     setError(null);
+
+    const allowNetwork = forceFetch || isOpen;
 
     try {
       let list = [];
 
       if (role === 'WAITER') {
         const [dashRes, ordersRes] = await Promise.all([
-          posService.waiter.getDashboard().catch(() => null),
-          posService.orders.getAll({ limit: 15 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.waiter.dashboard(restId),
+            async () => {
+              const res = await posService.waiter.getDashboard();
+              return res.success && res.data ? res.data : null;
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.orders.all(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.orders.getAll({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         // 1. Ready Order Notifications from Kitchen
-        const readyItems = dashRes?.data?.readyNotifications || [];
+        const readyItems = (dashRes?.readyNotifications || dashRes?.data?.readyNotifications) || [];
         readyItems.forEach((n) => {
           list.push({
             id: `waiter-ready-${n.orderId || n.id}`,
@@ -118,7 +158,7 @@ export default function NotificationDropdown() {
         });
 
         // 2. Bills ready for delivery
-        const billItems = dashRes?.data?.billNotifications || [];
+        const billItems = (dashRes?.billNotifications || dashRes?.data?.billNotifications) || [];
         billItems.forEach((b) => {
           list.push({
             id: `waiter-bill-${b.billId || b.id}`,
@@ -126,7 +166,7 @@ export default function NotificationDropdown() {
             description: `Table ${b.tableNumber} • Bill #${b.billNumber} (${currency}${Number(b.totalAmount || 0).toFixed(2)}) ready`,
             timestamp: b.createdAt || new Date().toISOString(),
             icon: Receipt,
-            iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+            iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
           });
         });
 
@@ -141,7 +181,7 @@ export default function NotificationDropdown() {
               description: `Order #${o.orderNumber} • Guest requested bill settlement`,
               timestamp: o.billRequestedAt || o.updatedAt,
               icon: Receipt,
-              iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+              iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
             });
           } else if (o.status === 'IN_PREPARATION') {
             list.push({
@@ -156,8 +196,22 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'KITCHEN_ADMIN') {
         const [ordersRes, lowStockRes] = await Promise.all([
-          posService.kitchen.getOrders({ limit: 15 }).catch(() => null),
-          posService.inventory.getLowStockAlerts().catch(() => null),
+          getOrFetchQuery(
+            queryKeys.kitchen.orders(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.kitchen.getOrders({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.inventory.lowStock(restId),
+            async () => {
+              const res = await posService.inventory.getLowStockAlerts();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         const rawOrders = extractItems(ordersRes);
@@ -181,7 +235,7 @@ export default function NotificationDropdown() {
               description: `Table ${tableName} • Order #${o.orderNumber} in active cooking`,
               timestamp: o.updatedAt || o.createdAt,
               icon: ChefHat,
-              iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+              iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
             });
           } else if (o.status === 'READY') {
             list.push({
@@ -209,9 +263,30 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'RESTAURANT_OWNER') {
         const [ordersRes, lowStockRes, billsRes] = await Promise.all([
-          posService.orders.getAll({ limit: 15 }).catch(() => null),
-          posService.inventory.getLowStockAlerts().catch(() => null),
-          posService.billing.getBills({ limit: 8 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.orders.all(restId, { limit: 15 }),
+            async () => {
+              const res = await posService.orders.getAll({ limit: 15 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.inventory.lowStock(restId),
+            async () => {
+              const res = await posService.inventory.getLowStockAlerts();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.billing.bills(restId, { limit: 100 }),
+            async () => {
+              const res = await posService.billing.getBills({ limit: 100 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         // Real-time Order Events
@@ -236,7 +311,7 @@ export default function NotificationDropdown() {
               description: `Order #${o.orderNumber} • Guest requested check`,
               timestamp: o.billRequestedAt || o.updatedAt,
               icon: Receipt,
-              iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+              iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
             });
           } else if (o.status === 'READY') {
             list.push({
@@ -254,7 +329,7 @@ export default function NotificationDropdown() {
               description: `Order #${o.orderNumber} served to guests`,
               timestamp: o.servedAt || o.updatedAt,
               icon: UtensilsCrossed,
-              iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+              iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
             });
           }
         });
@@ -289,8 +364,22 @@ export default function NotificationDropdown() {
         });
       } else if (role === 'RECEPTIONIST') {
         const [pendingOrdersRes, billsRes] = await Promise.all([
-          posService.billing.getPendingOrders().catch(() => null),
-          posService.billing.getBills({ limit: 12 }).catch(() => null),
+          getOrFetchQuery(
+            queryKeys.billing.pendingOrders(restId),
+            async () => {
+              const res = await posService.billing.getPendingOrders();
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
+          getOrFetchQuery(
+            queryKeys.billing.bills(restId, { limit: 100 }),
+            async () => {
+              const res = await posService.billing.getBills({ limit: 100 });
+              return res.success && res.data ? (Array.isArray(res.data) ? res.data : res.data.items || []) : [];
+            },
+            allowNetwork
+          ),
         ]);
 
         const rawPending = extractItems(pendingOrdersRes);
@@ -301,7 +390,7 @@ export default function NotificationDropdown() {
             description: `Table ${o.table?.tableNumber || 'Guest'} #${o.orderNumber} requested final invoice checkout`,
             timestamp: o.billRequestedAt || o.updatedAt || o.createdAt,
             icon: Receipt,
-            iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+            iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
           });
         });
 
@@ -320,7 +409,14 @@ export default function NotificationDropdown() {
           });
         });
       } else if (role === 'RESTAURANT_REGISTRATION_ADMIN') {
-        const res = await posService.registrationAdmin.getRestaurants({ limit: 10 }).catch(() => null);
+        const res = await getOrFetchQuery(
+          queryKeys.superAdmin.restaurants({ limit: 10 }),
+          async () => {
+            const r = await posService.registrationAdmin.getRestaurants({ limit: 10 });
+            return r.success && r.data ? r.data : [];
+          },
+          allowNetwork
+        );
         const restaurants = extractItems(res);
         restaurants.forEach((r) => {
           list.push({
@@ -329,7 +425,7 @@ export default function NotificationDropdown() {
             description: `Plan: ${r.subscription?.plan?.name || 'Active'} • Status: ${r.isActive ? 'Active' : 'Inactive'}`,
             timestamp: r.updatedAt || r.createdAt || new Date().toISOString(),
             icon: Building2,
-            iconColor: 'text-[#92400E] bg-[#FAF7F2] border-[#E5D8C6]',
+            iconColor: 'text-[#173F36] bg-[#F7EFE4] border-[#E4DCD0]',
           });
         });
       }
@@ -356,18 +452,16 @@ export default function NotificationDropdown() {
     } finally {
       if (!isSilent) setLoading(false);
     }
-  }, [role, currency]);
+  }, [role, currency, restId, isOpen, getOrFetchQuery]);
 
-  // Initial load, live reactive poll every 4 seconds, and auto-refresh on window focus / custom events
+  // Initial load and instant refresh on window focus / custom events
   useEffect(() => {
-    fetchDynamicNotifications(false);
+    fetchDynamicNotifications(true, false);
 
-    const interval = setInterval(() => {
-      fetchDynamicNotifications(true);
-    }, 4000);
-
-    const handleFocus = () => fetchDynamicNotifications(true);
-    const handleCustomRefresh = () => fetchDynamicNotifications(true);
+    const handleFocus = () => {
+      if (isOpen) fetchDynamicNotifications(true, true);
+    };
+    const handleCustomRefresh = () => fetchDynamicNotifications(true, true);
 
     window.addEventListener('focus', handleFocus);
     window.addEventListener('pos:refresh_notifications', handleCustomRefresh);
@@ -375,13 +469,19 @@ export default function NotificationDropdown() {
     window.addEventListener('pos:order_updated', handleCustomRefresh);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('pos:refresh_notifications', handleCustomRefresh);
       window.removeEventListener('pos:order_created', handleCustomRefresh);
       window.removeEventListener('pos:order_updated', handleCustomRefresh);
     };
-  }, [fetchDynamicNotifications]);
+  }, [fetchDynamicNotifications, isOpen]);
+
+  // Refresh immediately whenever user opens the notifications dropdown
+  useEffect(() => {
+    if (isOpen) {
+      fetchDynamicNotifications(false, true);
+    }
+  }, [isOpen, fetchDynamicNotifications]);
 
   // Close dropdown on outside click or Escape
   useEffect(() => {
@@ -416,13 +516,13 @@ export default function NotificationDropdown() {
         aria-label="View notifications"
         title="Notifications"
         className={`relative p-2 rounded-xl transition-all duration-200 border cursor-pointer ${isOpen
-            ? 'bg-[#92400E] text-white border-[#92400E] shadow-sm'
-            : 'text-[#4B5563] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border-[#E5D8C6] dark:border-[#382F26] bg-white dark:bg-[#1C1815]'
+            ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] shadow-xs'
+            : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1C2C27] border-[#E4DCD0] dark:border-[#233630] bg-[#FFFDF9] dark:bg-[#152320]'
           }`}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#EF4444] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white dark:border-[#1C1815] shadow-xs animate-in zoom-in-75">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#C53030] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#FFFDF9] dark:border-[#152320] shadow-xs animate-in zoom-in-75">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -430,13 +530,13 @@ export default function NotificationDropdown() {
 
       {/* Notification Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl shadow-editorial z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-4 border-b border-[#E5D8C6] dark:border-[#382F26] bg-white dark:bg-[#1C1815] flex items-center justify-between">
+          <div className="p-4 border-b border-[#E4DCD0] dark:border-[#233630] bg-[#FFFDF9] dark:bg-[#152320] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-sm tracking-tight">Notifications</h3>
+              <h3 className="font-serif font-bold text-[#173F36] dark:text-[#F7EFE4] text-base tracking-tight">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/25 dark:border-[#92400E]/40">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/25 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20">
                   {unreadCount} new
                 </span>
               )}
@@ -446,7 +546,7 @@ export default function NotificationDropdown() {
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="text-xs font-semibold text-[#92400E] dark:text-[#D97706] hover:text-[#78350F] dark:hover:text-[#F59E0B] transition-colors cursor-pointer flex items-center gap-1"
+                className="text-xs font-semibold text-[#173F36] dark:text-[#9FB29E] hover:text-[#12332C] dark:hover:text-[#F7EFE4] transition-colors cursor-pointer flex items-center gap-1"
                 title="Mark all notifications as read"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
@@ -455,10 +555,10 @@ export default function NotificationDropdown() {
             )}
           </div>
 
-          {/* Filter Bar: EXACTLY ONE FILTER "All" as required */}
-          <div className="px-4 py-2 bg-[#FAF7F2]/80 dark:bg-[#181512]/80 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between">
+          {/* Filter Bar */}
+          <div className="px-4 py-2 bg-[#F7EFE4]/80 dark:bg-[#101A18]/80 border-b border-[#E4DCD0] dark:border-[#233630] flex items-center justify-between">
             <div className="inline-flex items-center">
-              <span className="px-3 py-1 rounded-lg text-xs font-bold bg-[#92400E] text-white shadow-2xs">
+              <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#173F36] text-[#FFFDF9] shadow-xs">
                 All
               </span>
             </div>
@@ -466,48 +566,48 @@ export default function NotificationDropdown() {
               type="button"
               onClick={() => fetchDynamicNotifications(false)}
               disabled={loading}
-              className="text-[#6B6258] dark:text-[#8C7E72] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] p-1 rounded-md transition-colors cursor-pointer"
+              className="text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] p-1 rounded-md transition-colors cursor-pointer"
               title="Refresh notifications"
               aria-label="Refresh notifications"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#92400E] dark:text-[#D97706]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#173F36] dark:text-[#9FB29E]' : ''}`} />
             </button>
           </div>
 
           {/* Notifications List Container */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-[#E5D8C6]/50 dark:divide-[#382F26]/50 scrollbar-thin">
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-[#E4DCD0]/60 dark:divide-[#233630]/60 scrollbar-thin">
             {loading && notifications.length === 0 ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((idx) => (
                   <div key={idx} className="flex gap-3 animate-pulse">
-                    <div className="w-9 h-9 rounded-xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] shrink-0" />
+                    <div className="w-9 h-9 rounded-xl bg-[#F7EFE4] dark:bg-[#1C2C27] border border-[#E4DCD0] dark:border-[#233630] shrink-0" />
                     <div className="flex-1 space-y-2 py-0.5">
-                      <div className="h-3.5 bg-[#FAF7F2] dark:bg-[#201C18] rounded w-2/3" />
-                      <div className="h-2.5 bg-[#FAF7F2] dark:bg-[#201C18] rounded w-5/6" />
-                      <div className="h-2 bg-[#FAF7F2] dark:bg-[#201C18] rounded w-1/3" />
+                      <div className="h-3.5 bg-[#F7EFE4] dark:bg-[#1C2C27] rounded w-2/3" />
+                      <div className="h-2.5 bg-[#F7EFE4] dark:bg-[#1C2C27] rounded w-5/6" />
+                      <div className="h-2 bg-[#F7EFE4] dark:bg-[#1C2C27] rounded w-1/3" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : error ? (
               <div className="p-6 text-center">
-                <AlertTriangle className="w-7 h-7 mx-auto text-amber-500 mb-2 stroke-1" />
-                <p className="text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC]">{error}</p>
+                <AlertTriangle className="w-7 h-7 mx-auto text-[#C53030] mb-2 stroke-1" />
+                <p className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">{error}</p>
                 <button
                   type="button"
                   onClick={() => fetchDynamicNotifications(false)}
-                  className="mt-3 px-3 py-1.5 text-xs font-bold text-[#92400E] dark:text-[#D97706] bg-[#FAF7F2] dark:bg-[#201C18] hover:bg-[#F1E8DB] dark:hover:bg-[#2A241F] rounded-xl border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
+                  className="mt-3 px-3 py-1.5 text-xs font-semibold text-[#173F36] dark:text-[#9FB29E] bg-[#F7EFE4] dark:bg-[#1C2C27] hover:bg-[#EBDDCB] dark:hover:bg-[#233630] rounded-xl border border-[#E4DCD0] dark:border-[#233630] transition-colors cursor-pointer"
                 >
                   Retry
                 </button>
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-10 px-4 text-center">
-                <div className="w-10 h-10 rounded-2xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center text-[#92400E] dark:text-[#D97706] mx-auto mb-2.5 shadow-2xs">
+                <div className="w-10 h-10 rounded-2xl bg-[#F7EFE4] dark:bg-[#1C2C27] border border-[#E4DCD0] dark:border-[#233630] flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] mx-auto mb-2.5 shadow-xs">
                   <CheckCircle2 className="w-5 h-5 opacity-80" />
                 </div>
-                <h4 className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">You're all caught up</h4>
-                <p className="text-[11px] text-[#6B6258] dark:text-[#8C7E72] mt-0.5">No new notifications</p>
+                <h4 className="font-serif text-sm font-bold text-[#17251F] dark:text-[#F7EFE4]">You're all caught up</h4>
+                <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">No new notifications</p>
               </div>
             ) : (
               notifications.map((notif) => {
@@ -519,13 +619,13 @@ export default function NotificationDropdown() {
                     key={notif.id}
                     onClick={() => markAsRead(notif.id)}
                     className={`p-3.5 flex items-start gap-3 transition-colors cursor-pointer group ${isUnread
-                        ? 'bg-[#FAF7F2]/80 dark:bg-[#221E1A]/80 hover:bg-[#FAF7F2] dark:hover:bg-[#26221D] border-l-2 border-l-[#92400E] dark:border-l-[#D97706]'
-                        : 'bg-white dark:bg-[#1C1815] hover:bg-[#FAF7F2]/40 dark:hover:bg-[#201C18]/40'
+                        ? 'bg-[#F7EFE4]/60 dark:bg-[#1E2E2A]/60 hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] border-l-2 border-l-[#173F36] dark:border-l-[#9FB29E]'
+                        : 'bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1C2C27]/40'
                       }`}
                   >
                     {/* Icon */}
                     <div
-                      className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${notif.iconColor || 'text-[#92400E] dark:text-[#D97706] bg-[#FAF7F2] dark:bg-[#201C18] border-[#E5D8C6] dark:border-[#382F26]'
+                      className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-xs ${notif.iconColor || 'text-[#173F36] dark:text-[#9FB29E] bg-[#F7EFE4] dark:bg-[#1C2C27] border-[#E4DCD0] dark:border-[#233630]'
                         }`}
                     >
                       <IconComponent className="w-4 h-4" />
@@ -535,24 +635,24 @@ export default function NotificationDropdown() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <h4
-                          className={`text-xs font-bold truncate ${isUnread ? 'text-[#1F2937] dark:text-[#F7F3EC]' : 'text-[#4B5563] dark:text-[#A89B8C]'
+                          className={`text-xs font-bold truncate ${isUnread ? 'text-[#17251F] dark:text-[#F7EFE4]' : 'text-[#657168] dark:text-[#9FB29E]'
                             }`}
                         >
                           {notif.title}
                         </h4>
                         {isUnread && (
                           <span
-                            className="w-2 h-2 rounded-full bg-[#92400E] dark:bg-[#D97706] shrink-0"
+                            className="w-2 h-2 rounded-full bg-[#173F36] dark:bg-[#9FB29E] shrink-0"
                             title="Unread notification"
                           />
                         )}
                       </div>
 
-                      <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] line-clamp-2 leading-relaxed">
                         {notif.description}
                       </p>
 
-                      <span className="text-[10px] text-[#8C7E72] dark:text-[#786C5E] mt-1.5 block font-medium">
+                      <span className="text-[10px] text-[#9FB29E] dark:text-[#657168] mt-1.5 block font-medium">
                         {formatRelativeTime(notif.timestamp)}
                       </span>
                     </div>

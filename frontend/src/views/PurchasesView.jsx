@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
-import { Modal } from '../components/ui';
+import { usePurchases, useSuppliers, useInventory, usePosMutations } from '../hooks/usePosQueries';
+import { Modal, Button } from '../components/ui';
 import {
   Truck,
   Plus,
   Trash2,
-  CheckCircle2,
-  Calendar,
   Building2,
-  DollarSign,
   Package,
-  Layers,
-  X
 } from 'lucide-react';
 
 export default function PurchasesView() {
   const { restaurant, addToast } = useAuth();
   const [activeTab, setActiveTab] = useState('purchases'); // 'purchases' | 'suppliers'
-  const [purchases, setPurchases] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: purchases = [], isLoading: loadingPurchases, refetch: refetchPurchases } = usePurchases(restaurant?.id);
+  const { data: suppliers = [], isLoading: loadingSuppliers, refetch: refetchSuppliers } = useSuppliers(restaurant?.id);
+  const { data: inventoryItems = [], isLoading: loadingInventory, refetch: refetchInventory } = useInventory(restaurant?.id);
+  const { invalidatePurchases, invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const loading = (loadingPurchases && purchases.length === 0) ||
+    (loadingSuppliers && suppliers.length === 0) ||
+    (loadingInventory && inventoryItems.length === 0);
 
   // Modals
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -49,26 +50,10 @@ export default function PurchasesView() {
   const currency = restaurant?.currency || '₹';
 
   const loadData = async () => {
-    setLoading(true);
-    try {
-      const [purRes, supRes, invRes] = await Promise.all([
-        posService.purchases.getAll(),
-        posService.suppliers.getAll(),
-        posService.inventory.getAll(),
-      ]);
-      if (purRes.success) setPurchases(purRes.data || []);
-      if (supRes.success) setSuppliers(supRes.data || []);
-      if (invRes.success) setInventoryItems(invRes.data || []);
-    } catch (err) {
-      addToast(err.message || 'Failed to load procurement data', 'error');
-    } finally {
-      setLoading(false);
-    }
+    invalidatePurchases();
+    invalidateInventory();
+    await Promise.all([refetchPurchases(), refetchSuppliers(), refetchInventory()]);
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleCreateSupplier = async (e) => {
     e.preventDefault();
@@ -151,28 +136,33 @@ export default function PurchasesView() {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
-            <Truck className="w-6 h-6 text-[#92400E]" />
-            <span>Procurement & Supplier Relations</span>
-          </h1>
-          <p className="text-sm text-[#5B6470]">
-            Manage vendor accounts, record inward stock purchases, and restock ingredient inventory
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
+            <Truck className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
+              Procurement & Supplier Relations
+            </h1>
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
+              Manage vendor accounts, record inward stock purchases, and restock ingredient inventory
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setShowSupplierModal(true)}
-            className="flex items-center gap-1.5 bg-white hover:bg-[#F1E8DB] text-[#1F2937] text-xs font-semibold px-4 py-2.5 rounded-xl border border-[#E5D8C6] transition-colors shadow-sm"
+            icon={Building2}
           >
-            <Building2 className="w-4 h-4 text-[#D97706]" />
-            <span>New Supplier</span>
-          </button>
-          <button
+            New Supplier
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => {
               if (suppliers.length === 0) {
                 addToast('Create a supplier first', 'warning');
@@ -187,51 +177,50 @@ export default function PurchasesView() {
               });
               setShowPurchaseModal(true);
             }}
-            className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
+            icon={Plus}
           >
-            <Plus className="w-4 h-4" />
-            <span>Record Inward Stock</span>
-          </button>
+            Record Inward Stock
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3">
+      <div className="flex gap-2 border-b border-[#E4DCD0] dark:border-[#1E362E] pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('purchases')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'purchases'
-              ? 'bg-[#92400E] text-white shadow-sm'
-              : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+              ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
           }`}
         >
-          Purchase Orders ({purchases.length})
+          Purchase Orders <span className="tabular-nums font-mono">({purchases.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('suppliers')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'suppliers'
-              ? 'bg-[#92400E] text-white shadow-sm'
-              : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+              ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
           }`}
         >
-          Vendors & Suppliers ({suppliers.length})
+          Vendors & Suppliers <span className="tabular-nums font-mono">({suppliers.length})</span>
         </button>
       </div>
 
       {/* TAB 1: PURCHASES */}
       {activeTab === 'purchases' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
           {purchases.length === 0 ? (
-            <div className="p-12 text-center text-[#5B6470]">
-              <Package className="w-12 h-12 mx-auto mb-2 text-[#E7DCCB]" />
-              <p className="text-[#1F2937] font-semibold">No Inward Purchases Recorded</p>
-              <p className="text-xs text-[#5B6470] mt-1">Record purchases to automatically replenish ingredient inventory levels.</p>
+            <div className="p-12 text-center text-[#657168] dark:text-[#9FB29E]">
+              <Package className="w-12 h-12 mx-auto mb-2 text-[#9FB29E] opacity-60" />
+              <p className="text-[#17251F] dark:text-[#F7EFE4] font-serif font-bold">No Inward Purchases Recorded</p>
+              <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">Record purchases to automatically replenish ingredient inventory levels.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
+                <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Invoice #</th>
                     <th className="px-5 py-3.5">Supplier</th>
@@ -241,32 +230,32 @@ export default function PurchasesView() {
                     <th className="px-5 py-3.5">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {purchases.map((p) => (
-                    <tr key={p.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
-                      <td className="px-5 py-4 font-mono font-bold text-[#1F2937]">
+                    <tr key={p.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                      <td className="px-5 py-4 font-mono font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         {p.invoiceNumber || `PO-${p.id.slice(0, 8)}`}
                       </td>
-                      <td className="px-5 py-4 font-semibold text-[#1F2937]">
+                      <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         {p.supplier?.name || 'Unknown Supplier'}
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470] font-mono">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                         {new Date(p.purchaseDate || p.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-5 py-4 text-[#1F2937]">
+                      <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4]">
                         <div className="space-y-0.5">
                           {p.items?.map((it, idx) => (
-                            <div key={idx}>
+                            <div key={idx} className="text-xs">
                               {it.quantity} {it.inventoryItem?.unit || ''} {it.inventoryItem?.name || 'Item'} @ {currency}{Number(it.costPerUnit ?? it.unitCost ?? 0).toFixed(2)}
                             </div>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-bold text-[#16A34A] font-mono text-sm">
+                      <td className="px-5 py-4 font-bold text-emerald-700 dark:text-emerald-300 font-mono text-sm tabular-nums">
                         {currency}{Number(p.totalAmount || 0).toFixed(2)}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
                           {p.status || 'RECEIVED'}
                         </span>
                       </td>
@@ -281,16 +270,16 @@ export default function PurchasesView() {
 
       {/* TAB 2: SUPPLIERS */}
       {activeTab === 'suppliers' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
           {suppliers.length === 0 ? (
-            <div className="p-12 text-center text-[#5B6470]">
-              <Building2 className="w-12 h-12 mx-auto mb-2 text-[#E7DCCB]" />
-              <p className="text-[#1F2937] font-semibold">No Suppliers Registered</p>
+            <div className="p-12 text-center text-[#657168] dark:text-[#9FB29E]">
+              <Building2 className="w-12 h-12 mx-auto mb-2 text-[#9FB29E] opacity-60" />
+              <p className="text-[#17251F] dark:text-[#F7EFE4] font-serif font-bold">No Suppliers Registered</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] text-[#5B6470] uppercase text-[10px] font-bold border-b border-[#E5D8C6]">
+                <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Vendor Name</th>
                     <th className="px-5 py-3.5">Contact Person</th>
@@ -299,23 +288,23 @@ export default function PurchasesView() {
                     <th className="px-5 py-3.5">Tax / GSTIN</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6]/60">
+                <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {suppliers.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#F1E8DB]/40 transition-colors">
-                      <td className="px-5 py-4 font-bold text-[#1F2937] text-sm">
+                    <tr key={s.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                      <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm">
                         {s.name}
                       </td>
-                      <td className="px-5 py-4 text-[#1F2937]">
+                      <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4]">
                         {s.contactPerson || '—'}
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470] font-mono">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono">
                         <div>{s.phone || '—'}</div>
-                        <div className="text-[11px] text-[#5B6470]">{s.email || ''}</div>
+                        <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">{s.email || ''}</div>
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470]">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E]">
                         {s.address || '—'}
                       </td>
-                      <td className="px-5 py-4 font-mono text-[#5B6470]">
+                      <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E]">
                         {s.taxId || '—'}
                       </td>
                     </tr>
@@ -337,76 +326,76 @@ export default function PurchasesView() {
       >
         <form onSubmit={handleCreateSupplier} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Company / Vendor Name *</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Company / Vendor Name *</label>
             <input
               type="text"
               required
               placeholder="e.g. Metro Farm Produce Ltd."
               value={supplierForm.name}
               onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Contact Person</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Contact Person</label>
               <input
                 type="text"
                 placeholder="John Doe"
                 value={supplierForm.contactPerson}
                 onChange={(e) => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })}
-                className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Phone</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Phone</label>
               <input
                 type="text"
                 placeholder="+91 98765 00000"
                 value={supplierForm.phone}
                 onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Email</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Email</label>
             <input
               type="email"
               placeholder="sales@vendor.com"
               value={supplierForm.email}
               onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Billing Address</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Billing Address</label>
             <input
               type="text"
               placeholder="Industrial Area, Sector 4"
               value={supplierForm.address}
               onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
-            <button
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setShowSupplierModal(false)}
-              className="px-4 py-2 text-xs font-semibold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
+              variant="primary"
             >
               Save Supplier
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -422,12 +411,12 @@ export default function PurchasesView() {
         <form onSubmit={handleCreatePurchase} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Supplier *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Supplier *</label>
               <select
                 required
                 value={purchaseForm.supplierId}
                 onChange={(e) => setPurchaseForm({ ...purchaseForm, supplierId: e.target.value })}
-                className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               >
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -437,12 +426,12 @@ export default function PurchasesView() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Invoice Number</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Invoice Number</label>
               <input
                 type="text"
                 value={purchaseForm.invoiceNumber}
                 onChange={(e) => setPurchaseForm({ ...purchaseForm, invoiceNumber: e.target.value })}
-                className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
               />
             </div>
           </div>
@@ -450,11 +439,11 @@ export default function PurchasesView() {
           {/* Items Section */}
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Goods Inward Items</span>
+              <span className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Goods Inward Items</span>
               <button
                 type="button"
                 onClick={handleAddPurchaseItem}
-                className="text-xs text-[#92400E] dark:text-[#D97706] font-semibold hover:text-[#78350F] flex items-center gap-1 cursor-pointer"
+                className="text-xs text-[#173F36] dark:text-[#9FB29E] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Row
               </button>
@@ -462,7 +451,7 @@ export default function PurchasesView() {
 
             <div className="space-y-2">
               {purchaseForm.items.map((it, idx) => (
-                <div key={idx} className="bg-[#FAF7F2] dark:bg-[#181512] p-2.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] flex items-center gap-2">
+                <div key={idx} className="bg-[#F7EFE4] dark:bg-[#101A18] p-2.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] flex items-center gap-2">
                   <select
                     value={it.inventoryItemId}
                     onChange={(e) => {
@@ -474,7 +463,7 @@ export default function PurchasesView() {
                         ),
                       }));
                     }}
-                    className="flex-1 bg-white dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-lg px-2 py-1 text-xs"
+                    className="flex-1 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-lg px-2 py-1 text-xs"
                   >
                     {inventoryItems.map((inv) => (
                       <option key={inv.id} value={inv.id}>
@@ -495,7 +484,7 @@ export default function PurchasesView() {
                         items: prev.items.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)),
                       }))
                     }
-                    className="w-20 bg-white dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-lg px-2 py-1 text-xs font-mono"
+                    className="w-20 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-lg px-2 py-1 text-xs font-mono"
                   />
 
                   <input
@@ -510,7 +499,7 @@ export default function PurchasesView() {
                         items: prev.items.map((x, i) => (i === idx ? { ...x, unitCost: e.target.value } : x)),
                       }))
                     }
-                    className="w-24 bg-white dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-lg px-2 py-1 text-xs font-mono"
+                    className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-lg px-2 py-1 text-xs font-mono"
                   />
 
                   <button
@@ -521,7 +510,7 @@ export default function PurchasesView() {
                         items: prev.items.filter((_, i) => i !== idx),
                       }))
                     }
-                    className="text-[#5B6470] dark:text-[#A89B8C] hover:text-[#EF4444] p-1 cursor-pointer"
+                    className="text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 p-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -531,30 +520,30 @@ export default function PurchasesView() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Notes / Batch Info</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Notes / Batch Info</label>
             <input
               type="text"
               placeholder="e.g. Received batch fresh from supplier van"
               value={purchaseForm.notes}
               onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })}
-              className="w-full bg-[#FAF7F2] dark:bg-[#181512] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#92400E] dark:focus:border-[#D97706]"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
-            <button
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setShowPurchaseModal(false)}
-              className="px-4 py-2 text-xs font-semibold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-bold px-5 py-2 rounded-xl transition-all shadow-md shadow-[#92400E]/20"
+              variant="primary"
             >
               Confirm Goods Receipt
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

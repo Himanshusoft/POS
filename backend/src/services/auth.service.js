@@ -3,6 +3,7 @@ import { prisma, env } from '../config/env.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetOtpEmail } from './email.service.js';
+import { revokeToken, invalidateUserAuthCache } from '../utils/cache.js';
 
 export const registerOwner = async (data) => {
   const email = data.email.trim().toLowerCase();
@@ -504,9 +505,20 @@ export const resetPassword = async ({ resetToken, newPassword }) => {
   };
 };
 
+export const logout = async (token, userId) => {
+  if (token) {
+    await revokeToken(token);
+  }
+  if (userId) {
+    await invalidateUserAuthCache(userId);
+  }
+  return { message: 'Logged out successfully' };
+};
+
 export default {
   registerOwner,
   login,
+  logout,
   getProfile,
   updateProfile,
   changePassword,

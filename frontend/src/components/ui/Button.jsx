@@ -22,7 +22,7 @@ export function Button({
   ...props
 }) {
   const baseStyles =
-    'inline-flex items-center justify-center font-bold transition-all duration-150 cursor-pointer select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] dark:focus-visible:ring-[#D97706] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none touch-manipulation';
+    'inline-flex items-center justify-center font-bold tracking-wide transition-all duration-150 cursor-pointer select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] dark:focus-visible:ring-[#4EBA87] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none touch-manipulation';
 
   const sizeStyles = {
     sm: 'h-8 px-3 text-xs gap-1.5',
@@ -33,17 +33,17 @@ export function Button({
 
   const variantStyles = {
     primary:
-      'bg-[#92400E] hover:bg-[#78350F] active:bg-[#5F280A] text-white shadow-sandstone hover:shadow-sandstone-md focus:ring-[#92400E] dark:bg-[#B45309] dark:hover:bg-[#92400E] dark:active:bg-[#78350F]',
+      'bg-[#173F36] hover:bg-[#12332C] active:bg-[#0E2621] text-[#FFFDF9] shadow-sandstone hover:shadow-editorial-md hover:-translate-y-0.5 focus:ring-[#173F36] dark:bg-[#235A4D] dark:hover:bg-[#1B463D] dark:active:bg-[#153831] dark:text-[#F7EFE4]',
     secondary:
-      'bg-[#FAF7F2] hover:bg-[#F1E8DB] active:bg-[#E5D8C6] text-[#1F2937] border border-[#E5D8C6] shadow-2xs hover:border-[#D9C3A5] focus:ring-[#92400E] dark:bg-[#201C18] dark:hover:bg-[#2A241F] dark:active:bg-[#342D26] dark:text-[#F7F3EC] dark:border-[#382F26] dark:hover:border-[#524436]',
+      'bg-[#FFFDF9] hover:bg-[#F4ECE0] active:bg-[#EFE6D8] text-[#173F36] border border-[#173F36]/20 shadow-2xs hover:border-[#173F36]/40 hover:-translate-y-0.5 focus:ring-[#173F36] dark:bg-[#14221E] dark:hover:bg-[#1A2B26] dark:active:bg-[#20332D] dark:text-[#E4EFE9] dark:border-[#233630] dark:hover:border-[#3B574E]',
     outline:
-      'bg-transparent hover:bg-[#FAF7F2] text-[#1F2937] border border-[#E5D8C6] hover:border-[#92400E] focus:ring-[#92400E] dark:hover:bg-[#201C18] dark:text-[#F7F3EC] dark:border-[#382F26] dark:hover:border-[#D97706]',
+      'bg-transparent hover:bg-[#F7EFE4] text-[#173F36] border border-[#173F36]/25 hover:border-[#173F36] focus:ring-[#173F36] dark:hover:bg-[#14221E] dark:text-[#E4EFE9] dark:border-[#233630] dark:hover:border-[#4EBA87]',
     danger:
-      'bg-[#EF4444] hover:bg-[#DC2626] active:bg-[#B91C1C] text-white shadow-sandstone focus:ring-[#EF4444]',
+      'bg-[#C53030] hover:bg-[#A82626] active:bg-[#8C1F1F] text-white shadow-sandstone hover:-translate-y-0.5 focus:ring-[#C53030]',
     success:
-      'bg-[#16A34A] hover:bg-[#15803D] active:bg-[#166534] text-white shadow-sandstone focus:ring-[#16A34A]',
+      'bg-[#2D6A4F] hover:bg-[#23543E] active:bg-[#1B4231] text-white shadow-sandstone hover:-translate-y-0.5 focus:ring-[#2D6A4F]',
     ghost:
-      'bg-transparent hover:bg-[#F1E8DB] text-[#5B6470] hover:text-[#1F2937] focus:ring-[#92400E] dark:hover:bg-[#26201B] dark:text-[#A89B8C] dark:hover:text-[#F7F3EC]',
+      'bg-transparent hover:bg-[#F3ECE0] text-[#173F36] hover:text-[#12332C] focus:ring-[#173F36] dark:hover:bg-[#1A2B26] dark:text-[#9FB29E] dark:hover:text-[#F7EFE4]',
   };
 
   return (

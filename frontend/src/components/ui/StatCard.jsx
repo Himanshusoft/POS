@@ -15,8 +15,8 @@ export function StatCard({
   value,
   subtitle,
   icon: Icon,
-  iconColor = 'text-[#92400E] dark:text-[#D97706]',
-  iconBg = 'bg-[#FAF7F2] dark:bg-[#221E1A] border border-[#E5D8C6] dark:border-[#382F26]',
+  iconColor = 'text-[#173F36] dark:text-[#E4EFE9]',
+  iconBg = 'bg-[#E8EFEA] dark:bg-[#1A2B26] border border-[#173F36]/15 dark:border-[#233630]',
   trend, // e.g. { value: '+12%', isPositive: true, label: 'vs yesterday' }
   className = '',
   onClick,
@@ -38,10 +38,10 @@ export function StatCard({
           : undefined
       }
       className={`
-        group bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 shadow-sandstone
+        group bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl p-5 shadow-editorial
         card-hover flex flex-col justify-between transition-all duration-200
-        hover:border-[#92400E]/30 dark:hover:border-[#D97706]/40
-        ${onClick ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] dark:focus-visible:ring-[#D97706] select-none' : ''}
+        hover:border-[#173F36]/30 dark:hover:border-[#4EBA87]/40
+        ${onClick ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] dark:focus-visible:ring-[#4EBA87] select-none' : ''}
         ${className}
       `}
     >
@@ -50,12 +50,12 @@ export function StatCard({
         <div className="flex items-center gap-2.5 min-w-0">
           {Icon && (
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconBg} ${iconColor}`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${iconBg} ${iconColor}`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-4.5 h-4.5" />
             </div>
           )}
-          <span className="text-xs sm:text-sm font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate tracking-wide">
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-[#657168] dark:text-[#9FB29E] truncate">
             {title}
           </span>
         </div>
@@ -64,17 +64,17 @@ export function StatCard({
 
       {/* Main KPI Value */}
       <div className="my-1">
-        <div className="kpi-value text-[#1F2937] dark:text-[#F7F3EC] tracking-tight tabular-nums font-mono">{value}</div>
+        <div className="kpi-value text-[#173F36] dark:text-[#F7EFE4] tracking-tight tabular-nums font-mono text-2xl sm:text-3xl font-extrabold">{value}</div>
       </div>
 
       {/* Subtitle or Trend Comparison */}
       {(trend || subtitle) && (
-        <div className="mt-2.5 pt-2.5 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C]">
+        <div className="mt-2.5 pt-2.5 border-t border-[#E4DCD0]/70 dark:border-[#233630]/70 flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E]">
           {trend ? (
             <div className="flex items-center gap-1.5 font-medium">
               <span
                 className={`inline-flex items-center gap-0.5 font-bold ${
-                  trend.isPositive ? 'text-[#16A34A] dark:text-[#34D399]' : 'text-[#EF4444] dark:text-[#F87171]'
+                  trend.isPositive ? 'text-[#2D6A4F] dark:text-[#4EBA87]' : 'text-[#C53030] dark:text-[#F87171]'
                 }`}
               >
                 {trend.isPositive ? (
@@ -84,10 +84,10 @@ export function StatCard({
                 )}
                 {trend.value}
               </span>
-              {trend.label && <span className="text-[#8C7E72] dark:text-[#998C7F]">{trend.label}</span>}
+              {trend.label && <span className="text-[#8D9890] dark:text-[#7A8C82]">{trend.label}</span>}
             </div>
           ) : (
-            <span className="text-[#8C7E72] dark:text-[#998C7F] truncate">{subtitle}</span>
+            <span className="text-[#8D9890] dark:text-[#7A8C82] truncate">{subtitle}</span>
           )}
         </div>
       )}

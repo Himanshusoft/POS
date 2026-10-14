@@ -232,12 +232,12 @@ function PosDashboard() {
   // 1. Loading Workspace State
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-[#FAF7F2] dark:bg-[#141210] flex flex-col items-center justify-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#92400E] to-[#D97706] flex items-center justify-center shadow-xl shadow-[#92400E]/20 animate-pulse">
+      <div className="h-screen w-screen bg-[#F7EFE4] dark:bg-[#101A18] flex flex-col items-center justify-center gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#173F36] to-[#2D6A4F] flex items-center justify-center shadow-editorial-lg shadow-[#173F36]/20 animate-pulse">
           <UtensilsCrossed className="w-8 h-8 text-white" />
         </div>
-        <div className="flex items-center gap-2 text-[#5B6470] dark:text-[#A89B8C] text-sm font-medium">
-          <RefreshCw className="w-4 h-4 animate-spin text-[#92400E] dark:text-[#D97706]" />
+        <div className="flex items-center gap-2 text-[#657168] dark:text-[#9FB29E] text-sm font-medium">
+          <RefreshCw className="w-4 h-4 animate-spin text-[#173F36] dark:text-[#9FB29E]" />
           <span>Loading your workspace...</span>
         </div>
       </div>
@@ -428,18 +428,18 @@ function PosDashboard() {
 
     return (
       <div className="h-full flex items-center justify-center p-8">
-        <div className="max-w-md w-full bg-white border border-[#E5D8C6] rounded-2xl p-6 text-center shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-[#92400E] flex items-center justify-center mx-auto mb-3">
+        <div className="max-w-md w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 text-center shadow-editorial">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-[#173F36] dark:text-[#9FB29E] flex items-center justify-center mx-auto mb-3">
             <AlertCircle className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-[#1F2937]">Station Not Available</h3>
-          <p className="text-xs text-[#5B6470] mt-1.5 leading-relaxed">
+          <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Station Not Available</h3>
+          <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1.5 leading-relaxed">
             The requested view (<span className="font-semibold">{activeTab}</span>) is not available for your role.
           </p>
           <button
             type="button"
             onClick={() => navigateTab(fallbackTab)}
-            className="mt-4 px-4 py-2 bg-[#92400E] hover:bg-[#78350F] text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            className="mt-4 px-4 py-2 bg-[#173F36] hover:bg-[#12332C] text-white rounded-xl text-xs font-semibold transition shadow-editorial cursor-pointer"
           >
             Return to {currentRoleCfg?.name || 'Workspace'}
           </button>
@@ -449,7 +449,7 @@ function PosDashboard() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#FAF7F2] dark:bg-[#141210] text-[#1F2937] dark:text-[#F7F3EC] overflow-hidden font-sans">
+    <div className="h-screen w-screen flex flex-col bg-[#F7EFE4] dark:bg-[#101A18] text-[#17251F] dark:text-[#F7EFE4] overflow-hidden font-sans">
       <Navbar
         activeTab={activeTab}
         setActiveTab={navigateTab}
@@ -472,7 +472,7 @@ function PosDashboard() {
           setMobileOpen={setMobileSidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] dark:bg-[#141210] min-w-0">
+        <main className="flex-1 overflow-y-auto bg-[#F7EFE4] dark:bg-[#101A18] min-w-0">
           <ErrorBoundary onReset={() => navigateTab(ROLE_CONFIG[normalizeRole(role)]?.defaultTab || 'dashboard')}>
             {renderMainContent()}
           </ErrorBoundary>

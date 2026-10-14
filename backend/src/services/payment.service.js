@@ -3,9 +3,16 @@ import { prisma, env } from '../config/env.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { getRazorpayInstance } from '../config/razorpay.js';
+import {
+  invalidateBillingCache,
+  invalidateOrderCache,
+  invalidateTableCache,
+  cachedQuery,
+  buildCacheKey,
+} from '../utils/cache.js';
 
 export const processPayment = async (restaurantId, data) => {
-  return await serializableTransaction(prisma, async (tx) => {
+  const result = await serializableTransaction(prisma, async (tx) => {
     const bill = await tx.bill.findFirst({
       where: { id: data.billId, restaurantId },
       include: {
@@ -123,6 +130,14 @@ export const processPayment = async (restaurantId, data) => {
       isFullyPaid,
     };
   });
+
+  await Promise.all([
+    invalidateBillingCache(restaurantId),
+    invalidateOrderCache(restaurantId),
+    invalidateTableCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const createPayment = async (restaurantId, data) => {
@@ -130,25 +145,28 @@ export const createPayment = async (restaurantId, data) => {
 };
 
 export const getPayments = async (restaurantId, filters = {}) => {
-  const where = { bill: { restaurantId } };
-  if (filters.method) where.method = filters.method;
-  if (filters.status) where.status = filters.status;
-  if (filters.startDate || filters.endDate) {
-    where.createdAt = {};
-    if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
-    if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
-  }
-  return await findManyPaginated(prisma.payment, {
-    where,
-    include: {
-      bill: {
-        include: {
-          order: { include: { table: true } },
+  const cacheKey = buildCacheKey(restaurantId, 'payments', filters);
+  return await cachedQuery(cacheKey, 15, async () => {
+    const where = { bill: { restaurantId } };
+    if (filters.method) where.method = filters.method;
+    if (filters.status) where.status = filters.status;
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
+      if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
+    }
+    return await findManyPaginated(prisma.payment, {
+      where,
+      include: {
+        bill: {
+          include: {
+            order: { include: { table: true } },
+          },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filters);
+      orderBy: { createdAt: 'desc' },
+    }, filters);
+  });
 };
 
 export const getPaymentById = async (restaurantId, id) => {

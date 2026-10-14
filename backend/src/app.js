@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/error.middleware.js';
+import { requestProfiler } from './middleware/profiler.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,12 @@ import settingRoutes from './routes/setting.routes.js';
 const app = express();
 
 // Global Middlewares
-app.use(cors());
+app.use(requestProfiler);
+app.use(cors({
+  origin: true,
+  credentials: true,
+  maxAge: 86400, // 24 hours preflight cache
+}));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

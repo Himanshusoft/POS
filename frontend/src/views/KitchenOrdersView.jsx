@@ -19,52 +19,33 @@ const STATUS_TABS = [
   { id: 'COMPLETED', label: 'Completed' },
 ];
 
+import { useKitchenOrders, usePosMutations } from '../hooks/usePosQueries';
+
 export default function KitchenOrdersView() {
-  const { addToast } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { restaurant, addToast } = useAuth();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const fetchOrders = useCallback(async (isSilent = false) => {
-    if (!isSilent && orders.length === 0) {
-      setInitialLoading(true);
-    } else {
-      setRefreshing(true);
-    }
-    try {
-      const params = {};
-      if (statusFilter === 'COMPLETED') {
-        params.status = 'COMPLETED';
-      }
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-      const res = await posService.kitchen.getOrders(params);
-      if (res.success && res.data) {
-        const orderList = Array.isArray(res.data) ? res.data : res.data.items || [];
-        setOrders(orderList);
-      }
-    } catch (err) {
-      if (!isSilent) {
-        addToast(err.message || 'Failed to fetch kitchen orders', 'error');
-      }
-    } finally {
-      setInitialLoading(false);
-      setRefreshing(false);
-    }
-  }, [statusFilter, searchQuery, orders.length, addToast]);
+  const queryParams = useMemo(() => {
+    const params = {};
+    if (statusFilter === 'COMPLETED') params.status = 'COMPLETED';
+    if (searchQuery.trim()) params.search = searchQuery.trim();
+    return params;
+  }, [statusFilter, searchQuery]);
 
-  useEffect(() => {
-    fetchOrders(orders.length > 0);
-    const interval = setInterval(() => {
-      fetchOrders(true);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [fetchOrders, orders.length]);
+  const {
+    data: orders = [],
+    isLoading,
+    isRefetching: refreshing,
+    refetch,
+  } = useKitchenOrders(restaurant?.id, queryParams);
+
+  const { invalidateOrders, invalidateInventory } = usePosMutations(restaurant?.id);
+  const initialLoading = isLoading && orders.length === 0;
+
+  const fetchOrders = () => refetch();
 
   const handleAccept = async (orderId) => {
     setActionLoading(orderId);
@@ -179,41 +160,41 @@ export default function KitchenOrdersView() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300';
+        return 'bg-[#F7EFE4] dark:bg-[#1A2622] border-[#E4DCD0] dark:border-[#233630] text-[#17251F] dark:text-[#F7EFE4]';
       case 'ACCEPTED':
-        return 'bg-[#92400E]/10 dark:bg-[#92400E]/20 border-[#92400E]/30 dark:border-[#92400E]/40 text-[#92400E] dark:text-[#D97706]';
+        return 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-[#B45309] dark:text-amber-400';
       case 'IN_PREPARATION':
       case 'COOKING':
-        return 'bg-amber-100 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-[#B45309] dark:text-[#FBBF24]';
+        return 'bg-[#173F36]/10 dark:bg-[#173F36]/20 border-[#173F36]/20 dark:border-[#4EBA87]/30 text-[#173F36] dark:text-[#4EBA87]';
       case 'READY':
-        return 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300';
+        return 'bg-[#E8F3ED] dark:bg-[#1A2E26] border-[#C5DED0] dark:border-[#244237] text-[#1E4D38] dark:text-[#88D4A8]';
       case 'SERVED':
-        return 'bg-[#FAF7F2] dark:bg-[#201C18] border-[#E5D8C6] dark:border-[#382F26] text-[#92400E] dark:text-[#D97706]';
+        return 'bg-[#E8F3ED] dark:bg-[#1A2E26] border-[#C5DED0] dark:border-[#244237] text-[#2D6A4F] dark:text-[#88D4A8]';
       case 'COMPLETED':
-        return 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300';
+        return 'bg-[#F7EFE4] dark:bg-[#1A2622] border-[#E4DCD0] dark:border-[#233630] text-[#657168] dark:text-[#9FB29E]';
       default:
-        return 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300';
+        return 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-[#C53030] dark:text-rose-400';
     }
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC] transition-colors duration-200">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#F7EFE4] dark:bg-[#101A18] min-h-screen text-[#17251F] dark:text-[#F7EFE4] transition-colors duration-200">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/40 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87] shrink-0 shadow-xs">
             <ClipboardList className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
                 Kitchen Orders
               </h1>
-              <span className="text-xs font-bold text-[#92400E] dark:text-[#D97706] font-mono tabular-nums">
+              <span className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] font-mono tabular-nums">
                 ({filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'})
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Manage incoming food orders, recipe requirements, and prep status transitions
             </p>
           </div>
@@ -221,15 +202,15 @@ export default function KitchenOrdersView() {
 
         <div className="flex items-center gap-3">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => fetchOrders(false)}
             title="Refresh Orders"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 mr-1.5 ${
                 refreshing || initialLoading
-                  ? 'animate-spin text-[#92400E] dark:text-[#D97706]'
-                  : 'text-[#5B6470] dark:text-[#A89B8C]'
+                  ? 'animate-spin text-[#173F36] dark:text-[#4EBA87]'
+                  : 'text-[#657168] dark:text-[#9FB29E]'
               }`}
             />
             <span>Refresh</span>
@@ -238,8 +219,8 @@ export default function KitchenOrdersView() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-4 shadow-sm">
-        {/* Status Filters - Stable non-blinking pills with counts */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 shadow-editorial">
+        {/* Status Filters */}
         <div className="flex gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0" role="tablist">
           {STATUS_TABS.map((tab) => {
             const isSelected = statusFilter === tab.id;
@@ -250,18 +231,18 @@ export default function KitchenOrdersView() {
                 role="tab"
                 aria-selected={isSelected}
                 onClick={() => setStatusFilter(tab.id)}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] shrink-0 ${
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] shrink-0 ${
                   isSelected
-                    ? 'bg-[#92400E] text-white border-[#92400E] font-bold shadow-xs'
-                    : 'bg-[#FAF7F2] dark:bg-[#201C18] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#2A241F] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                    ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] font-bold shadow-xs'
+                    : 'bg-[#F7EFE4]/60 dark:bg-[#1A2622] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`tabular-nums font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded-md transition-colors ${
                     isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706]'
+                      ? 'bg-white/20 text-[#FFFDF9]'
+                      : 'bg-[#173F36]/10 dark:bg-[#173F36]/20 text-[#173F36] dark:text-[#4EBA87]'
                   }`}
                 >
                   {count}
@@ -273,19 +254,19 @@ export default function KitchenOrdersView() {
 
         {/* Search Input */}
         <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#5B6470] dark:text-[#A89B8C] pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] pointer-events-none" />
           <input
             type="text"
             placeholder="Search by Order # or Table..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl pl-9 pr-4 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+            className="w-full bg-[#F7EFE4]/60 dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-9 pr-4 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#8D9890] dark:placeholder-[#657168] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] transition-all"
           />
         </div>
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
         {initialLoading && orders.length === 0 ? (
           <div className="p-4">
             <SkeletonTable rows={5} columns={6} />
@@ -301,7 +282,7 @@ export default function KitchenOrdersView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#FAF7F2] dark:bg-[#201C18] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+              <thead className="sticky top-0 z-10 bg-[#F7EFE4] dark:bg-[#1A2622] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider">
                 <tr>
                   <th className="px-5 py-4">Table / Order</th>
                   <th className="px-5 py-4">Waiter</th>
@@ -311,36 +292,36 @@ export default function KitchenOrdersView() {
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+              <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                 {filteredOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#201C18]/60 transition-colors">
+                  <tr key={ord.id} className="hover:bg-[#F7EFE4]/60 dark:hover:bg-[#1A2622]/60 transition-colors">
                     <td className="px-5 py-4">
-                      <div className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-sm">
+                      <div className="font-serif font-bold text-[#173F36] dark:text-[#F7EFE4] text-sm">
                         Table #{ord.table?.tableNumber || ord.tableNumber || 'N/A'}
                       </div>
-                      <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] font-mono mt-0.5">
+                      <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">
                         #{ord.orderNumber || ord.id.slice(0, 8)}
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-[#1F2937] dark:text-[#F7F3EC] font-medium">
+                    <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4] font-medium">
                       {ord.waiter?.name || 'Staff'}
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="space-y-0.5 max-w-xs">
                         {ord.items?.map((it, idx) => (
-                          <div key={idx} className="text-[#1F2937] dark:text-[#F7F3EC] text-xs flex items-center gap-1.5">
-                            <span className="font-bold text-[#B45309] dark:text-[#FBBF24] tabular-nums">{it.quantity}x</span>
+                          <div key={idx} className="text-[#17251F] dark:text-[#F7EFE4] text-xs flex items-center gap-1.5">
+                            <span className="font-bold text-[#173F36] dark:text-[#4EBA87] tabular-nums">{it.quantity}x</span>
                             <span>{it.menuItem?.name || it.name}</span>
                           </div>
                         ))}
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 font-mono text-[#5B6470] dark:text-[#A89B8C] tabular-nums">
+                    <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums">
                       <div>{new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                      <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+                      <div className="text-[10px] text-[#8D9890] dark:text-[#657168] mt-0.5">
                         {Math.floor((Date.now() - new Date(ord.createdAt).getTime()) / 60000)}m ago
                       </div>
                     </td>
@@ -355,11 +336,11 @@ export default function KitchenOrdersView() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openOrderDetail(ord)}
-                          className="min-h-[36px] min-w-[36px] p-2 bg-[#FAF7F2] dark:bg-[#201C18] hover:bg-[#F1E8DB] dark:hover:bg-[#2A241F] text-[#1F2937] dark:text-[#F7F3EC] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl transition-colors cursor-pointer shadow-xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                          className="min-h-[36px] min-w-[36px] p-2 bg-[#F7EFE4] dark:bg-[#1A2622] hover:bg-[#EAE0D2] dark:hover:bg-[#213830] text-[#17251F] dark:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl transition-colors cursor-pointer shadow-2xs flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                           title="View Order & Recipe Details"
                           aria-label={`Inspect ticket #${ord.orderNumber}`}
                         >
-                          <Eye className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C]" />
+                          <Eye className="w-4 h-4 text-[#657168] dark:text-[#9FB29E]" />
                         </button>
 
                         {ord.status === 'PENDING' && (
@@ -367,7 +348,7 @@ export default function KitchenOrdersView() {
                             variant="primary"
                             onClick={() => handleAccept(ord.id)}
                             disabled={actionLoading === ord.id}
-                            className="bg-blue-600 hover:bg-blue-700 min-h-[36px] text-xs"
+                            className="min-h-[36px] text-xs font-bold"
                           >
                             Accept
                           </Button>
@@ -411,7 +392,7 @@ export default function KitchenOrdersView() {
         title={
           selectedOrderForDetail ? (
             <div className="flex items-center gap-2">
-              <span>Table #{selectedOrderForDetail.table?.tableNumber || 'N/A'}</span>
+              <span className="font-serif">Table #{selectedOrderForDetail.table?.tableNumber || 'N/A'}</span>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getStatusBadge(selectedOrderForDetail.status)}`}>
                 {selectedOrderForDetail.status}
               </span>
@@ -432,40 +413,40 @@ export default function KitchenOrdersView() {
           <div className="space-y-4">
             {/* Note */}
             {selectedOrderForDetail.notes && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs p-3 rounded-xl font-medium">
+              <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-amber-950 dark:text-amber-300 text-xs p-3 rounded-xl font-medium">
                 <strong>Kitchen Note:</strong> {selectedOrderForDetail.notes}
               </div>
             )}
 
             {/* Ordered Dishes Section */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">Ordered Dishes</h4>
+              <h4 className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] uppercase tracking-wider">Ordered Dishes</h4>
               <div className="space-y-2">
                 {selectedOrderForDetail.items?.map((item, idx) => (
-                  <div key={idx} className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl p-3.5">
+                  <div key={idx} className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#1F2937] text-sm flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-md bg-amber-100 text-[#B45309] border border-amber-200 flex items-center justify-center font-bold text-xs tabular-nums">
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-md bg-[#173F36]/10 dark:bg-[#173F36]/20 text-[#173F36] dark:text-[#4EBA87] border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center font-bold text-xs tabular-nums">
                           {item.quantity}
                         </span>
                         <span>{item.menuItem?.name || item.name}</span>
                       </span>
-                      <span className="text-xs text-[#5B6470] font-mono tabular-nums">
+                      <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                         {item.menuItem?.recipe?.prepTime ? `Prep: ~${item.menuItem.recipe.prepTime}m` : 'Standard'}
                       </span>
                     </div>
 
                     {/* Dish Recipe Ingredients */}
                     {item.menuItem?.recipe?.ingredients && item.menuItem.recipe.ingredients.length > 0 ? (
-                      <div className="mt-3 pt-2 border-t border-[#E5D8C6] text-[11px] text-[#5B6470]">
-                        <div className="text-[10px] font-semibold text-[#5B6470] uppercase mb-1">
+                      <div className="mt-3 pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] text-[11px] text-[#657168] dark:text-[#9FB29E]">
+                        <div className="text-[10px] font-semibold text-[#657168] dark:text-[#9FB29E] uppercase mb-1">
                           Recipe Requirement per unit:
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           {item.menuItem.recipe.ingredients.map((ing, iIdx) => (
-                            <div key={iIdx} className="bg-white px-2.5 py-1.5 rounded-lg border border-[#E5D8C6] flex justify-between">
-                              <span className="truncate max-w-[120px]">{ing.inventoryItem?.name || 'Ingredient'}</span>
-                              <span className="font-mono text-[#1F2937] font-semibold tabular-nums">
+                            <div key={iIdx} className="bg-[#FFFDF9] dark:bg-[#152320] px-2.5 py-1.5 rounded-lg border border-[#E4DCD0] dark:border-[#1E362E] flex justify-between">
+                              <span className="truncate max-w-[120px] text-[#17251F] dark:text-[#F7EFE4]">{ing.inventoryItem?.name || 'Ingredient'}</span>
+                              <span className="font-mono text-[#173F36] dark:text-[#4EBA87] font-semibold tabular-nums">
                                 {Number(ing.quantityRequired) * item.quantity} {ing.unit}
                               </span>
                             </div>
@@ -473,7 +454,7 @@ export default function KitchenOrdersView() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-2 text-[11px] text-red-600 italic">
+                      <div className="mt-2 text-[11px] text-[#C53030] dark:text-rose-400 italic">
                         No recipe configured for this menu item.
                       </div>
                     )}
@@ -483,10 +464,10 @@ export default function KitchenOrdersView() {
 
               {/* Total Recipe Ingredient BOM Check */}
               {selectedOrderForDetail.calculatedIngredients && selectedOrderForDetail.calculatedIngredients.length > 0 && (
-                <div className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl p-4 mt-4">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#92400E] uppercase tracking-wider mb-2">
-                    <span className="flex items-center gap-1.5">
-                      <PackageCheck className="w-4 h-4" /> Total Order Ingredient Requirements
+                <div className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-4 mt-4">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#173F36] dark:text-[#4EBA87] uppercase tracking-wider mb-2">
+                    <span className="flex items-center gap-1.5 font-serif">
+                      Total Order Ingredient Requirements
                     </span>
                   </div>
                   <div className="space-y-1.5">
@@ -495,12 +476,12 @@ export default function KitchenOrdersView() {
                         key={idx}
                         className={`flex items-center justify-between text-xs px-3 py-1.5 rounded-lg border ${
                           ing.isSufficient
-                            ? 'bg-white border-[#E5D8C6] text-[#1F2937]'
-                            : 'bg-red-50 border-red-200 text-red-700 font-bold'
+                            ? 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]'
+                            : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-[#C53030] dark:text-rose-400 font-bold'
                         }`}
                       >
                         <span className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${ing.isSufficient ? 'bg-[#16A34A]' : 'bg-red-600 animate-ping'}`} />
+                          <span className={`w-2 h-2 rounded-full ${ing.isSufficient ? 'bg-[#2D6A4F]' : 'bg-red-600 animate-ping'}`} />
                           <span>{ing.name}</span>
                         </span>
                         <span className="font-mono text-xs tabular-nums">
@@ -514,9 +495,9 @@ export default function KitchenOrdersView() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setSelectedOrderForDetail(null)}
               >
                 Close
@@ -527,7 +508,6 @@ export default function KitchenOrdersView() {
                   variant="primary"
                   onClick={() => handleAccept(selectedOrderForDetail.id)}
                   disabled={actionLoading === selectedOrderForDetail.id}
-                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   Accept Order
                 </Button>
@@ -535,7 +515,7 @@ export default function KitchenOrdersView() {
 
               {selectedOrderForDetail.status === 'ACCEPTED' && (
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   onClick={() => handleStartPrep(selectedOrderForDetail.id)}
                   disabled={actionLoading === selectedOrderForDetail.id}
                 >

@@ -17,6 +17,7 @@ validateUuidParams(router);
 
 router.post('/register', validateRequest(validateRegisterOwner), authController.registerOwner);
 router.post('/login', validateRequest(validateLogin), authController.login);
+router.post('/logout', authController.logout);
 router.get('/me', authenticate, authController.getCurrentUser);
 router.put('/profile', authenticate, authController.updateProfile);
 router.put('/password', authenticate, authController.changePassword);

@@ -1,6 +1,7 @@
 import { prisma } from '../config/env.js';
 import { hashPassword } from '../utils/password.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { cachedQuery, buildCacheKey, invalidateUserCache } from '../utils/cache.js';
 
 export const createStaff = async (restaurantId, data) => {
   const email = data.email.trim().toLowerCase();
@@ -49,7 +50,7 @@ export const createStaff = async (restaurantId, data) => {
 
   const hashedPassword = await hashPassword(data.password);
 
-  return await prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       restaurantId,
       name: data.name,
@@ -70,23 +71,29 @@ export const createStaff = async (restaurantId, data) => {
       createdAt: true,
     },
   });
+
+  await invalidateUserCache(restaurantId);
+  return newUser;
 };
 
 export const getStaffList = async (restaurantId, filters = {}) => {
-  return await findManyPaginated(prisma.user, {
-    where: { restaurantId },
-    select: {
-      id: true,
-      restaurantId: true,
-      name: true,
-      email: true,
-      role: true,
-      phone: true,
-      isActive: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filters);
+  const cacheKey = buildCacheKey(restaurantId, 'users', filters);
+  return await cachedQuery(cacheKey, 30, async () => {
+    return await findManyPaginated(prisma.user, {
+      where: { restaurantId },
+      select: {
+        id: true,
+        restaurantId: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }, filters);
+  });
 };
 
 export const getStaffById = async (restaurantId, id) => {
@@ -124,7 +131,7 @@ export const updateStaff = async (restaurantId, id, data) => {
     updateData.password = await hashPassword(data.password);
   }
 
-  return await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: updateData,
     select: {
@@ -138,12 +145,15 @@ export const updateStaff = async (restaurantId, id, data) => {
       updatedAt: true,
     },
   });
+
+  await invalidateUserCache(restaurantId, id);
+  return updated;
 };
 
 export const updateStaffStatus = async (restaurantId, id, isActive) => {
   await getStaffById(restaurantId, id);
 
-  return await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: { isActive },
     select: {
@@ -157,13 +167,19 @@ export const updateStaffStatus = async (restaurantId, id, isActive) => {
       updatedAt: true,
     },
   });
+
+  await invalidateUserCache(restaurantId, id);
+  return updated;
 };
 
 export const deleteStaff = async (restaurantId, id) => {
   await getStaffById(restaurantId, id);
-  return await prisma.user.delete({
+  const deleted = await prisma.user.delete({
     where: { id },
   });
+
+  await invalidateUserCache(restaurantId, id);
+  return deleted;
 };
 
 export default {

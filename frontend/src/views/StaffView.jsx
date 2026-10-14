@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
 import { Button, Badge, Modal, Input, SkeletonTable, EmptyState } from '../components/ui';
@@ -18,13 +18,17 @@ import {
   Phone,
   Mail,
   User,
-  X
 } from 'lucide-react';
 
+import { useUsers, usePosMutations } from '../hooks/usePosQueries';
+
 export default function StaffView() {
-  const { addToast } = useAuth();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
+  const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(restaurant?.id);
+  const { invalidateUsers } = usePosMutations(restaurant?.id);
+
+  const staff = Array.isArray(staffData) ? staffData : (staffData.items || []);
+  const loading = isLoading && staff.length === 0;
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,23 +52,7 @@ export default function StaffView() {
     password: '',
   });
 
-  const fetchStaff = async () => {
-    setLoading(true);
-    try {
-      const res = await posService.users.getAll();
-      if (res.success && res.data) {
-        setStaff(res.data);
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load staff roster', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStaff();
-  }, []);
+  const fetchStaff = () => refetch();
 
   // Compute counts by role
   const waiterCount = staff.filter((u) => u.role === 'WAITER').length;
@@ -87,6 +75,7 @@ export default function StaffView() {
       addToast(`Staff member "${form.name}" added successfully!`, 'success');
       setShowAddModal(false);
       setForm({ name: '', email: '', password: '', phone: '', role: 'WAITER' });
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to create staff member', 'error');
@@ -127,6 +116,7 @@ export default function StaffView() {
       await posService.users.update(editingStaff.id, payload);
       addToast(`Staff details for "${editForm.name}" updated!`, 'success');
       setShowEditModal(false);
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to update staff member', 'error');
@@ -143,6 +133,7 @@ export default function StaffView() {
     try {
       await posService.users.toggleStatus(usr.id, nextState);
       addToast(`Account for "${usr.name}" is now ${nextState ? 'ACTIVE' : 'DEACTIVATED'}`, 'success');
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to update account status', 'error');
@@ -154,6 +145,7 @@ export default function StaffView() {
     try {
       await posService.users.delete(id);
       addToast(`${name} removed from roster`, 'success');
+      invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to remove user', 'error');
@@ -163,36 +155,36 @@ export default function StaffView() {
   const getRoleIcon = (role) => {
     switch (role) {
       case 'RESTAURANT_OWNER':
-        return <Shield className="w-4 h-4 text-[#92400E]" />;
+        return <Shield className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E]" />;
       case 'KITCHEN_ADMIN':
         return <ChefHat className="w-4 h-4 text-[#D97706]" />;
       case 'WAITER':
-        return <Coffee className="w-4 h-4 text-[#2563EB]" />;
+        return <Coffee className="w-4 h-4 text-[#2D6A4F] dark:text-[#9FB29E]" />;
       case 'RECEPTIONIST':
-        return <Receipt className="w-4 h-4 text-[#16A34A]" />;
+        return <Receipt className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />;
       default:
-        return <Users className="w-4 h-4 text-[#5B6470]" />;
+        return <Users className="w-4 h-4 text-[#657168]" />;
     }
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Manage Staff & Access Control
               </h1>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/20 dark:border-[#92400E]/30 shadow-2xs">
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/30 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20 tracking-wider">
                 Roster Live
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
               Create, edit, activate/deactivate, and configure role credentials for restaurant personnel
             </p>
           </div>
@@ -223,73 +215,73 @@ export default function StaffView() {
       </div>
 
       {/* Role Quota Tracker Banner */}
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 shadow-sandstone">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 shadow-editorial">
         <div className="flex items-center gap-2 mb-3.5">
-          <Sparkles className="w-4 h-4 text-[#D97706]" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C]">
+          <Sparkles className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E]" />
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E]">
             Subscription Role Capacities (Standard Annual Plan)
           </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {/* Waiters Box */}
-          <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-3.5 flex items-center justify-between hover:border-[#2563EB]/40 transition-colors">
+          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-[#173F36]/40 transition-colors shadow-editorial">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-[#2563EB] dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800 shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-[#173F36]/10 text-[#173F36] dark:text-[#9FB29E] flex items-center justify-center border border-[#173F36]/20 shadow-2xs">
                 <Coffee className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Waiters</div>
-                <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-medium">POS & Tables</div>
+                <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">Waiters</div>
+                <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">POS & Tables</div>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-sm font-mono tabular-nums font-bold text-[#2563EB] dark:text-blue-400">
+              <span className="text-sm font-mono tabular-nums font-bold text-[#173F36] dark:text-[#9FB29E]">
                 {waiterCount} / 10
               </span>
-              <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] block font-medium tabular-nums">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
                 {10 - waiterCount} available
               </span>
             </div>
           </div>
 
           {/* Kitchen Admins Box */}
-          <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-3.5 flex items-center justify-between hover:border-[#D97706]/40 transition-colors">
+          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-[#D97706]/40 transition-colors shadow-editorial">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-[#D97706] dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs">
                 <ChefHat className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Kitchen Admins</div>
-                <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-medium">KDS & Recipes</div>
+                <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">Kitchen Admins</div>
+                <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">KDS & Recipes</div>
               </div>
             </div>
             <div className="text-right">
               <span className="text-sm font-mono tabular-nums font-bold text-[#D97706] dark:text-amber-400">
                 {chefCount} / 2
               </span>
-              <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] block font-medium tabular-nums">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
                 {2 - chefCount} available
               </span>
             </div>
           </div>
 
           {/* Receptionists Box */}
-          <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-3.5 flex items-center justify-between hover:border-[#16A34A]/40 transition-colors">
+          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-emerald-500/40 transition-colors shadow-editorial">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-[#16A34A] dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800 shadow-2xs">
                 <Receipt className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Receptionists</div>
-                <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-medium">Billing & Cashier</div>
+                <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">Receptionists</div>
+                <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">Billing & Cashier</div>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-sm font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
+              <span className="text-sm font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
                 {receptionistCount} / 2
               </span>
-              <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] block font-medium tabular-nums">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
                 {2 - receptionistCount} available
               </span>
             </div>
@@ -298,11 +290,11 @@ export default function StaffView() {
       </div>
 
       {/* Staff Table */}
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sandstone">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
         {loading ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] sticky top-0 z-10 tracking-wider">
+              <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] sticky top-0 z-10 tracking-wider">
                 <tr>
                   <th className="px-5 py-3.5">Staff Member</th>
                   <th className="px-5 py-3.5">Assigned Role</th>
@@ -327,7 +319,7 @@ export default function StaffView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] sticky top-0 z-10 tracking-wider">
+              <thead className="bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-semibold border-b border-[#E4DCD0] dark:border-[#1E362E] sticky top-0 z-10 tracking-wider">
                 <tr>
                   <th className="px-5 py-3.5">Staff Member</th>
                   <th className="px-5 py-3.5">Assigned Role</th>
@@ -337,19 +329,19 @@ export default function StaffView() {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5D8C6]/60 dark:divide-[#382F26]">
+              <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                 {staff.map((usr) => {
                   const isOwner = usr.role === 'RESTAURANT_OWNER';
                   return (
-                    <tr key={usr.id} className="hover:bg-[#F1E8DB]/40 dark:hover:bg-[#25201C]/60 transition-colors">
+                    <tr key={usr.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
                       <td className="px-5 py-4">
-                        <div className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-sm">{usr.name}</div>
-                        <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-mono mt-0.5">
+                        <div className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm">{usr.name}</div>
+                        <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">
                           {isOwner ? 'Restaurant Administrator' : `ID: ${usr.id.slice(0, 8)}`}
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#F7EFE4] dark:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#254238] text-[#17251F] dark:text-[#F7EFE4]">
                           {getRoleIcon(usr.role)}
                           <span>
                             {usr.role === 'KITCHEN_ADMIN'
@@ -360,10 +352,10 @@ export default function StaffView() {
                           </span>
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-[#1F2937] dark:text-[#F7F3EC] font-mono">
+                      <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4] font-mono">
                         {usr.email}
                       </td>
-                      <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
+                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                         {usr.phone || '—'}
                       </td>
                       <td className="px-5 py-4">
@@ -380,7 +372,7 @@ export default function StaffView() {
                               type="button"
                               onClick={() => handleOpenEdit(usr)}
                               aria-label={`Edit ${usr.name}`}
-                              className="p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              className="p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                               title="Edit Staff Details"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -390,10 +382,10 @@ export default function StaffView() {
                               type="button"
                               onClick={() => handleToggleStatus(usr)}
                               aria-label={usr.isActive ? `Deactivate ${usr.name}` : `Activate ${usr.name}`}
-                              className={`p-2 rounded-xl transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+                              className={`p-2 rounded-xl transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                                 usr.isActive
-                                  ? 'text-[#EF4444] dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                                  : 'text-[#16A34A] dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                                  ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
                               }`}
                               title={usr.isActive ? 'Deactivate Account' : 'Activate Account'}
                             >
@@ -404,14 +396,14 @@ export default function StaffView() {
                               type="button"
                               onClick={() => handleDeleteStaff(usr.id, usr.name)}
                               aria-label={`Remove ${usr.name}`}
-                              className="p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#EF4444] dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#EF4444]"
+                              className="p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                               title="Remove from roster"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-semibold italic">Primary Admin</span>
+                          <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-semibold italic">Primary Admin</span>
                         )}
                       </td>
                     </tr>
@@ -470,11 +462,11 @@ export default function StaffView() {
             />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[#1F2937]">Role *</label>
+              <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Role *</label>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
               >
                 <option value="WAITER">Waiter ({10 - waiterCount} slots left)</option>
                 <option value="KITCHEN_ADMIN">Kitchen Admin ({2 - chefCount} slots left)</option>
@@ -483,7 +475,7 @@ export default function StaffView() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"
@@ -518,12 +510,12 @@ export default function StaffView() {
           />
 
           <div>
-            <label className="block text-xs font-semibold text-[#5B6470] mb-1">Email (Cannot be changed)</label>
+            <label className="block text-xs font-semibold text-[#657168] dark:text-[#9FB29E] mb-1">Email (Cannot be changed)</label>
             <input
               type="email"
               disabled
               value={editingStaff?.email || ''}
-              className="w-full bg-gray-100 border border-[#E5D8C6] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-gray-500 font-mono cursor-not-allowed"
+              className="w-full bg-[#E4DCD0]/30 dark:bg-[#1E362E]/30 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] font-mono cursor-not-allowed"
             />
           </div>
 
@@ -536,11 +528,11 @@ export default function StaffView() {
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-[#1F2937]">Assigned Role *</label>
+            <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Assigned Role *</label>
             <select
               value={editForm.role}
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
             >
               <option value="WAITER">Waiter</option>
               <option value="KITCHEN_ADMIN">Kitchen Admin</option>
@@ -558,7 +550,7 @@ export default function StaffView() {
             icon={Lock}
           />
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"

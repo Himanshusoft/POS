@@ -19,7 +19,17 @@ export const verifyToken = (token) => {
   return jwt.verify(token, getJwtSecret());
 };
 
+export const decodeToken = (token) => {
+  if (!token) return null;
+  try {
+    return jwt.decode(token);
+  } catch {
+    return null;
+  }
+};
+
 export default {
   signToken,
   verifyToken,
+  decodeToken,
 };

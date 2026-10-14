@@ -13,12 +13,20 @@ import {
 } from 'lucide-react';
 import { INVENTORY_UNITS } from '../constants/inventory.constants';
 
+import { useMenuItems, useRecipes, useInventory, usePosMutations } from '../hooks/usePosQueries';
+
 export default function KitchenRecipesView() {
-  const { addToast } = useAuth();
-  const [menuItems, setMenuItems] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurant, addToast } = useAuth();
+  const { data: menuItemsData = [], isLoading: loadingMenu, refetch: refetchMenu } = useMenuItems(restaurant?.id);
+  const { data: inventoryData = [], isLoading: loadingInventory, refetch: refetchInventory } = useInventory(restaurant?.id);
+  const { data: recipesData = [], isLoading: loadingRecipes, refetch: refetchRecipes } = useRecipes(restaurant?.id);
+  const { invalidateMenu, invalidateInventory } = usePosMutations(restaurant?.id);
+
+  const menuItems = Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData.items || []);
+  const inventoryItems = Array.isArray(inventoryData) ? inventoryData : (inventoryData.items || []);
+  const recipes = Array.isArray(recipesData) ? recipesData : (recipesData.items || []);
+
+  const loading = (loadingMenu && menuItems.length === 0) || (loadingInventory && inventoryItems.length === 0) || (loadingRecipes && recipes.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Recipe Modal State
@@ -32,35 +40,12 @@ export default function KitchenRecipesView() {
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [itemsRes, invRes, recRes] = await Promise.all([
-        posService.menu.getItems(),
-        posService.kitchen.getInventory(),
-        posService.recipes.getAll(),
-      ]);
-
-      if (itemsRes.success) {
-        const list = Array.isArray(itemsRes.data) ? itemsRes.data : itemsRes.data.items || [];
-        setMenuItems(list);
-      }
-      if (invRes.success) {
-        setInventoryItems(invRes.data || []);
-      }
-      if (recRes.success) {
-        const rList = Array.isArray(recRes.data) ? recRes.data : recRes.data.items || [];
-        setRecipes(rList);
-      }
+      await Promise.all([refetchMenu(), refetchInventory(), refetchRecipes()]);
     } catch (err) {
-      addToast(err.message || 'Failed to load recipe data', 'error');
-    } finally {
-      setLoading(false);
+      addToast(err.message || 'Failed to refresh recipe data', 'error');
     }
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const openRecipeEditor = async (menuItem) => {
     setSelectedMenuItem(menuItem);
@@ -161,6 +146,8 @@ export default function KitchenRecipesView() {
       await posService.recipes.create(payload);
       addToast(`Recipe for '${selectedMenuItem.name}' saved successfully!`, 'success');
       setShowModal(false);
+      invalidateMenu();
+      invalidateInventory();
       loadData();
     } catch (err) {
       addToast(err.message || 'Failed to save recipe', 'error');
@@ -181,47 +168,47 @@ export default function KitchenRecipesView() {
   });
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#F7EFE4] dark:bg-[#101A18] min-h-screen text-[#17251F] dark:text-[#F7EFE4]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#E5D8C6] p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 border border-[#92400E]/20 flex items-center justify-center text-[#92400E] shrink-0 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87] shrink-0 shadow-xs">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
               Recipe Management (BOM)
             </h1>
-            <p className="text-xs sm:text-sm text-[#5B6470] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Define ingredient Bill of Materials (BOM) for menu items for automated kitchen stock consumption
             </p>
           </div>
         </div>
 
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={loadData}
           title="Refresh Data"
         >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#173F36] dark:text-[#4EBA87]' : 'text-[#657168] dark:text-[#9FB29E]'}`} />
           <span>Refresh</span>
         </Button>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white border border-[#E5D8C6] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 shadow-editorial flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#5B6470] pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] pointer-events-none" />
           <input
             type="text"
             placeholder="Search dish by name or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-4 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+            className="w-full bg-[#F7EFE4]/60 dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-9 pr-4 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#8D9890] dark:placeholder-[#657168] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] transition-all"
           />
         </div>
-        <div className="text-xs text-[#5B6470] font-medium self-end sm:self-auto">
-          Showing <span className="font-bold text-[#1F2937] tabular-nums">{filteredMenuItems.length}</span> dishes
+        <div className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium self-end sm:self-auto">
+          Showing <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">{filteredMenuItems.length}</span> dishes
         </div>
       </div>
 
@@ -229,7 +216,7 @@ export default function KitchenRecipesView() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="bg-white border border-[#E5D8C6] rounded-2xl p-5 space-y-4">
+            <div key={n} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 space-y-4 shadow-editorial">
               <div className="flex justify-between items-center">
                 <Skeleton className="w-32 h-6 rounded-md" />
                 <Skeleton className="w-20 h-6 rounded-full" />
@@ -257,22 +244,22 @@ export default function KitchenRecipesView() {
             return (
               <div
                 key={item.id}
-                className="bg-white border border-[#E5D8C6] rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all"
+                className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 flex flex-col justify-between shadow-editorial hover:shadow-md transition-all"
               >
                 <div>
                   <div className="flex items-start justify-between mb-2 gap-2">
                     <div>
-                      <h3 className="text-base font-bold text-[#1F2937]">{item.name}</h3>
-                      <div className="text-[11px] text-[#5B6470] mt-0.5">
-                        <span>{item.category?.name || 'Main Course'}</span> • <span className="font-mono font-semibold tabular-nums">₹{Number(item.price).toFixed(2)}</span>
+                      <h3 className="font-serif text-lg font-bold text-[#173F36] dark:text-[#F7EFE4]">{item.name}</h3>
+                      <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
+                        <span>{item.category?.name || 'Main Course'}</span> • <span className="font-mono font-semibold tabular-nums text-[#17251F] dark:text-[#F7EFE4]">₹{Number(item.price).toFixed(2)}</span>
                       </div>
                     </div>
 
                     <span
                       className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border shrink-0 ${
                         hasRecipe
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                          : 'bg-amber-50 border-amber-200 text-[#92400E]'
+                          ? 'bg-[#E8F3ED] border-[#C5DED0] text-[#1E4D38] dark:bg-[#1A2E26] dark:text-[#88D4A8]'
+                          : 'bg-amber-50 border-amber-200 text-[#B45309] dark:bg-amber-950/40 dark:text-amber-400'
                       }`}
                     >
                       {hasRecipe ? 'Recipe Active' : 'No Recipe'}
@@ -280,18 +267,18 @@ export default function KitchenRecipesView() {
                   </div>
 
                   {item.description && (
-                    <p className="text-xs text-[#5B6470] line-clamp-2 mt-1 mb-3">
+                    <p className="text-xs text-[#657168] dark:text-[#9FB29E] line-clamp-2 mt-1 mb-3">
                       {item.description}
                     </p>
                   )}
 
                   {/* Ingredients Preview */}
-                  <div className="border-t border-[#E5D8C6] pt-3 mt-3">
-                    <div className="text-[10px] uppercase font-bold text-[#5B6470] mb-2 flex items-center justify-between">
+                  <div className="border-t border-[#E4DCD0] dark:border-[#1E362E] pt-3 mt-3">
+                    <div className="text-[10px] uppercase font-bold text-[#657168] dark:text-[#9FB29E] mb-2 flex items-center justify-between">
                       <span>Ingredients (Per Portion)</span>
                       {recipe?.prepTime && (
-                        <span className="font-mono text-[#5B6470] flex items-center gap-1 font-semibold tabular-nums">
-                          <Clock className="w-3 h-3 text-[#92400E]" /> {recipe.prepTime}m
+                        <span className="font-mono text-[#657168] dark:text-[#9FB29E] flex items-center gap-1 font-semibold tabular-nums">
+                          <Clock className="w-3 h-3 text-[#173F36] dark:text-[#4EBA87]" /> {recipe.prepTime}m
                         </span>
                       )}
                     </div>
@@ -301,21 +288,21 @@ export default function KitchenRecipesView() {
                         {recipe.ingredients.map((ing, iIdx) => (
                           <div
                             key={iIdx}
-                            className="flex items-center justify-between text-xs bg-[#FAF7F2] px-2.5 py-1.5 rounded-lg border border-[#E5D8C6]"
+                            className="flex items-center justify-between text-xs bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 px-2.5 py-1.5 rounded-lg border border-[#E4DCD0] dark:border-[#1E362E]"
                           >
-                            <span className="text-[#1F2937] font-medium truncate max-w-[150px]">
+                            <span className="text-[#17251F] dark:text-[#F7EFE4] font-medium truncate max-w-[150px]">
                               {ing.inventoryItem?.name || 'Item'}
                             </span>
-                            <span className="font-mono text-xs text-[#92400E] font-bold tabular-nums">
+                            <span className="font-mono text-xs text-[#173F36] dark:text-[#4EBA87] font-bold tabular-nums">
                               {Number(ing.quantityRequired)} {ing.unit}
                             </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 text-center">
-                        <p className="text-xs font-semibold text-amber-900">No ingredients defined.</p>
-                        <p className="text-[10px] text-[#5B6470] mt-0.5">
+                      <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-xl p-3 text-center">
+                        <p className="text-xs font-semibold text-amber-950 dark:text-amber-300">No ingredients defined.</p>
+                        <p className="text-[10px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                           Configure recipe to enable automated stock deductions upon order readiness.
                         </p>
                       </div>
@@ -323,7 +310,7 @@ export default function KitchenRecipesView() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#E5D8C6] mt-4">
+                <div className="pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-4">
                   <Button
                     variant="primary"
                     onClick={() => openRecipeEditor(item)}
@@ -351,7 +338,7 @@ export default function KitchenRecipesView() {
           {/* Preparation Time & Instructions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">
                 Prep Time (Minutes)
               </label>
               <input
@@ -360,11 +347,11 @@ export default function KitchenRecipesView() {
                 max="300"
                 value={recipeForm.prepTime}
                 onChange={(e) => setRecipeForm({ ...recipeForm, prepTime: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono tabular-nums transition-all"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#152320]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-mono tabular-nums transition-all"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">
                 Kitchen Instructions (Optional)
               </label>
               <input
@@ -372,7 +359,7 @@ export default function KitchenRecipesView() {
                 placeholder="e.g. Cook in tandoor until crisp..."
                 value={recipeForm.instructions}
                 onChange={(e) => setRecipeForm({ ...recipeForm, instructions: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#152320]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
           </div>
@@ -380,13 +367,13 @@ export default function KitchenRecipesView() {
           {/* Ingredient List Rows */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
+              <label className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] uppercase tracking-wider font-sans">
                 Ingredients (Per Portion)
               </label>
               <button
                 type="button"
                 onClick={handleAddIngredientRow}
-                className="text-xs font-semibold text-[#92400E] hover:text-[#78350F] flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] rounded-md p-1"
+                className="text-xs font-semibold text-[#173F36] dark:text-[#9FB29E] hover:text-[#12332C] flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] rounded-md p-1 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Ingredient</span>
@@ -394,12 +381,12 @@ export default function KitchenRecipesView() {
             </div>
 
             {recipeForm.ingredients.length === 0 ? (
-              <div className="bg-[#FAF7F2] border border-dashed border-[#E5D8C6] rounded-xl p-6 text-center">
-                <p className="text-xs text-[#5B6470]">No ingredients added yet.</p>
+              <div className="bg-[#F7EFE4]/50 dark:bg-[#152320]/50 border border-dashed border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-6 text-center">
+                <p className="text-xs text-[#657168] dark:text-[#9FB29E]">No ingredients added yet.</p>
                 <button
                   type="button"
                   onClick={handleAddIngredientRow}
-                  className="mt-2 text-xs font-bold text-[#92400E] hover:underline cursor-pointer"
+                  className="mt-2 text-xs font-bold text-[#173F36] dark:text-[#9FB29E] hover:underline cursor-pointer"
                 >
                   + Add First Ingredient
                 </button>
@@ -409,14 +396,14 @@ export default function KitchenRecipesView() {
                 {recipeForm.ingredients.map((ing, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E5D8C6]"
+                    className="flex items-center gap-2 bg-[#F7EFE4]/40 dark:bg-[#152320]/40 p-2.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E]"
                   >
                     {/* Ingredient Select */}
                     <div className="flex-1">
                       <select
                         value={ing.inventoryItemId}
                         onChange={(e) => handleIngredientChange(idx, 'inventoryItemId', e.target.value)}
-                        className="w-full bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                        className="w-full bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
                       >
                         {inventoryItems.map((inv) => (
                           <option key={inv.id} value={inv.id}>
@@ -436,7 +423,7 @@ export default function KitchenRecipesView() {
                         placeholder="Qty"
                         value={ing.quantityRequired}
                         onChange={(e) => handleIngredientChange(idx, 'quantityRequired', e.target.value)}
-                        className="w-full bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-1.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] text-right"
+                        className="w-full bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] text-right"
                       />
                     </div>
 
@@ -445,7 +432,7 @@ export default function KitchenRecipesView() {
                       <select
                         value={ing.unit}
                         onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
-                        className="w-full bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                        className="w-full bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
                       >
                         {INVENTORY_UNITS.map((u) => (
                           <option key={u.value} value={u.value}>
@@ -459,7 +446,7 @@ export default function KitchenRecipesView() {
                     <button
                       type="button"
                       onClick={() => handleRemoveIngredientRow(idx)}
-                      className="p-1.5 min-h-[36px] min-w-[36px] text-[#5B6470] hover:text-red-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                      className="p-1.5 min-h-[36px] min-w-[36px] text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                       title="Remove ingredient"
                       aria-label="Remove ingredient"
                     >
@@ -472,7 +459,7 @@ export default function KitchenRecipesView() {
           </div>
 
           {/* Modal Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"

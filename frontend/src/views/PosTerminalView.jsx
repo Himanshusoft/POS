@@ -19,11 +19,12 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getItemAvailability, validateCumulativeCartInventory } from '../utils/inventoryValidation';
+import { useMenuCategories, useMenuItems, useTables, usePosMutations } from '../hooks/usePosQueries';
 
 /**
  * MenuItemImage helper:
  * Displays real image URL if provided in API/database.
- * If missing or fails to load, gracefully displays a neutral Sandstone dish placeholder.
+ * If missing or fails to load, gracefully displays an editorial dish placeholder.
  */
 function MenuItemImage({ image, name, categoryName }) {
   const [imgError, setImgError] = useState(false);
@@ -36,7 +37,7 @@ function MenuItemImage({ image, name, categoryName }) {
 
   if (resolvedUrl) {
     return (
-      <div className="relative w-full h-32 sm:h-36 rounded-xl overflow-hidden mb-2.5 border border-[#E5D8C6] bg-[#FAF7F2] group">
+      <div className="relative w-full h-32 sm:h-36 rounded-xl overflow-hidden mb-2.5 border border-[#E4DCD0] dark:border-[#1E362E] bg-[#F7EFE4]/40 dark:bg-[#101A18] group">
         <img
           src={resolvedUrl}
           alt={name}
@@ -44,18 +45,18 @@ function MenuItemImage({ image, name, categoryName }) {
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-32 sm:h-36 rounded-xl mb-2.5 border border-[#E5D8C6] bg-gradient-to-br from-[#F7F3EC] to-[#FAF7F2] flex flex-col items-center justify-center text-[#5B6470] overflow-hidden">
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#92400E_1px,transparent_1px)] [background-size:10px_10px]" />
-      <div className="w-9 h-9 rounded-xl bg-white border border-[#E5D8C6] shadow-xs flex items-center justify-center text-[#92400E]">
+    <div className="relative w-full h-28 sm:h-32 rounded-xl mb-2.5 border border-[#E4DCD0] dark:border-[#1E362E] bg-gradient-to-br from-[#F7EFE4] to-[#FFFDF9] dark:from-[#152320] dark:to-[#101A18] flex flex-col items-center justify-center text-[#657168] dark:text-[#9FB29E] overflow-hidden">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#173F36_1px,transparent_1px)] [background-size:10px_10px]" />
+      <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] shadow-xs flex items-center justify-center text-[#173F36] dark:text-[#9FB29E]">
         <UtensilsCrossed className="w-4 h-4" />
       </div>
-      <span className="text-[10px] font-semibold text-[#5B6470] mt-1.5 flex items-center gap-1 uppercase tracking-wider">
+      <span className="text-[10px] font-semibold text-[#657168] dark:text-[#9FB29E] mt-1.5 flex items-center gap-1 font-sans">
         {categoryName || 'Menu Dish'}
       </span>
     </div>
@@ -64,9 +65,12 @@ function MenuItemImage({ image, name, categoryName }) {
 
 export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   const { restaurant, addToast } = useAuth();
-  const [categories, setCategories] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [tables, setTables] = useState([]);
+  const { invalidateOrders } = usePosMutations(restaurant?.id);
+
+  const { data: categories = [], isLoading: loadingCategories } = useMenuCategories(restaurant?.id);
+  const { data: menuItems = [], isLoading: loadingMenuItems } = useMenuItems(restaurant?.id);
+  const { data: tables = [], isLoading: loadingTables } = useTables(restaurant?.id);
+
   const [selectedTableId, setSelectedTableId] = useState(preSelectedTable?.id || '');
   const [activeCategoryId, setActiveCategoryId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,7 +78,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   const [orderType, setOrderType] = useState('DINE_IN');
   const [specialNotes, setSpecialNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
+
+  const loading = (loadingCategories && categories.length === 0) ||
+    (loadingMenuItems && menuItems.length === 0) ||
+    (loadingTables && tables.length === 0);
 
   // Orders History Drawer
   const [showHistory, setShowHistory] = useState(false);
@@ -89,33 +96,12 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
     }
   }, [preSelectedTable]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [catRes, itemRes, tblRes] = await Promise.all([
-        posService.menu.getCategories(),
-        posService.menu.getItems(),
-        posService.tables.getAll(),
-      ]);
-      if (catRes.success) setCategories(catRes.data || []);
-      if (itemRes.success) setMenuItems(itemRes.data || []);
-      if (tblRes.success) {
-        setTables(tblRes.data || []);
-        if (!selectedTableId && tblRes.data?.length > 0) {
-          const avail = tblRes.data.find((t) => t.status === 'AVAILABLE') || tblRes.data[0];
-          setSelectedTableId(avail.id);
-        }
-      }
-    } catch (err) {
-      addToast(err.message || 'Failed to load POS catalog', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!selectedTableId && tables.length > 0) {
+      const avail = tables.find((t) => t.status === 'AVAILABLE') || tables[0];
+      setSelectedTableId(avail.id);
+    }
+  }, [tables, selectedTableId]);
 
   const fetchActiveOrders = async () => {
     setLoadingOrders(true);
@@ -272,6 +258,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
       const res = await posService.orders.create(payload);
       if (res.success) {
+        invalidateOrders();
         addToast(
           activeOrderOnTable
             ? `New items added to active order #${res.data?.orderNumber || activeOrderOnTable.orderNumber}!`
@@ -318,19 +305,19 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
   });
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-[#FAF7F2] text-[#1F2937]">
+    <div className="h-[calc(100vh-4rem)] flex overflow-hidden text-[#17251F] dark:text-[#F7EFE4]">
       {/* LEFT: Menu Catalog & Categories */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#FAF7F2] p-5 sm:p-6 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 p-5 sm:p-6 overflow-hidden">
         {/* Top Control Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search dishes, drinks, starters..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-[#E5D8C6] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] shadow-sandstone transition-all min-h-[42px]"
+              className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] shadow-editorial transition-all min-h-[42px]"
             />
           </div>
 
@@ -341,9 +328,9 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                 fetchActiveOrders();
                 setShowHistory(true);
               }}
-              className="flex items-center gap-2 bg-white hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer min-h-[42px]"
+              className="flex items-center gap-2 bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] active:scale-95 text-[#17251F] dark:text-[#F7EFE4] text-xs font-bold px-4 py-2.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial hover:shadow-md transition-all cursor-pointer min-h-[42px]"
             >
-              <History className="w-4 h-4 text-[#92400E]" />
+              <History className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Active Orders</span>
             </button>
           </div>
@@ -356,8 +343,8 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             onClick={() => setActiveCategoryId('ALL')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer min-h-[36px] ${
               activeCategoryId === 'ALL'
-                ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
-                : 'bg-white text-[#5B6470] hover:bg-[#F1E8DB] hover:text-[#1F2937] border border-[#E5D8C6] shadow-sandstone'
+                ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+                : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial'
             }`}
           >
             All Items ({menuItems.length})
@@ -369,8 +356,8 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               onClick={() => setActiveCategoryId(cat.id)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer min-h-[36px] ${
                 activeCategoryId === cat.id
-                  ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
-                  : 'bg-white text-[#5B6470] hover:bg-[#F1E8DB] hover:text-[#1F2937] border border-[#E5D8C6] shadow-sandstone'
+                  ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+                  : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial'
               }`}
             >
               {cat.name}
@@ -383,7 +370,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="bg-white border border-[#E5D8C6] rounded-2xl p-4 space-y-3 shadow-sandstone">
+                <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 space-y-3 shadow-editorial">
                   <Skeleton className="h-32 w-full rounded-xl" />
                   <Skeleton className="h-4 w-3/4 rounded-lg" />
                   <Skeleton className="h-3 w-1/2 rounded-lg" />
@@ -395,10 +382,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-[#9CA3AF] bg-white rounded-2xl border border-dashed border-[#E5D8C6]">
-              <ShoppingBag className="w-10 h-10 mb-2 stroke-1 text-[#9CA3AF]" />
-              <p className="font-semibold text-sm text-[#1F2937]">No dishes match your selection.</p>
-              <p className="text-xs text-[#5B6470] mt-0.5">Try searching with a different keyword or category.</p>
+            <div className="h-64 flex flex-col items-center justify-center text-[#657168] dark:text-[#9FB29E] bg-[#FFFDF9] dark:bg-[#152320] rounded-2xl border border-dashed border-[#E4DCD0] dark:border-[#1E362E]">
+              <ShoppingBag className="w-10 h-10 mb-2 stroke-1 text-[#657168] dark:text-[#9FB29E]" />
+              <p className="font-serif font-bold text-sm text-[#17251F] dark:text-[#F7EFE4]">No dishes match your selection.</p>
+              <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5">Try searching with a different keyword or category.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -412,10 +399,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                   <div
                     key={item.id}
                     onClick={() => addToCart(item)}
-                    className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none group shadow-sandstone ${
+                    className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none group shadow-editorial ${
                       !isOrderable
-                        ? 'opacity-75 border-[#E5D8C6] bg-slate-50/90 cursor-not-allowed hover:border-amber-400/60'
-                        : 'bg-white border-[#E5D8C6] hover:border-[#92400E] hover:shadow-sandstone-md hover:-translate-y-0.5 cursor-pointer'
+                        ? 'opacity-80 border-[#E4DCD0] dark:border-[#1E362E] bg-slate-50/80 dark:bg-slate-900/40 cursor-not-allowed hover:border-amber-400/60'
+                        : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36] dark:hover:border-[#9FB29E] hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
                     }`}
                     title={!isOrderable ? availability.reasonMessage : undefined}
                   >
@@ -427,13 +414,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                         categoryName={categoryName}
                       />
 
-                      <div className="flex items-start justify-between gap-2 mb-1.5 min-h-[2.5rem]">
-                        <h3
-                          className={`font-bold text-sm leading-snug line-clamp-2 min-w-0 flex-1 transition-colors ${
-                            !isOrderable ? 'text-[#5B6470]' : 'text-[#1F2937] group-hover:text-[#92400E]'
-                          }`}
-                          title={item.name}
-                        >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span className={`font-serif font-bold text-sm line-clamp-1 transition-colors ${
+                          !isOrderable ? 'text-[#657168] dark:text-[#9FB29E]' : 'text-[#17251F] dark:text-[#F7EFE4] group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E]'
+                        }`}>
                           {item.name}
                         </h3>
                         {(item.dietary || item.isVeg !== undefined) && (
@@ -462,7 +446,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
                       {/* Prominent Warning Callout when not orderable */}
                       {!isOrderable && (
-                        <div className="bg-amber-50/90 border border-amber-200 rounded-lg p-2 mb-2 text-[11px] text-amber-900 leading-snug flex items-start gap-1.5">
+                        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-1.5 mb-2 text-[11px] text-amber-900 dark:text-amber-300 leading-snug flex items-start gap-1">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                           <span className="line-clamp-2 font-medium">
                             {availability.reasonMessage}
@@ -471,14 +455,14 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                       )}
 
                       {item.description && (
-                        <p className="text-xs text-[#5B6470] line-clamp-2 mb-3 leading-relaxed">
+                        <p className="text-xs text-[#657168] dark:text-[#9FB29E] line-clamp-2 mb-3 leading-relaxed">
                           {item.description}
                         </p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-[#E5D8C6] mt-auto">
-                      <span className="font-extrabold text-[#92400E] text-sm font-mono tabular-nums shrink-0">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-2">
+                      <span className="font-extrabold text-[#173F36] dark:text-[#9FB29E] text-sm font-mono tabular-nums">
                         {currency}{Number(item.price).toFixed(2)}
                       </span>
                       {!isOrderable ? (
@@ -486,28 +470,29 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                           <span
                             className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
                               !item.isAvailable
-                                ? 'text-rose-800 bg-rose-50 border-rose-200'
-                                : 'text-amber-900 bg-amber-50 border-amber-300'
+                                ? 'text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'
+                                : 'text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700'
                             }`}
                           >
-                            <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                            <span>
-                              {!item.isAvailable
-                                ? '86 Out'
-                                : availability.reasonCode === 'NO_RECIPE'
-                                ? 'No Recipe'
-                                : 'Out of Stock'}
-                            </span>
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            {!item.isAvailable
+                              ? '86 Out'
+                              : availability.reasonCode === 'NO_RECIPE'
+                              ? 'No Recipe'
+                              : 'Low Stock'}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] bg-[#F7EFE4] dark:bg-[#101A18] px-2 py-0.5 rounded-md border border-[#E4DCD0] dark:border-[#1E362E]">
+                            Unavailable
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 shrink-0">
                           {availability.maxOrderableQuantity <= 5 && availability.maxOrderableQuantity > 0 && (
-                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
+                            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                               {availability.maxOrderableQuantity} left
                             </span>
                           )}
-                          <span className="w-8 h-8 rounded-xl bg-amber-100 group-hover:bg-[#92400E] text-[#92400E] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs shrink-0">
+                          <span className="w-8 h-8 rounded-xl bg-[#173F36]/10 group-hover:bg-[#173F36] text-[#173F36] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
                             <Plus className="w-4 h-4 stroke-[2.5]" />
                           </span>
                         </div>
@@ -522,13 +507,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
       </div>
 
       {/* RIGHT: Live Order Cart Ticket */}
-      <div className="w-96 bg-white border-l border-[#E5D8C6] flex flex-col shrink-0 shadow-sandstone">
+      <div className="w-96 bg-[#FFFDF9] dark:bg-[#152320] border-l border-[#E4DCD0] dark:border-[#1E362E] flex flex-col shrink-0 shadow-editorial">
         {/* Cart Header */}
-        <div className="p-4 border-b border-[#E5D8C6]">
+        <div className="p-4 border-b border-[#E4DCD0] dark:border-[#1E362E]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-[#92400E]" />
-              <h2 className="font-bold text-[#1F2937] text-base">Current Ticket</h2>
+              <ShoppingBag className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
+              <h2 className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-base">Current Ticket</h2>
             </div>
             {cart.length > 0 && (
               <button
@@ -544,13 +529,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
           {/* Table & Order Type Selectors */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-bold text-[#5B6470] uppercase tracking-wider block mb-1">
+              <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
                 Table
               </label>
               <select
                 value={selectedTableId}
                 onChange={(e) => setSelectedTableId(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] transition-all"
               >
                 <option value="">Select Table</option>
                 {tables.map((t) => (
@@ -562,13 +547,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-[#5B6470] uppercase tracking-wider block mb-1">
+              <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
                 Type
               </label>
               <select
                 value={orderType}
                 onChange={(e) => setOrderType(e.target.value)}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-2.5 py-1.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] transition-all"
               >
                 <option value="DINE_IN">Dine-In</option>
                 <option value="TAKEAWAY">Takeaway</option>
@@ -579,8 +564,8 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
           {/* Active Table Session Banner */}
           {activeOrderOnTable && (
-            <div className="mt-2.5 bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-900 flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+            <div className="mt-2.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-2.5 text-[11px] text-amber-900 dark:text-amber-300 flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold">Active Table Order #{activeOrderOnTable.orderNumber}:</span> New items added will merge into this active order without creating a duplicate.
               </div>
@@ -592,13 +577,13 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {/* Section 1: Previously Ordered Items on this Table */}
           {activeOrderOnTable && activeOrderOnTable.items && activeOrderOnTable.items.length > 0 && (
-            <div className="bg-white border border-[#E5D8C6] rounded-xl p-3 shadow-sandstone">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E5D8C6]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#5B6470] flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#92400E]" />
+            <div className="bg-[#F7EFE4]/40 dark:bg-[#101A18]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 shadow-xs">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E4DCD0] dark:border-[#1E362E]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E] flex items-center gap-1.5 font-sans">
+                  <Clock className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                   Already In Order ({activeOrderOnTable.items.length})
                 </span>
-                <span className="text-[11px] font-mono font-bold text-[#1F2937] tabular-nums">
+                <span className="text-[11px] font-mono font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                   {currency}{existingSubtotal.toFixed(2)}
                 </span>
               </div>
@@ -606,19 +591,19 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                 {activeOrderOnTable.items.map((it, idx) => (
                   <div key={idx} className="flex items-center justify-between text-xs py-1">
                     <div className="flex items-center gap-1.5 truncate pr-2">
-                      <span className="font-bold text-[#1F2937]">{it.quantity}x</span>
-                      <span className="truncate text-[#5B6470] font-medium">{it.menuItem?.name || it.name}</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">{it.quantity}x</span>
+                      <span className="truncate text-[#657168] dark:text-[#9FB29E] font-medium">{it.menuItem?.name || it.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border ${
-                        it.status === 'SERVED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        it.status === 'SERVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                         it.status === 'READY' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                         it.status === 'COOKING' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         'bg-slate-50 text-slate-700 border-slate-200'
                       }`}>
                         {it.status}
                       </span>
-                      <span className="text-[#1F2937] font-mono text-[11px] tabular-nums">
+                      <span className="text-[#17251F] dark:text-[#F7EFE4] font-mono text-[11px] tabular-nums">
                         {currency}{Number(it.subtotal || 0).toFixed(2)}
                       </span>
                     </div>
@@ -630,19 +615,19 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
           {/* Section 2: New Items Being Added */}
           {activeOrderOnTable && (
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[#92400E] px-1 flex items-center gap-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#173F36] dark:text-[#9FB29E] px-1 flex items-center gap-1 font-sans">
               <Plus className="w-3 h-3" />
               <span>New Items to Add ({cart.length})</span>
             </div>
           )}
 
           {cart.length === 0 ? (
-            <div className={`flex flex-col items-center justify-center text-center p-6 text-[#9CA3AF] ${activeOrderOnTable ? 'py-4' : 'h-full'}`}>
-              <ShoppingBag className="w-10 h-10 stroke-1 mb-2 text-[#9CA3AF]" />
-              <p className="font-semibold text-xs text-[#1F2937]">
+            <div className={`flex flex-col items-center justify-center text-center p-6 text-[#657168] dark:text-[#9FB29E] ${activeOrderOnTable ? 'py-4' : 'h-full'}`}>
+              <ShoppingBag className="w-10 h-10 stroke-1 mb-2 text-[#657168] dark:text-[#9FB29E]" />
+              <p className="font-serif font-bold text-xs text-[#17251F] dark:text-[#F7EFE4]">
                 {activeOrderOnTable ? 'No new items selected yet' : 'Ticket is Empty'}
               </p>
-              <p className="text-[11px] text-[#5B6470] mt-0.5">
+              <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                 Click dish items on the left to add them to this table's order.
               </p>
             </div>
@@ -650,33 +635,33 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             cart.map((item) => (
               <div
                 key={item.menuItemId}
-                className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl p-3 flex flex-col gap-2"
+                className="bg-[#F7EFE4]/40 dark:bg-[#101A18]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex flex-col gap-2"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-bold text-[#1F2937] text-xs leading-tight">{item.name}</div>
-                    <div className="text-[11px] text-[#92400E] font-mono mt-0.5 font-bold tabular-nums">
+                    <div className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-xs leading-tight font-serif">{item.name}</div>
+                    <div className="text-[11px] text-[#173F36] dark:text-[#9FB29E] font-mono mt-0.5 font-bold tabular-nums">
                       {currency}{item.price.toFixed(2)} each
                     </div>
                   </div>
 
                   {/* Quantity Controls (Accessible Touch Targets) */}
-                  <div className="flex items-center gap-1 bg-white border border-[#E5D8C6] rounded-lg p-0.5">
+                  <div className="flex items-center gap-1 bg-white dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg p-0.5">
                     <button
                       type="button"
                       onClick={() => updateQuantity(item.menuItemId, -1)}
-                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] active:scale-95 transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] active:scale-95 transition-colors cursor-pointer"
                       aria-label="Decrease quantity"
                     >
                       <Minus className="w-3 h-3 stroke-[2.5]" />
                     </button>
-                    <span className="w-7 text-center text-xs font-bold font-mono text-[#1F2937] tabular-nums">
+                    <span className="w-7 text-center text-xs font-bold font-mono text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                       {item.quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateQuantity(item.menuItemId, 1)}
-                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] active:scale-95 transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] active:scale-95 transition-colors cursor-pointer"
                       aria-label="Increase quantity"
                     >
                       <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -690,7 +675,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                   placeholder="Notes (e.g. less salt, spicy)"
                   value={item.specialInstructions}
                   onChange={(e) => updateItemNotes(item.menuItemId, e.target.value)}
-                  className="w-full bg-white border border-[#E5D8C6] rounded-lg px-2.5 py-1 text-[11px] text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-1 text-[11px] text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36]"
                 />
               </div>
             ))
@@ -698,35 +683,35 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         </div>
 
         {/* Cart Bottom Summary & Action */}
-        <div className="p-4 border-t border-[#E5D8C6] bg-white space-y-3">
+        <div className="p-4 border-t border-[#E4DCD0] dark:border-[#1E362E] bg-[#FFFDF9] dark:bg-[#152320] space-y-3">
           <div>
             <input
               type="text"
               placeholder="Kitchen Order Note (optional)"
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] min-h-[38px]"
+              className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] min-h-[38px]"
             />
           </div>
 
           <div className="space-y-1.5 text-xs">
             {activeOrderOnTable && existingSubtotal > 0 && (
-              <div className="flex justify-between text-[#5B6470]">
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
                 <span>Already Ordered</span>
-                <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{existingSubtotal.toFixed(2)}</span>
+                <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">{currency}{existingSubtotal.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between text-[#5B6470]">
+            <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
               <span>{activeOrderOnTable ? 'New Items Subtotal' : 'Subtotal'}</span>
-              <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{newSubtotal.toFixed(2)}</span>
+              <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">{currency}{newSubtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-[#5B6470]">
+            <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
               <span>Estimated Tax ({taxRate}%)</span>
-              <span className="font-mono text-[#1F2937] font-semibold tabular-nums">{currency}{estimatedTax.toFixed(2)}</span>
+              <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">{currency}{estimatedTax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm font-bold text-[#1F2937] pt-2 border-t border-[#E5D8C6]">
-              <span>Grand Total</span>
-              <span className="text-[#92400E] font-mono text-base font-extrabold tabular-nums">{currency}{grandTotal.toFixed(2)}</span>
+            <div className="flex justify-between text-sm font-bold text-[#17251F] dark:text-[#F7EFE4] pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+              <span className="font-serif">Grand Total</span>
+              <span className="text-[#173F36] dark:text-[#9FB29E] font-mono text-base font-extrabold tabular-nums">{currency}{grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -735,7 +720,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
             type="button"
             onClick={handlePlaceOrder}
             disabled={submitting || cart.length === 0}
-            className="w-full min-h-[48px] flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 disabled:opacity-50 text-white font-bold text-sm py-3 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+            className="w-full min-h-[48px] flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] active:scale-95 disabled:opacity-50 text-[#FFFDF9] font-bold text-sm py-3 rounded-xl transition-all shadow-editorial hover:shadow-md cursor-pointer"
           >
             {submitting ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -756,16 +741,16 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
       {/* ACTIVE ORDERS DRAWER */}
       {showHistory && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-xl bg-white border-l border-[#E5D8C6] h-full flex flex-col shadow-sandstone-lg animate-slide-left">
-            <div className="p-5 border-b border-[#E5D8C6] flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-[#1F2937] text-base">
-                <History className="w-5 h-5 text-[#92400E]" />
+          <div className="w-full max-w-xl bg-[#FFFDF9] dark:bg-[#152320] border-l border-[#E4DCD0] dark:border-[#1E362E] h-full flex flex-col shadow-2xl animate-slide-left">
+            <div className="p-5 border-b border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-between">
+              <div className="flex items-center gap-2 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-base">
+                <History className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
                 <span>Active Kitchen & Service Orders</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowHistory(false)}
-                className="text-[#5B6470] hover:text-[#1F2937] p-1.5 rounded-lg hover:bg-[#F1E8DB] cursor-pointer"
+                className="text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] p-1.5 rounded-lg hover:bg-[#F7EFE4] dark:hover:bg-[#101A18] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -773,39 +758,39 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {loadingOrders ? (
-                <div className="text-center py-12 text-[#5B6470] text-sm flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-[#92400E]" />
+                <div className="text-center py-12 text-[#657168] dark:text-[#9FB29E] text-sm flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#173F36] dark:text-[#9FB29E]" />
                   <span>Loading orders...</span>
                 </div>
               ) : activeOrders.length === 0 ? (
-                <div className="text-center py-12 text-[#9CA3AF] text-sm">No active orders found.</div>
+                <div className="text-center py-12 text-[#657168] dark:text-[#9FB29E] text-sm">No active orders found.</div>
               ) : (
                 activeOrders.map((ord) => (
                   <div
                     key={ord.id}
-                    className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-2xl p-4 space-y-3"
+                    className="bg-[#F7EFE4]/40 dark:bg-[#101A18]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 space-y-3 shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-bold text-[#1F2937] text-sm font-mono">
+                        <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm font-mono">
                           Table #{ord.table?.tableNumber || ord.tableNumber || 'N/A'}
                         </span>
-                        <span className="text-xs text-[#5B6470] ml-2 font-mono">
+                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] ml-2 font-mono">
                           #{ord.orderNumber || ord.id.slice(0, 8)}
                         </span>
                       </div>
-                      <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                      <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full border bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border-emerald-200 dark:border-emerald-800 font-sans">
                         {ord.status}
                       </span>
                     </div>
 
-                    <div className="text-xs text-[#1F2937] space-y-1">
+                    <div className="text-xs text-[#17251F] dark:text-[#F7EFE4] space-y-1">
                       {ord.items?.map((it, idx) => (
                         <div key={idx} className="flex justify-between">
                           <span className="font-medium">
                             {it.quantity}x {it.menuItem?.name || it.name}
                           </span>
-                          <span className="text-[#5B6470] font-mono tabular-nums">
+                          <span className="text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                             {currency}{Number(it.unitPrice || it.price || 0).toFixed(2)}
                           </span>
                         </div>
@@ -813,7 +798,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                     </div>
 
                     {['PENDING', 'IN_PREPARATION'].includes(ord.status) && (
-                      <div className="pt-2 border-t border-[#E5D8C6] flex justify-end">
+                      <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-end">
                         <button
                           type="button"
                           onClick={() => handleCancelOrder(ord.id)}

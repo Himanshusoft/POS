@@ -22,11 +22,11 @@ function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="p-2 rounded-xl transition-all duration-200 border cursor-pointer text-[#4B5563] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border-[#E5D8C6] dark:border-[#382F26] bg-white dark:bg-[#1C1815] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+      className="p-2 rounded-xl transition-all duration-200 border cursor-pointer text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] border-[#E4DCD0] dark:border-[#233630] bg-[#FFFDF9] dark:bg-[#14221E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
       title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
       aria-label="Toggle light or dark theme"
     >
-      {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#4B5563]" />}
+      {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#173F36]" />}
     </button>
   );
 }
@@ -40,7 +40,7 @@ export default function Navbar({
   mobileSidebarOpen,
   setMobileSidebarOpen,
 }) {
-  const { user, restaurant, logout, role } = useAuth();
+  const { user, restaurant, logout, loggingOut, role } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -67,31 +67,31 @@ export default function Navbar({
   const roleBadges = {
     RESTAURANT_REGISTRATION_ADMIN: {
       label: 'Platform Super Admin',
-      color: 'bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border-[#92400E]/25 dark:border-[#92400E]/40',
+      color: 'bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border-[#C8DDD2] dark:border-[#233630]',
       settingsLabel: 'Platform Settings',
       settingsSubTab: 'platform',
     },
     RESTAURANT_OWNER: {
       label: 'Restaurant Admin',
-      color: 'bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#92400E] dark:text-[#D97706] border-[#D97706]/25 dark:border-[#D97706]/40',
+      color: 'bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border-[#C8DDD2] dark:border-[#233630]',
       settingsLabel: 'Restaurant Settings',
       settingsSubTab: 'restaurant',
     },
     KITCHEN_ADMIN: {
       label: 'Kitchen Chef',
-      color: 'bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#B45309] dark:text-[#FBBF24] border-[#D97706]/25 dark:border-[#D97706]/40',
+      color: 'bg-[#FDF4E6] dark:bg-[#342414] text-[#9A5B13] dark:text-[#FBBF24] border-[#F6D8A8] dark:border-[#523B22]',
       settingsLabel: 'Kitchen Preferences',
       settingsSubTab: 'kitchen_view',
     },
     WAITER: {
       label: 'Service Waiter',
-      color: 'bg-[#2563EB]/10 dark:bg-[#2563EB]/20 text-[#2563EB] dark:text-[#60A5FA] border-[#2563EB]/25 dark:border-[#2563EB]/40',
+      color: 'bg-[#EAF2F0] dark:bg-[#172D28] text-[#1E5248] dark:text-[#5FA596] border-[#BED9D3] dark:border-[#2A4B43]',
       settingsLabel: 'Service Station Settings',
       settingsSubTab: 'waiter_view',
     },
     RECEPTIONIST: {
       label: 'Reception / Cashier',
-      color: 'bg-[#16A34A]/10 dark:bg-[#16A34A]/20 text-[#16A34A] dark:text-[#34D399] border-[#16A34A]/25 dark:border-[#16A34A]/40',
+      color: 'bg-[#E8F3ED] dark:bg-[#1B3629] text-[#2D6A4F] dark:text-[#4EBA87] border-[#B7DAC7] dark:border-[#2D5441]',
       settingsLabel: 'Cashier Terminal Settings',
       settingsSubTab: 'cashier_view',
     },
@@ -99,7 +99,7 @@ export default function Navbar({
 
   const currentBadge = roleBadges[role] || {
     label: role,
-    color: 'bg-[#FAF7F2] dark:bg-[#201C18] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26]',
+    color: 'bg-[#F4ECE1] dark:bg-[#1A2521] text-[#55635B] dark:text-[#A0ABA2] border-[#DDD3C5] dark:border-[#233630]',
     settingsLabel: 'Preferences',
     settingsSubTab: 'preferences',
   };
@@ -115,13 +115,13 @@ export default function Navbar({
   };
 
   return (
-    <header className="h-16 bg-white/95 dark:bg-[#161310]/95 backdrop-blur-sm border-b border-[#E5D8C6] dark:border-[#382F26] px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(41,35,31,0.04)] dark:shadow-none transition-colors duration-200">
+    <header className="h-16 bg-[#FFFDF9]/95 dark:bg-[#0E1815]/95 backdrop-blur-sm border-b border-[#E4DCD0] dark:border-[#233630] px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_0_rgba(23,63,54,0.03)] dark:shadow-none transition-colors duration-200">
       {/* Left: Brand & Sidebar Toggle */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Sidebar Hamburger Toggle */}
         <button
           onClick={() => setMobileSidebarOpen && setMobileSidebarOpen((prev) => !prev)}
-          className="lg:hidden p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
+          className="lg:hidden p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] border border-[#E4DCD0] dark:border-[#233630] transition-colors cursor-pointer"
           title="Toggle Navigation Menu"
         >
           <Menu className="w-5 h-5" />
@@ -130,30 +130,30 @@ export default function Navbar({
         {/* Desktop Sidebar Collapse Toggle */}
         <button
           onClick={toggleSidebar}
-          className="hidden lg:flex p-2 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
+          className="hidden lg:flex p-2 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] border border-[#E4DCD0] dark:border-[#233630] transition-colors cursor-pointer"
           title={sidebarCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
         >
           {sidebarCollapsed ? (
-            <PanelLeftOpen className="w-4 h-4 text-[#92400E] dark:text-[#D97706]" />
+            <PanelLeftOpen className="w-4 h-4 text-[#173F36] dark:text-[#4EBA87]" />
           ) : (
-            <PanelLeftClose className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C]" />
+            <PanelLeftClose className="w-4 h-4 text-[#657168] dark:text-[#9FB29E]" />
           )}
         </button>
 
         {/* Brand Icon & Name */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#92400E] to-[#D97706] flex items-center justify-center shadow-md shadow-[#92400E]/20 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-[#173F36] flex items-center justify-center shadow-sm shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-[#FFFDF9]" />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] text-lg tracking-tight shrink-0">POS</span>
+            <span className="font-serif font-bold text-[#173F36] dark:text-[#F7EFE4] text-xl tracking-tight shrink-0">POS</span>
             {role === 'RESTAURANT_REGISTRATION_ADMIN' ? (
               <div className="flex items-center gap-2 min-w-0">
-                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[#E5D8C6] dark:bg-[#382F26] shrink-0" />
-                <span className="text-xs sm:text-sm font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[120px] sm:max-w-none">
+                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[#E4DCD0] dark:bg-[#233630] shrink-0" />
+                <span className="text-xs sm:text-sm font-semibold text-[#657168] dark:text-[#9FB29E] truncate max-w-[120px] sm:max-w-none">
                   Platform Super Admin
                 </span>
-                <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/25 dark:border-[#92400E]/40 shrink-0 shadow-xs">
+                <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] border border-[#C8DDD2] dark:border-[#233630] shrink-0 shadow-xs">
                   SUPER ADMIN
                 </span>
               </div>
@@ -161,13 +161,13 @@ export default function Navbar({
               <div className="flex flex-col justify-center min-w-0">
                 <div className="flex items-center gap-2">
                   {restaurant?.name && (
-                    <span className="text-xs sm:text-sm font-semibold text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[140px] sm:max-w-xs">
+                    <span className="text-xs sm:text-sm font-semibold text-[#657168] dark:text-[#9FB29E] truncate max-w-[140px] sm:max-w-xs">
                       {restaurant.name}
                     </span>
                   )}
                   {planName && (
-                    <span className="text-[10px] sm:text-[11px] bg-[#D97706]/10 dark:bg-[#D97706]/20 text-[#92400E] dark:text-[#D97706] font-bold px-2 py-0.5 rounded-full border border-[#D97706]/25 dark:border-[#D97706]/40 flex items-center gap-1 shrink-0">
-                      <Sparkles className="w-3 h-3 text-[#D97706]" />
+                    <span className="text-[10px] sm:text-[11px] bg-[#E8EFEA] dark:bg-[#1A2B26] text-[#173F36] dark:text-[#4EBA87] font-bold px-2 py-0.5 rounded-full border border-[#C8DDD2] dark:border-[#233630] flex items-center gap-1 shrink-0">
+                      <Sparkles className="w-3 h-3 text-[#173F36] dark:text-[#4EBA87]" />
                       <span>{planName}</span>
                     </span>
                   )}
@@ -187,42 +187,42 @@ export default function Navbar({
         <ThemeToggle />
 
         {/* 3. User Card with Interactive Profile Dropdown */}
-        <div className="relative pl-1 sm:pl-2 border-l border-[#E5D8C6] dark:border-[#382F26] shrink-0" ref={dropdownRef}>
+        <div className="relative pl-1 sm:pl-2 border-l border-[#E4DCD0] dark:border-[#233630] shrink-0" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((prev) => !prev)}
             aria-expanded={dropdownOpen}
             aria-haspopup="true"
             aria-label="User Account Menu"
-            className="flex items-center gap-2 sm:gap-2.5 p-1.5 rounded-xl hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors cursor-pointer text-left shrink-0"
+            className="flex items-center gap-2 sm:gap-2.5 p-1.5 rounded-xl hover:bg-[#F4ECE0] dark:hover:bg-[#1A2B26] transition-colors cursor-pointer text-left shrink-0"
             title="Account Menu"
           >
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-[#1F2937] dark:text-[#F7F3EC] leading-tight truncate max-w-[130px] lg:max-w-none">
+              <div className="text-sm font-semibold text-[#17251F] dark:text-[#F7EFE4] leading-tight truncate max-w-[130px] lg:max-w-none">
                 {user?.name || 'Staff User'}
               </div>
               <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border inline-block mt-0.5 ${currentBadge.color}`}>
                 {currentBadge.label}
               </div>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FAF7F2] to-[#E7DCCB] dark:from-[#25201A] dark:to-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center font-bold text-[#92400E] dark:text-[#D97706] text-sm shadow-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E8EFEA] to-[#D0DDD0] dark:from-[#1A2B26] dark:to-[#14221E] border border-[#173F36]/20 dark:border-[#233630] flex items-center justify-center font-bold text-[#173F36] dark:text-[#4EBA87] text-sm shadow-xs shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-[#5B6470] dark:text-[#A89B8C] hidden sm:block shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 text-[#657168] dark:text-[#9FB29E] hidden sm:block shrink-0" />
           </button>
 
           {/* Floating Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-xl p-2 z-50 animate-scale-in">
+            <div className="absolute right-0 mt-2 w-64 bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl shadow-editorial-lg p-2 z-50 animate-scale-in">
               {/* User Identity Header */}
-              <div className="p-3 bg-[#FAF7F2] dark:bg-[#201C18] rounded-xl border border-[#E5D8C6] dark:border-[#382F26] mb-2">
-                <div className="font-semibold text-[#1F2937] dark:text-[#F7F3EC] text-sm truncate">{user?.name || 'Staff User'}</div>
-                <div className="text-xs text-[#5B6470] dark:text-[#A89B8C] truncate">{user?.email || 'user@pos.com'}</div>
+              <div className="p-3 bg-[#F7EFE4] dark:bg-[#111D1A] rounded-xl border border-[#E4DCD0] dark:border-[#233630] mb-2">
+                <div className="font-semibold text-[#17251F] dark:text-[#F7EFE4] text-sm truncate">{user?.name || 'Staff User'}</div>
+                <div className="text-xs text-[#657168] dark:text-[#9FB29E] truncate">{user?.email || 'user@pos.com'}</div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${currentBadge.color}`}>
                     {currentBadge.label}
                   </span>
                   {restaurant?.name && (
-                    <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-medium truncate max-w-[120px]">
+                    <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium truncate max-w-[120px]">
                       {restaurant.name}
                     </span>
                   )}
@@ -234,24 +234,26 @@ export default function Navbar({
                 {/* 1. My Profile & Account */}
                 <button
                   onClick={() => handleNavigate('profile')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] hover:bg-[#F3ECE0] dark:hover:bg-[#1A2B26] transition-colors text-left cursor-pointer"
                 >
-                  <User className="w-4 h-4 text-[#92400E] dark:text-[#D97706]" />
+                  <User className="w-4 h-4 text-[#173F36] dark:text-[#4EBA87]" />
                   <span>My Profile & Account</span>
                 </button>
 
-                <div className="h-px bg-[#E5D8C6] dark:bg-[#382F26] my-1" />
+                <div className="h-px bg-[#E4DCD0] dark:bg-[#233630] my-1" />
 
                 {/* 2. Sign Out */}
                 <button
-                  onClick={() => {
+                  type="button"
+                  disabled={loggingOut}
+                  onClick={async () => {
                     setDropdownOpen(false);
-                    logout();
+                    await logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors text-left cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#C53030] dark:text-[#F87171] hover:bg-[#FDF0ED] dark:hover:bg-[#361A1A] transition-colors text-left cursor-pointer disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{loggingOut ? 'Signing Out...' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>

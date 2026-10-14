@@ -1,6 +1,7 @@
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { areUnitsCompatible } from '../utils/unitConversion.js';
+import { invalidateRecipeCache, invalidateMenuCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
 
 export const createOrUpdateRecipe = async (restaurantId, data) => {
   const menuItem = await prisma.menuItem.findFirst({
@@ -32,7 +33,7 @@ export const createOrUpdateRecipe = async (restaurantId, data) => {
     }
   }
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     let recipe = await tx.recipe.findUnique({
       where: { menuItemId: data.menuItemId },
     });
@@ -80,6 +81,13 @@ export const createOrUpdateRecipe = async (restaurantId, data) => {
       },
     });
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return result;
 };
 
 export const createRecipe = async (restaurantId, data) => {
@@ -87,36 +95,42 @@ export const createRecipe = async (restaurantId, data) => {
 };
 
 export const getRecipes = async (restaurantId, filters = {}) => {
-  return await findManyPaginated(prisma.recipe, {
-    where: { menuItem: { restaurantId } },
-    include: {
-      menuItem: true,
-      ingredients: { include: { inventoryItem: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  }, filters);
+  const cacheKey = buildCacheKey(restaurantId, 'recipes:list', filters);
+  return await cachedQuery(cacheKey, 30, async () => {
+    return await findManyPaginated(prisma.recipe, {
+      where: { menuItem: { restaurantId } },
+      include: {
+        menuItem: true,
+        ingredients: { include: { inventoryItem: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }, filters);
+  });
 };
 
 export const getRecipeByMenuItem = async (restaurantId, menuItemId) => {
-  const recipe = await prisma.recipe.findFirst({
-    where: {
-      menuItemId,
-      menuItem: { restaurantId },
-    },
-    include: {
-      menuItem: true,
-      ingredients: {
-        include: { inventoryItem: true },
+  const cacheKey = buildCacheKey(restaurantId, 'recipes', { menuItemId });
+  return await cachedQuery(cacheKey, 60, async () => {
+    const recipe = await prisma.recipe.findFirst({
+      where: {
+        menuItemId,
+        menuItem: { restaurantId },
       },
-    },
-  });
+      include: {
+        menuItem: true,
+        ingredients: {
+          include: { inventoryItem: true },
+        },
+      },
+    });
 
-  if (!recipe) {
-    const error = new Error('Recipe not found for this menu item');
-    error.statusCode = 404;
-    throw error;
-  }
-  return recipe;
+    if (!recipe) {
+      const error = new Error('Recipe not found for this menu item');
+      error.statusCode = 404;
+      throw error;
+    }
+    return recipe;
+  });
 };
 
 export const getRecipeById = async (restaurantId, id) => {
@@ -140,7 +154,7 @@ export const getRecipeById = async (restaurantId, id) => {
 export const updateRecipe = async (restaurantId, id, data) => {
   await getRecipeById(restaurantId, id);
 
-  return await prisma.recipe.update({
+  const updated = await prisma.recipe.update({
     where: { id },
     data: {
       instructions: data.instructions !== undefined ? data.instructions : undefined,
@@ -151,13 +165,27 @@ export const updateRecipe = async (restaurantId, id, data) => {
       ingredients: { include: { inventoryItem: true } },
     },
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return updated;
 };
 
 export const deleteRecipe = async (restaurantId, id) => {
   await getRecipeById(restaurantId, id);
-  return await prisma.recipe.delete({
+  const deleted = await prisma.recipe.delete({
     where: { id },
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return deleted;
 };
 
 export const addRecipeIngredient = async (restaurantId, recipeId, data) => {
@@ -192,7 +220,7 @@ export const addRecipeIngredient = async (restaurantId, recipeId, data) => {
     throw error;
   }
 
-  return await prisma.recipeIngredient.create({
+  const created = await prisma.recipeIngredient.create({
     data: {
       recipeId,
       inventoryItemId: data.inventoryItemId,
@@ -201,6 +229,13 @@ export const addRecipeIngredient = async (restaurantId, recipeId, data) => {
     },
     include: { inventoryItem: true },
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return created;
 };
 
 export const updateRecipeIngredient = async (restaurantId, ingredientId, data) => {
@@ -219,7 +254,7 @@ export const updateRecipeIngredient = async (restaurantId, ingredientId, data) =
     throw error;
   }
 
-  return await prisma.recipeIngredient.update({
+  const updated = await prisma.recipeIngredient.update({
     where: { id: ingredientId },
     data: {
       quantityRequired: data.quantityRequired !== undefined ? Number(data.quantityRequired) : undefined,
@@ -227,6 +262,13 @@ export const updateRecipeIngredient = async (restaurantId, ingredientId, data) =
     },
     include: { inventoryItem: true },
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return updated;
 };
 
 export const removeRecipeIngredient = async (restaurantId, ingredientId) => {
@@ -239,9 +281,16 @@ export const removeRecipeIngredient = async (restaurantId, ingredientId) => {
     throw error;
   }
 
-  return await prisma.recipeIngredient.delete({
+  const deleted = await prisma.recipeIngredient.delete({
     where: { id: ingredientId },
   });
+
+  await Promise.all([
+    invalidateRecipeCache(restaurantId),
+    invalidateMenuCache(restaurantId),
+  ]);
+
+  return deleted;
 };
 
 export default {

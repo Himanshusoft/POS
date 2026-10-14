@@ -1,5 +1,6 @@
 import * as authService from '../services/auth.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { decodeToken } from '../utils/jwt.js';
 
 export const registerOwner = async (req, res, next) => {
   try {
@@ -15,6 +16,26 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
     const result = await authService.login({ email, password });
     return sendSuccess(res, 200, 'Login successful', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const logout = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    let userId = req.user?.id || null;
+    if (!userId && token) {
+      try {
+        const decoded = decodeToken(token);
+        userId = decoded?.userId || decoded?.id || null;
+      } catch {
+        // Safe to ignore decode errors
+      }
+    }
+    await authService.logout(token, userId);
+    return sendSuccess(res, 200, 'Logged out successfully', {});
   } catch (error) {
     next(error);
   }
@@ -92,6 +113,7 @@ export const resetPassword = async (req, res, next) => {
 export default {
   registerOwner,
   login,
+  logout,
   getCurrentUser,
   getMe,
   updateProfile,

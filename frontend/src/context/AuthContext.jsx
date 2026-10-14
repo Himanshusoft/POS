@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, getAuthToken, setAuthToken, getActiveUser, setActiveUser } from '../services/api';
+import { api, getAuthToken, setAuthToken, getActiveUser, setActiveUser, getActiveRestaurant, setActiveRestaurant } from '../services/api';
 import posService from '../services/pos.service';
 import { normalizeRole, getDefaultPathForRole } from '../config/navigation';
+import { clearUserQueryCache } from '../config/queryClient';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(getActiveUser());
-  const [restaurant, setRestaurant] = useState(null);
+  const [restaurant, setRestaurant] = useState(getActiveRestaurant());
   const [token, setTokenState] = useState(getAuthToken());
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   // Toast notifier
@@ -40,10 +42,11 @@ export const AuthProvider = ({ children }) => {
         const res = await posService.auth.me();
         if (res.success && res.data) {
           const userData = res.data.user || res.data;
-          const restData = res.data.restaurant || userData.restaurant || null;
+          const restData = res.data.restaurant || userData.restaurant || (userData.restaurantId ? { id: userData.restaurantId } : null);
           setUser(userData);
           setRestaurant(restData);
           setActiveUser(userData);
+          setActiveRestaurant(restData);
         }
       } catch (err) {
         console.error('Session expired or invalid:', err.message);
@@ -74,13 +77,31 @@ export const AuthProvider = ({ children }) => {
 
         setAuthToken(receivedToken);
         setTokenState(receivedToken);
-        setUser(loggedUser);
-        setActiveUser(loggedUser);
-        setRestaurant(loggedRestaurant || loggedUser.restaurant || null);
-        addToast(`Welcome back, ${loggedUser.name}!`, 'success');
+
+        let finalUser = loggedUser;
+        let finalRest = loggedRestaurant || loggedUser?.restaurant || (loggedUser?.restaurantId ? { id: loggedUser.restaurantId } : null);
+
+        // Immediately fetch authenticated profile to get full restaurant and user details
+        try {
+          const meRes = await posService.auth.me();
+          if (meRes?.success && meRes?.data) {
+            const meUser = meRes.data.user || meRes.data;
+            const meRest = meRes.data.restaurant || meUser?.restaurant || null;
+            if (meUser) finalUser = meUser;
+            if (meRest) finalRest = meRest;
+          }
+        } catch {
+          // Keep basic login details if /me encounters a transient issue
+        }
+
+        setUser(finalUser);
+        setActiveUser(finalUser);
+        setRestaurant(finalRest);
+        setActiveRestaurant(finalRest);
+        addToast(`Welcome back, ${finalUser.name || loggedUser.name}!`, 'success');
         return {
           success: true,
-          user: loggedUser,
+          user: finalUser,
           role: normalizedRole,
           defaultPath,
         };
@@ -104,7 +125,9 @@ export const AuthProvider = ({ children }) => {
         setTokenState(receivedToken);
         setUser(registeredUser);
         setActiveUser(registeredUser);
-        setRestaurant(regRestaurant || null);
+        const activeRest = regRestaurant || registeredUser?.restaurant || (registeredUser?.restaurantId ? { id: registeredUser.restaurantId } : null);
+        setRestaurant(activeRest);
+        setActiveRestaurant(activeRest);
         addToast('Restaurant & Owner account registered successfully!', 'success');
         return {
           success: true,
@@ -120,14 +143,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setAuthToken(null);
-    setTokenState('');
-    setUser(null);
-    setActiveUser(null);
-    setRestaurant(null);
-    if (window.location.pathname !== '/login') {
-      window.history.replaceState(null, '', '/login');
+  const logout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+
+    try {
+      // 1. Dispatch real server-side logout request before credentials are wiped locally
+      await posService.auth.logout();
+    } catch (err) {
+      // Gracefully continue local cleanup if backend is unreachable
+      console.warn('Server-side logout notice:', err?.message || err);
+    } finally {
+      // 2. Clear protected React Query cache to stop in-flight queries and prevent data leakage
+      clearUserQueryCache();
+
+      // 3. Clear local storage authentication credentials and tenant session
+      setAuthToken(null);
+      setTokenState('');
+      setUser(null);
+      setActiveUser(null);
+      setRestaurant(null);
+      setActiveRestaurant(null);
+      setLoggingOut(false);
+
+      // 4. Safely transition route to /login
+      if (window.location.pathname !== '/login') {
+        window.history.replaceState(null, '', '/login');
+      }
     }
   };
 
@@ -147,8 +189,10 @@ export const AuthProvider = ({ children }) => {
         user,
         role: normalizedRole,
         restaurant,
+        restaurantId: restaurant?.id || user?.restaurantId || null,
         token,
         loading,
+        loggingOut,
         toasts,
         addToast,
         removeToast,

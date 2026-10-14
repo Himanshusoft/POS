@@ -8,17 +8,17 @@ export default function Toast() {
   if (!toasts || toasts.length === 0) return null;
 
   const icons = {
-    success: <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0" />,
-    error: <AlertCircle className="w-5 h-5 text-[#EF4444] shrink-0" />,
-    warning: <AlertTriangle className="w-5 h-5 text-[#D97706] shrink-0" />,
-    info: <Info className="w-5 h-5 text-[#2563EB] shrink-0" />,
+    success: <CheckCircle2 className="w-5 h-5 text-[#2D6A4F] shrink-0" />,
+    error: <AlertCircle className="w-5 h-5 text-[#C53030] shrink-0" />,
+    warning: <AlertTriangle className="w-5 h-5 text-[#C07D37] shrink-0" />,
+    info: <Info className="w-5 h-5 text-[#173F36] shrink-0" />,
   };
 
   const borderStyles = {
-    success: 'border-l-4 border-l-[#16A34A]',
-    error: 'border-l-4 border-l-[#EF4444]',
-    warning: 'border-l-4 border-l-[#D97706]',
-    info: 'border-l-4 border-l-[#2563EB]',
+    success: 'border-l-4 border-l-[#2D6A4F]',
+    error: 'border-l-4 border-l-[#C53030]',
+    warning: 'border-l-4 border-l-[#C07D37]',
+    info: 'border-l-4 border-l-[#173F36]',
   };
 
   return (
@@ -26,15 +26,15 @@ export default function Toast() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] shadow-lg text-[#1F2937] dark:text-[#F7F3EC] pointer-events-auto transition-all duration-200 animate-slide-in ${
+          className={`flex items-start gap-3 p-4 rounded-xl bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] shadow-editorial-md text-[#17251F] dark:text-[#F7EFE4] pointer-events-auto transition-all duration-200 animate-slide-in ${
             borderStyles[toast.type] || borderStyles.info
           }`}
         >
           {icons[toast.type] || icons.info}
-          <div className="flex-1 text-sm font-medium leading-snug">{toast.message}</div>
+          <div className="flex-1 text-xs sm:text-sm font-medium leading-snug">{toast.message}</div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] transition-colors p-0.5 rounded cursor-pointer"
+            className="text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] transition-colors p-0.5 rounded cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
