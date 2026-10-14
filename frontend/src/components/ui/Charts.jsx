@@ -1138,6 +1138,7 @@ export function DonutChart({
   strokeWidth = 24,
   currency = '',
   formatValue,
+  layout = 'auto', // 'auto' | 'horizontal' | 'vertical' | 'stacked'
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
@@ -1182,8 +1183,14 @@ export function DonutChart({
 
   const displayLbl = activeItem ? activeItem.label : centerLabel;
 
+  const isVertical = layout === 'vertical' || layout === 'col' || layout === 'stacked';
+
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+    <div className={`flex items-center justify-center ${
+      isVertical
+        ? 'flex-col gap-4 py-1 w-full max-w-full'
+        : 'flex-col sm:flex-row gap-6 py-2'
+    }`}>
       {/* SVG Donut */}
       <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
         <svg
@@ -1225,14 +1232,14 @@ export function DonutChart({
 
         {/* Center Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[110px]">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C] leading-tight text-center max-w-[120px] line-clamp-2">
             {displayLbl}
           </span>
-          <span className="text-base sm:text-lg font-black text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono truncate max-w-[120px]">
+          <span className="text-base sm:text-lg font-black text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono mt-0.5 truncate max-w-[120px]">
             {displayVal}
           </span>
           {activeItem && (
-            <span className="text-[10.5px] font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
+            <span className="text-[10px] sm:text-[10.5px] font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
               {activeItem.percentage}%
             </span>
           )}
@@ -1240,7 +1247,7 @@ export function DonutChart({
       </div>
 
       {/* Legend List */}
-      <div className="flex flex-col gap-2 w-full max-w-xs">
+      <div className={`flex flex-col gap-1.5 w-full ${isVertical ? 'max-w-full' : 'max-w-xs'}`}>
         {segments.map((seg) => {
           const isHovered = hoveredIndex === seg.index;
           return (

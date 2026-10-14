@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
-import { StatCard } from '../components/ui';
+import { StatCard, ChartCard, LineChart, DonutChart } from '../components/ui';
 import PlatformPerformanceAnalytics from '../components/PlatformPerformanceAnalytics';
 import {
   Building2,
@@ -506,7 +506,7 @@ export default function RegistrationAdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Registered Restaurants"
-          value={loading && !overview && !analyticsData ? '...' : totalTenants}
+          value={loading && !overview ? '...' : totalTenants}
           subtitle="Total registered tenants"
           icon={Building2}
           iconColor="text-[#173F36] dark:text-[#9FB29E]"
@@ -515,7 +515,7 @@ export default function RegistrationAdminDashboard() {
 
         <StatCard
           title="Active Restaurants"
-          value={loading && !overview && !analyticsData ? '...' : activeTenants}
+          value={loading && !overview ? '...' : activeTenants}
           subtitle="Currently operational tenants"
           icon={ShieldCheck}
           iconColor="text-[#2D6A4F] dark:text-[#52B788]"
@@ -533,7 +533,7 @@ export default function RegistrationAdminDashboard() {
 
         <StatCard
           title="Platform Users"
-          value={loading && !overview && !analyticsData ? '...' : totalUsers}
+          value={loading && !overview ? '...' : totalUsers}
           subtitle="Users across all restaurants"
           icon={Users}
           iconColor="text-[#173F36] dark:text-[#9FB29E]"
@@ -576,6 +576,9 @@ export default function RegistrationAdminDashboard() {
               data={planDistribution}
               centerLabel="Active Subscriptions"
               centerValue={activeSubscriptions}
+              size={155}
+              strokeWidth={20}
+              layout="vertical"
             />
           </div>
         </ChartCard>
