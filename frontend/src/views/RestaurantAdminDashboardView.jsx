@@ -93,7 +93,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
       case 'CASH':
         return <Banknote className="w-3.5 h-3.5 text-[#16A34A]" />;
       case 'UPI':
-        return <Smartphone className="w-3.5 h-3.5 text-[#92400E]" />;
+        return <Smartphone className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />;
       case 'CARD':
         return <CreditCard className="w-3.5 h-3.5 text-[#2563EB]" />;
       default:
@@ -117,17 +117,17 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
   const paymentChartData = useMemo(() => {
     if (!data?.paymentInsights) return [];
     const colorMap = {
-      CASH: '#16A34A',
-      UPI: '#92400E',
-      CARD: '#2563EB',
-      RAZORPAY: '#D97706',
+      CASH: '#2D6A4F',
+      UPI: '#173F36',
+      CARD: '#4EBA87',
+      RAZORPAY: '#657168',
     };
     return data.paymentInsights.map((p) => ({
       label: p.method,
       value: Number(p.amount) || 0,
       count: p.count,
       percentage: p.percentage,
-      color: colorMap[p.method] || '#D97706',
+      color: colorMap[p.method] || '#173F36',
     }));
   }, [data]);
 
@@ -140,7 +140,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
         label: d.name,
         value: d.quantitySold,
         sublabel: `${currency}${Number(d.revenueGenerated).toLocaleString()}`,
-        color: '#92400E',
+        color: '#173F36',
         image,
         category: d.category,
       };
@@ -215,28 +215,28 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
   }, [tables]);
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#F7EFE4] dark:bg-[#101A18] text-[#17251F] dark:text-[#F7EFE4]">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87] shrink-0 shadow-xs">
             <LayoutDashboard className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
                 {restaurant?.name || 'Restaurant'} Dashboard
               </h1>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#92400E]/10 dark:bg-[#92400E]/20 text-[#92400E] dark:text-[#D97706] border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center gap-1 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#E8F3ED] dark:bg-[#1A2E26] text-[#1E4D38] dark:text-[#88D4A8] border border-[#C5DED0] dark:border-[#244237] flex items-center gap-1 shadow-2xs">
                 <ShieldCheck className="w-3 h-3" />
                 <span>Executive Overview</span>
               </span>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#D97706]/15 text-[#B45309] dark:text-[#D97706] border border-[#D97706]/30 flex items-center gap-1 shadow-2xs">
-                <Sparkles className="w-3 h-3 text-[#D97706]" />
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/20 text-[#173F36] dark:text-[#4EBA87] border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center gap-1 shadow-2xs">
+                <Sparkles className="w-3 h-3 text-[#173F36] dark:text-[#4EBA87]" />
                 <span>Standard Annual Plan</span>
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Real-time analytical command center for restaurant operations, sales velocity, inventory, staff quotas, and payments
             </p>
           </div>
@@ -261,7 +261,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 shadow-sandstone space-y-3">
+              <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 shadow-editorial space-y-3">
                 <div className="flex justify-between items-center">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-9 w-9 rounded-xl" />
@@ -271,7 +271,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
               </div>
             ))}
           </div>
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-6 shadow-sandstone space-y-4">
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-4">
             <Skeleton className="h-6 w-48" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Skeleton className="h-20 rounded-xl" />
@@ -322,22 +322,22 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
           </div>
 
           {/* Staff Quota & Capacity Status Box */}
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 sm:p-6 shadow-sandstone card-hover">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-[#E5D8C6] dark:border-[#382F26]">
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 sm:p-6 shadow-editorial card-hover">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-[#E4DCD0] dark:border-[#1E362E]">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706]">
+                <div className="w-9 h-9 rounded-xl bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87]">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-[#1F2937] dark:text-[#F7F3EC]">Staff Roster & Subscription Role Limits</h3>
-                  <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium">
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-[#173F36] dark:text-[#F7EFE4]">Staff Roster & Subscription Role Limits</h3>
+                  <p className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
                     Enforced capacities under Standard Annual Plan (₹5,000/year)
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setActiveTab && setActiveTab('staff')}
-                className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:text-[#78350F] dark:hover:text-[#F59E0B] flex items-center gap-1.5 cursor-pointer transition-colors px-3 py-1.5 rounded-lg bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2721] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] hover:text-[#12332C] flex items-center gap-1.5 cursor-pointer transition-colors px-3 py-1.5 rounded-lg bg-[#F7EFE4] dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#EAE0D2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
               >
                 <span>Manage Staff Roster</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -346,15 +346,15 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               {/* Waiters */}
-              <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-4 hover:border-[#92400E]/40 transition-colors">
+              <div className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-4 hover:border-[#173F36]/40 transition-colors">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Waiters</span>
-                  <span className="font-mono tabular-nums text-[#16A34A] dark:text-emerald-400 font-extrabold text-xs">
+                  <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">Waiters</span>
+                  <span className="font-mono tabular-nums text-[#2D6A4F] dark:text-[#88D4A8] font-extrabold text-xs">
                     {data?.staff?.waiters || 0} / {data?.staff?.planLimits?.maxWaiters || 10}
                   </span>
                 </div>
                 <div
-                  className="w-full bg-[#E7DCCB] dark:bg-[#332A22] rounded-full h-2 overflow-hidden"
+                  className="w-full bg-[#E4DCD0] dark:bg-[#233630] rounded-full h-2 overflow-hidden"
                   role="progressbar"
                   aria-label="Waiters quota"
                   aria-valuenow={data?.staff?.waiters || 0}
@@ -362,28 +362,28 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                   aria-valuemax={data?.staff?.planLimits?.maxWaiters || 10}
                 >
                   <div
-                    className="bg-[#16A34A] dark:bg-emerald-400 h-2 rounded-full transition-all"
+                    className="bg-[#2D6A4F] dark:bg-[#4EBA87] h-2 rounded-full transition-all"
                     style={{
                       width: `${Math.min(100, ((data?.staff?.waiters || 0) / (data?.staff?.planLimits?.maxWaiters || 10)) * 100)}%`,
                     }}
                   />
                 </div>
-                <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-2 flex justify-between font-medium">
+                <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>Dining & table orders</span>
                   <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxWaiters || 10) - (data?.staff?.waiters || 0))} open</span>
                 </div>
               </div>
 
               {/* Kitchen Admins */}
-              <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-4 hover:border-[#92400E]/40 transition-colors">
+              <div className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-4 hover:border-[#173F36]/40 transition-colors">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Kitchen Admins</span>
-                  <span className="font-mono tabular-nums text-[#D97706] dark:text-amber-400 font-extrabold text-xs">
+                  <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">Kitchen Admins</span>
+                  <span className="font-mono tabular-nums text-[#173F36] dark:text-[#4EBA87] font-extrabold text-xs">
                     {data?.staff?.kitchenAdmins || 0} / {data?.staff?.planLimits?.maxKitchenAdmins || 2}
                   </span>
                 </div>
                 <div
-                  className="w-full bg-[#E7DCCB] dark:bg-[#332A22] rounded-full h-2 overflow-hidden"
+                  className="w-full bg-[#E4DCD0] dark:bg-[#233630] rounded-full h-2 overflow-hidden"
                   role="progressbar"
                   aria-label="Kitchen admins quota"
                   aria-valuenow={data?.staff?.kitchenAdmins || 0}
@@ -391,28 +391,28 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                   aria-valuemax={data?.staff?.planLimits?.maxKitchenAdmins || 2}
                 >
                   <div
-                    className="bg-[#D97706] dark:bg-amber-400 h-2 rounded-full transition-all"
+                    className="bg-[#173F36] dark:bg-[#4EBA87] h-2 rounded-full transition-all"
                     style={{
                       width: `${Math.min(100, ((data?.staff?.kitchenAdmins || 0) / (data?.staff?.planLimits?.maxKitchenAdmins || 2)) * 100)}%`,
                     }}
                   />
                 </div>
-                <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-2 flex justify-between font-medium">
+                <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>KDS & recipe depletion</span>
                   <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxKitchenAdmins || 2) - (data?.staff?.kitchenAdmins || 0))} open</span>
                 </div>
               </div>
 
               {/* Receptionists */}
-              <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-4 hover:border-[#92400E]/40 transition-colors">
+              <div className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-4 hover:border-[#173F36]/40 transition-colors">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Receptionists</span>
-                  <span className="font-mono tabular-nums text-[#2563EB] dark:text-blue-400 font-extrabold text-xs">
+                  <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">Receptionists</span>
+                  <span className="font-mono tabular-nums text-[#2D6A4F] dark:text-[#88D4A8] font-extrabold text-xs">
                     {data?.staff?.receptionists || 0} / {data?.staff?.planLimits?.maxReceptionists || 2}
                   </span>
                 </div>
                 <div
-                  className="w-full bg-[#E7DCCB] dark:bg-[#332A22] rounded-full h-2 overflow-hidden"
+                  className="w-full bg-[#E4DCD0] dark:bg-[#233630] rounded-full h-2 overflow-hidden"
                   role="progressbar"
                   aria-label="Receptionists quota"
                   aria-valuenow={data?.staff?.receptionists || 0}
@@ -420,13 +420,13 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                   aria-valuemax={data?.staff?.planLimits?.maxReceptionists || 2}
                 >
                   <div
-                    className="bg-[#2563EB] dark:bg-blue-400 h-2 rounded-full transition-all"
+                    className="bg-[#2D6A4F] dark:bg-[#4EBA87] h-2 rounded-full transition-all"
                     style={{
                       width: `${Math.min(100, ((data?.staff?.receptionists || 0) / (data?.staff?.planLimits?.maxReceptionists || 2)) * 100)}%`,
                     }}
                   />
                 </div>
-                <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-2 flex justify-between font-medium">
+                <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>Billing & cashier</span>
                   <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxReceptionists || 2) - (data?.staff?.receptionists || 0))} open</span>
                 </div>
@@ -446,7 +446,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 action={
                   <button
                     onClick={() => setActiveTab && setActiveTab('billing')}
-                    className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:text-[#78350F] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#FAF7F2] dark:hover:bg-[#201C18]"
+                    className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] hover:text-[#12332C] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#F7EFE4] dark:hover:bg-[#1A2622]"
                   >
                     <span>Billing Ledger</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -462,18 +462,18 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                     height={240}
                     revenueLabel="Revenue"
                     ordersLabel="Orders"
-                    barColor="#92400E"
-                    lineColor="#2563EB"
+                    barColor="#173F36"
+                    lineColor="#2D6A4F"
                   />
-                  <div className="pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 flex flex-wrap items-center justify-between gap-2 text-xs text-[#5B6470] dark:text-[#A89B8C]">
+                  <div className="pt-3 border-t border-[#E4DCD0]/60 dark:border-[#1E362E]/60 flex flex-wrap items-center justify-between gap-2 text-xs text-[#657168] dark:text-[#9FB29E]">
                     <span className="font-medium">
-                      Total Invoiced Revenue: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{currency}{Number(data?.sales?.totalRevenue || 0).toLocaleString()}</strong>
+                      Total Invoiced Revenue: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{currency}{Number(data?.sales?.totalRevenue || 0).toLocaleString()}</strong>
                     </span>
-                    <span className="font-mono text-[#16A34A] dark:text-emerald-400 font-bold">
+                    <span className="font-mono text-[#2D6A4F] dark:text-[#88D4A8] font-bold">
                       Today: {currency}{Number(data?.sales?.todayRevenue || 0).toLocaleString()}
                     </span>
-                    <span className="text-[11px] text-[#8C7E72] dark:text-[#998C7F] font-semibold">
-                      Settled Bills: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{data?.sales?.totalPaidBills || 0}</strong>
+                    <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-semibold">
+                      Settled Bills: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{data?.sales?.totalPaidBills || 0}</strong>
                     </span>
                   </div>
                 </div>
@@ -490,7 +490,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 action={
                   <button
                     onClick={() => setActiveTab && setActiveTab('tables')}
-                    className="text-xs font-bold text-[#D97706] hover:text-[#B45309] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] hover:text-[#12332C] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#F7EFE4] dark:hover:bg-[#1A2622]"
                   >
                     <span>Tables</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -517,7 +517,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 action={
                   <button
                     onClick={() => setActiveTab && setActiveTab('menu')}
-                    className="text-xs font-bold text-[#D97706] hover:text-[#B45309] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/35"
+                    className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] hover:text-[#12332C] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#F7EFE4] dark:hover:bg-[#1A2622]"
                   >
                     <span>Menu Catalog</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -532,11 +532,11 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                     valueLabel="orders"
                   />
 
-                  <div className="pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C]">
+                  <div className="pt-3 border-t border-[#E4DCD0]/60 dark:border-[#1E362E]/60 flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E]">
                     <span className="font-medium">
-                      Total Dishes Sold: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{data?.popularDishes?.reduce((s, d) => s + d.quantitySold, 0) || 0}</strong>
+                      Total Dishes Sold: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{data?.popularDishes?.reduce((s, d) => s + d.quantitySold, 0) || 0}</strong>
                     </span>
-                    <span className="text-[11px] text-[#8C7E72] font-semibold">
+                    <span className="text-[11px] text-[#657168] font-semibold">
                       Real-time Menu Analytics
                     </span>
                   </div>
@@ -554,7 +554,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 action={
                   <button
                     onClick={() => setActiveTab && setActiveTab('billing')}
-                    className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:text-[#78350F] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#FAF7F2] dark:hover:bg-[#201C18]"
+                    className="text-xs font-bold text-[#173F36] dark:text-[#4EBA87] hover:text-[#12332C] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-[#F7EFE4] dark:hover:bg-[#1A2622]"
                   >
                     <span>View Invoices</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -570,11 +570,11 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                     getMethodIcon={getMethodIcon}
                   />
 
-                  <div className="pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C]">
+                  <div className="pt-3 border-t border-[#E4DCD0]/60 dark:border-[#1E362E]/60 flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E]">
                     <span className="font-medium">
-                      Settled Bills: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{data?.sales?.totalPaidBills || 0}</strong>
+                      Settled Bills: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{data?.sales?.totalPaidBills || 0}</strong>
                     </span>
-                    <span className="font-mono text-[#1F2937] dark:text-[#F7F3EC] font-bold">
+                    <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-bold">
                       Net Collected: {currency}{Number(data?.sales?.totalRevenue || 0).toLocaleString()}
                     </span>
                   </div>
@@ -586,23 +586,23 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
           {/* Bottom Row: Inventory Alerts & Quick Operations */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Low-Stock Inventory Alerts */}
-            <div className="lg:col-span-2 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 sm:p-6 shadow-sandstone card-hover flex flex-col justify-between">
+            <div className="lg:col-span-2 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 sm:p-6 shadow-editorial card-hover flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-3.5 border-b border-[#E5D8C6] dark:border-[#382F26]">
+                <div className="flex items-center justify-between pb-3.5 border-b border-[#E4DCD0] dark:border-[#1E362E]">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 flex items-center justify-center text-[#EF4444] dark:text-rose-400">
                       <Boxes className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm sm:text-base font-bold text-[#1F2937] dark:text-[#F7F3EC]">Inventory Stock Warnings</h3>
-                      <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium">
+                      <h3 className="font-serif text-base font-bold text-[#17251F] dark:text-[#F7EFE4]">Inventory Stock Warnings</h3>
+                      <p className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
                         Raw ingredients at or below their defined minimum safety threshold
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setActiveTab && setActiveTab('inventory')}
-                    className="text-xs font-bold text-[#EF4444] dark:text-rose-400 hover:text-[#DC2626] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    className="text-xs font-bold text-[#C53030] dark:text-rose-400 hover:text-[#9B2C2C] flex items-center gap-1 cursor-pointer transition-colors px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
                   >
                     <span>Inventory Room</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -610,10 +610,10 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 </div>
 
                 {data?.inventoryAlerts?.items?.length === 0 ? (
-                  <div className="py-10 text-center text-[#5B6470] dark:text-[#A89B8C]">
-                    <CheckCircle2 className="w-9 h-9 text-[#16A34A] dark:text-emerald-400 mx-auto mb-2" />
-                    <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Stock Health Optimal</div>
-                    <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+                  <div className="py-10 text-center text-[#657168] dark:text-[#9FB29E]">
+                    <CheckCircle2 className="w-9 h-9 text-[#2D6A4F] dark:text-[#88D4A8] mx-auto mb-2" />
+                    <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">Stock Health Optimal</div>
+                    <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                       All ingredients are currently above minimum safety thresholds.
                     </div>
                   </div>
@@ -622,19 +622,19 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                     {data?.inventoryAlerts?.items?.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#EF4444]/30 rounded-xl p-3.5 flex items-center justify-between hover:bg-rose-50/30 dark:hover:bg-rose-950/20 transition-colors"
+                        className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 border border-[#EF4444]/30 rounded-xl p-3.5 flex items-center justify-between hover:bg-rose-50/30 dark:hover:bg-rose-950/20 transition-colors"
                       >
                         <div>
-                          <div className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">{item.name}</div>
-                          <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-mono mt-0.5">
+                          <div className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">{item.name}</div>
+                          <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">
                             Min Threshold: {item.minStockThreshold} {item.unit}
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-mono font-extrabold text-[#EF4444] dark:text-rose-400 block">
+                          <span className="text-xs font-mono font-extrabold text-[#C53030] dark:text-rose-400 block">
                             {Number(item.currentStock).toFixed(1)} {item.unit}
                           </span>
-                          <span className="text-[10px] font-bold text-[#EF4444] dark:text-rose-400 bg-[#EF4444]/10 dark:bg-[#EF4444]/20 px-2 py-0.5 rounded-full border border-[#EF4444]/20 dark:border-[#EF4444]/30 mt-1 inline-block">
+                          <span className="text-[10px] font-bold text-[#C53030] dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-900 mt-1 inline-block">
                             Low Stock
                           </span>
                         </div>
@@ -644,81 +644,81 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 )}
               </div>
 
-              <div className="mt-4 pt-3.5 border-t border-[#E5D8C6] dark:border-[#382F26] text-xs text-[#5B6470] dark:text-[#A89B8C] flex items-center justify-between">
+              <div className="mt-4 pt-3.5 border-t border-[#E4DCD0] dark:border-[#1E362E] text-xs text-[#657168] dark:text-[#9FB29E] flex items-center justify-between">
                 <span>Active supplier purchase orders auto-adjust inventory on receipt</span>
-                <span className="font-semibold text-[#1F2937] dark:text-[#F7F3EC]">{data?.inventoryAlerts?.items?.length || 0} alerts</span>
+                <span className="font-semibold text-[#17251F] dark:text-[#F7EFE4]">{data?.inventoryAlerts?.items?.length || 0} alerts</span>
               </div>
             </div>
 
             {/* Quick Operational Shortcuts */}
-            <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 sm:p-6 shadow-sandstone card-hover flex flex-col justify-between">
+            <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 sm:p-6 shadow-editorial card-hover flex flex-col justify-between">
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-lg bg-[#92400E]/10 dark:bg-[#92400E]/20 flex items-center justify-center text-[#92400E] dark:text-[#D97706]">
+                <h3 className="font-serif text-base font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-[#173F36]/10 dark:bg-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87]">
                     <Sliders className="w-4 h-4" />
                   </div>
                   <span>Administrative Control</span>
                 </h3>
-                <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mb-4 font-medium">Quick navigation to restaurant management modules</p>
+                <p className="text-xs text-[#657168] dark:text-[#9FB29E] mb-4 font-medium">Quick navigation to restaurant management modules</p>
 
                 <div className="space-y-2.5">
                   <button
                     onClick={() => setActiveTab && setActiveTab('staff')}
-                    className="w-full flex items-center justify-between p-3 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2721] active:scale-95 border border-[#E5D8C6] dark:border-[#382F26] rounded-xl text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] transition-all cursor-pointer shadow-sm hover:shadow"
+                    className="w-full flex items-center justify-between p-3 bg-[#F7EFE4]/60 dark:bg-[#1A2622] hover:bg-[#F7EFE4] dark:hover:bg-[#213830] active:scale-95 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] transition-all cursor-pointer shadow-xs hover:shadow"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-[#16A34A] dark:text-emerald-400">
+                      <div className="w-7 h-7 rounded-lg bg-[#E8F3ED] dark:bg-[#1A2E26] border border-[#C5DED0] dark:border-[#244237] flex items-center justify-center text-[#2D6A4F] dark:text-[#88D4A8]">
                         <Users className="w-3.5 h-3.5" />
                       </div>
                       <span>Manage Staff Roster</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold text-[#5B6470] dark:text-[#A89B8C]">{data?.staff?.total || 0} users</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#657168] dark:text-[#9FB29E]">{data?.staff?.total || 0} users</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab && setActiveTab('menu')}
-                    className="w-full flex items-center justify-between p-3 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2721] active:scale-95 border border-[#E5D8C6] dark:border-[#382F26] rounded-xl text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] transition-all cursor-pointer shadow-sm hover:shadow"
+                    className="w-full flex items-center justify-between p-3 bg-[#F7EFE4]/60 dark:bg-[#1A2622] hover:bg-[#F7EFE4] dark:hover:bg-[#213830] active:scale-95 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] transition-all cursor-pointer shadow-xs hover:shadow"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-[#D97706] dark:text-amber-400">
+                      <div className="w-7 h-7 rounded-lg bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87]">
                         <UtensilsCrossed className="w-3.5 h-3.5" />
                       </div>
                       <span>Menu Selection</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold text-[#5B6470] dark:text-[#A89B8C]">Manage Dishes</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#657168] dark:text-[#9FB29E]">Manage Dishes</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab && setActiveTab('inventory')}
-                    className="w-full flex items-center justify-between p-3 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2721] active:scale-95 border border-[#E5D8C6] dark:border-[#382F26] rounded-xl text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] transition-all cursor-pointer shadow-sm hover:shadow"
+                    className="w-full flex items-center justify-between p-3 bg-[#F7EFE4]/60 dark:bg-[#1A2622] hover:bg-[#F7EFE4] dark:hover:bg-[#213830] active:scale-95 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] transition-all cursor-pointer shadow-xs hover:shadow"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706]">
+                      <div className="w-7 h-7 rounded-lg bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87]">
                         <Boxes className="w-3.5 h-3.5" />
                       </div>
                       <span>Inventory & Spoilage</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold text-[#5B6470] dark:text-[#A89B8C]">Raw Ingredients</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#657168] dark:text-[#9FB29E]">Raw Ingredients</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab && setActiveTab('billing')}
-                    className="w-full flex items-center justify-between p-3 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2E2721] active:scale-95 border border-[#E5D8C6] dark:border-[#382F26] rounded-xl text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] transition-all cursor-pointer shadow-sm hover:shadow"
+                    className="w-full flex items-center justify-between p-3 bg-[#F7EFE4]/60 dark:bg-[#1A2622] hover:bg-[#F7EFE4] dark:hover:bg-[#213830] active:scale-95 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] transition-all cursor-pointer shadow-xs hover:shadow"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-[#2563EB] dark:text-blue-400">
+                      <div className="w-7 h-7 rounded-lg bg-[#E8F3ED] dark:bg-[#1A2E26] border border-[#C5DED0] dark:border-[#244237] flex items-center justify-center text-[#2D6A4F] dark:text-[#88D4A8]">
                         <Receipt className="w-3.5 h-3.5" />
                       </div>
                       <span>Billing & Payments</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold text-[#5B6470] dark:text-[#A89B8C]">Cash/UPI/Card</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#657168] dark:text-[#9FB29E]">Cash/UPI/Card</span>
                   </button>
                 </div>
               </div>
 
-              <div className="pt-3.5 border-t border-[#E5D8C6] dark:border-[#382F26] text-xs text-[#5B6470] dark:text-[#A89B8C] flex items-center justify-between">
-                <span>Restaurant Admin: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{user?.name || 'Administrator'}</strong></span>
-                <span className="text-[#16A34A] dark:text-emerald-400 font-bold text-[11px]">Online</span>
+              <div className="pt-3.5 border-t border-[#E4DCD0] dark:border-[#1E362E] text-xs text-[#657168] dark:text-[#9FB29E] flex items-center justify-between">
+                <span>Restaurant Admin: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{user?.name || 'Administrator'}</strong></span>
+                <span className="text-[#2D6A4F] dark:text-[#88D4A8] font-bold text-[11px]">Online</span>
               </div>
             </div>
           </div>

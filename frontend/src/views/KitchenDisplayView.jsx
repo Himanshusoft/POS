@@ -89,31 +89,31 @@ export default function KitchenDisplayView() {
   });
 
   const getStatusColor = (status, mins) => {
-    if (status === 'READY') return 'border-emerald-300 bg-emerald-50/20';
-    if (status === 'SERVED') return 'border-blue-300 bg-blue-50/20';
-    if (mins > 20) return 'border-red-300 bg-red-50/25';
-    if (mins > 10) return 'border-amber-300 bg-amber-50/25';
-    return 'border-[#E5D8C6] bg-white';
+    if (status === 'READY') return 'border-[#2D6A4F]/40 bg-[#E8F3ED]/40 dark:bg-[#1A2E26]/40';
+    if (status === 'SERVED') return 'border-[#173F36]/30 bg-[#F7EFE4] dark:bg-[#1A2622]';
+    if (mins > 20) return 'border-rose-300 bg-rose-50/30 dark:bg-rose-950/20';
+    if (mins > 10) return 'border-amber-300 bg-amber-50/30 dark:bg-amber-950/20';
+    return 'border-[#E4DCD0] dark:border-[#1E362E] bg-[#FFFDF9] dark:bg-[#152320]';
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#F7EFE4] dark:bg-[#101A18] min-h-screen text-[#17251F] dark:text-[#F7EFE4]">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/40 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/20 border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center text-[#173F36] dark:text-[#4EBA87] shrink-0 shadow-xs">
             <ChefHat className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
                 Kitchen Display System (KDS)
               </h1>
               <Badge variant="warning" size="sm">
                 Station Active
               </Badge>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Real-time kitchen order tickets, prep stations, and automated inventory depletion
             </p>
           </div>
@@ -121,11 +121,11 @@ export default function KitchenDisplayView() {
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={fetchOrders}
             title="Refresh Tickets"
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#92400E]' : 'text-[#5B6470]'}`} />
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#173F36] dark:text-[#4EBA87]' : 'text-[#657168] dark:text-[#9FB29E]'}`} />
             <span>Refresh</span>
           </Button>
         </div>
@@ -145,10 +145,10 @@ export default function KitchenDisplayView() {
             role="tab"
             aria-selected={filterStage === tab.id}
             onClick={() => setFilterStage(tab.id)}
-            className={`text-xs font-semibold px-4 py-2.5 rounded-xl border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+            className={`text-xs font-semibold px-4 py-2.5 rounded-xl border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
               filterStage === tab.id
-                ? 'bg-[#92400E] text-white border-[#92400E] font-bold shadow-sm'
-                : 'bg-white text-[#5B6470] border-[#E5D8C6] hover:bg-[#FAF7F2] hover:text-[#1F2937]'
+                ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] font-bold shadow-xs'
+                : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
             }`}
           >
             <span>{tab.label}</span> <span className="tabular-nums">({tab.count})</span>
@@ -160,7 +160,7 @@ export default function KitchenDisplayView() {
       {loading && orders.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="bg-white border border-[#E5D8C6] rounded-2xl p-4 space-y-4">
+            <div key={n} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 space-y-4 shadow-editorial">
               <div className="flex justify-between items-center">
                 <Skeleton className="w-24 h-6 rounded-md" />
                 <Skeleton className="w-16 h-6 rounded-full" />
@@ -171,12 +171,12 @@ export default function KitchenDisplayView() {
           ))}
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-16 text-center shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-center mx-auto mb-4 text-[#9CA3AF]">
-            <ChefHat className="w-8 h-8 text-[#92400E] dark:text-[#D97706]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-16 text-center shadow-editorial">
+          <div className="w-16 h-16 rounded-2xl bg-[#F7EFE4] dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-center mx-auto mb-4 text-[#8D9890]">
+            <ChefHat className="w-8 h-8 text-[#173F36] dark:text-[#4EBA87]" />
           </div>
-          <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC]">All Clear, Chef!</h3>
-          <p className="text-sm text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">No active food orders in this stage.</p>
+          <h3 className="font-serif text-lg font-bold text-[#173F36] dark:text-[#F7EFE4]">All Clear, Chef!</h3>
+          <p className="text-sm text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">No active food orders in this stage.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -189,13 +189,13 @@ export default function KitchenDisplayView() {
             return (
               <div
                 key={order.id}
-                className={`border rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-200 shadow-sm hover:shadow-md ${cardBg}`}
+                className={`border rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-200 shadow-editorial hover:shadow-md ${cardBg}`}
               >
                 <div>
                   {/* Card Header: Table Number & Timer */}
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <span className="text-xl font-extrabold text-[#1F2937] tracking-tight">
+                      <span className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
                         Table #{order.table?.tableNumber || order.tableNumber || 'Takeaway'}
                       </span>
                       <div className="text-[11px] text-[#5B6470] font-medium mt-0.5">
@@ -203,9 +203,9 @@ export default function KitchenDisplayView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] shadow-xs">
-                      <Clock className={`w-3.5 h-3.5 ${isCritical ? 'text-red-600 animate-pulse' : isWarning ? 'text-[#D97706]' : 'text-[#92400E]'}`} />
-                      <span className={`tabular-nums ${isCritical ? 'text-red-600 font-bold' : 'text-[#1F2937] font-semibold'}`}>
+                    <div className="flex items-center gap-1.5 font-mono text-xs px-2.5 py-1 rounded-xl bg-[#F7EFE4] dark:bg-[#1A2622] border border-[#E4DCD0] dark:border-[#1E362E] shadow-2xs">
+                      <Clock className={`w-3.5 h-3.5 ${isCritical ? 'text-[#C53030] animate-pulse' : isWarning ? 'text-[#B45309]' : 'text-[#173F36] dark:text-[#4EBA87]'}`} />
+                      <span className={`tabular-nums ${isCritical ? 'text-[#C53030] font-bold' : 'text-[#17251F] dark:text-[#F7EFE4] font-semibold'}`}>
                         {mins}m
                       </span>
                     </div>
@@ -215,36 +215,36 @@ export default function KitchenDisplayView() {
                   <div className="mb-3">
                     <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${
                       order.status === 'PENDING'
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        ? 'bg-[#F7EFE4] border-[#E4DCD0] text-[#17251F] dark:bg-[#1A2622] dark:text-[#F7EFE4]'
                         : order.status === 'IN_PREPARATION'
-                        ? 'bg-amber-100 border-amber-300 text-[#B45309]'
+                        ? 'bg-[#173F36]/10 border-[#173F36]/20 text-[#173F36] dark:bg-[#173F36]/20 dark:text-[#4EBA87]'
                         : order.status === 'READY'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        : 'bg-white border-[#E5D8C6] text-[#1F2937]'
+                        ? 'bg-[#E8F3ED] border-[#C5DED0] text-[#1E4D38] dark:bg-[#1A2E26] dark:text-[#88D4A8]'
+                        : 'bg-[#FFFDF9] border-[#E4DCD0] text-[#17251F] dark:bg-[#152320] dark:text-[#F7EFE4]'
                     }`}>
                       {order.status === 'IN_PREPARATION' ? 'COOKING' : order.status}
                     </span>
                     {order.notes && (
-                      <div className="text-[11px] text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mt-2 font-medium">
+                      <div className="text-[11px] text-[#B45309] dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 mt-2 font-medium">
                         <strong>Note:</strong> {order.notes}
                       </div>
                     )}
                   </div>
 
                   {/* Item List */}
-                  <div className="space-y-2 border-t border-[#E5D8C6] pt-3">
+                  <div className="space-y-2 border-t border-[#E4DCD0] dark:border-[#1E362E] pt-3">
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="bg-[#FAF7F2] hover:bg-[#F1E8DB] rounded-xl p-2.5 border border-[#E5D8C6] transition-colors">
+                      <div key={idx} className="bg-[#F7EFE4]/60 dark:bg-[#1A2622]/60 hover:bg-[#F7EFE4] dark:hover:bg-[#1A2622] rounded-xl p-2.5 border border-[#E4DCD0] dark:border-[#1E362E] transition-colors">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-[#1F2937] flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-amber-100 text-[#92400E] border border-amber-200 flex items-center justify-center font-bold text-xs shrink-0 tabular-nums">
+                          <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-[#173F36]/10 dark:bg-[#173F36]/20 text-[#173F36] dark:text-[#4EBA87] border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center justify-center font-bold text-xs shrink-0 tabular-nums">
                               {item.quantity}
                             </span>
                             <span className="truncate max-w-[170px]">{item.menuItem?.name || item.name}</span>
                           </span>
                         </div>
                         {item.specialInstructions && (
-                          <div className="text-[11px] text-red-700 mt-1 pl-7 italic">
+                          <div className="text-[11px] text-[#C53030] dark:text-rose-400 mt-1 pl-7 italic">
                             • {item.specialInstructions}
                           </div>
                         )}
@@ -254,12 +254,12 @@ export default function KitchenDisplayView() {
 
                   {/* Recipe Ingredients Checkpoint (Auto-Calculated BOM) */}
                   {order.calculatedIngredients && order.calculatedIngredients.length > 0 && (
-                    <div className="mt-3 pt-2.5 border-t border-[#E5D8C6]">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-[#92400E] uppercase tracking-wider mb-1.5">
-                        <span className="flex items-center gap-1">
+                    <div className="mt-3 pt-2.5 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-[#173F36] dark:text-[#4EBA87] uppercase tracking-wider mb-1.5">
+                        <span className="flex items-center gap-1 font-serif">
                           <PackageCheck className="w-3.5 h-3.5" /> Recipe BOM Check
                         </span>
-                        <span className="text-[10px] text-[#5B6470] font-mono tabular-nums">
+                        <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                           {order.calculatedIngredients.filter((i) => i.isSufficient).length}/{order.calculatedIngredients.length} Stock OK
                         </span>
                       </div>
@@ -269,21 +269,21 @@ export default function KitchenDisplayView() {
                             key={iIdx}
                             className={`flex items-center justify-between text-[11px] px-2 py-1 rounded-lg border ${
                               ing.isSufficient
-                                ? 'bg-[#FAF7F2] border-[#E5D8C6] text-[#1F2937]'
-                                : 'bg-red-50 border-red-200 text-red-700 font-semibold'
+                                ? 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]'
+                                : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900 text-[#C53030] dark:text-rose-400 font-semibold'
                             }`}
                           >
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={`w-1.5 h-1.5 rounded-full ${
-                                  ing.isSufficient ? 'bg-[#16A34A]' : 'bg-red-600 animate-ping'
+                                  ing.isSufficient ? 'bg-[#2D6A4F]' : 'bg-red-600 animate-ping'
                                 }`}
                               ></span>
                               <span className="truncate max-w-[120px] font-medium">{ing.name}</span>
                             </div>
                             <div className="font-mono text-[10px] text-right tabular-nums">
                               <span>Req: {ing.requiredQuantity} {ing.unit}</span>
-                              <span className={`ml-1.5 ${ing.isSufficient ? 'text-[#5B6470]' : 'text-red-600 font-bold'}`}>
+                              <span className={`ml-1.5 ${ing.isSufficient ? 'text-[#657168] dark:text-[#9FB29E]' : 'text-[#C53030] dark:text-rose-400 font-bold'}`}>
                                 (Stock: {ing.currentStock})
                               </span>
                             </div>
@@ -295,7 +295,7 @@ export default function KitchenDisplayView() {
                 </div>
 
                 {/* Progressive Action Button (Minimum 44px target) */}
-                <div className="pt-4 border-t border-[#E5D8C6] mt-4">
+                <div className="pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-4">
                   {order.status === 'PENDING' && (
                     <Button
                       variant="primary"
@@ -322,10 +322,10 @@ export default function KitchenDisplayView() {
 
                   {order.status === 'READY' && (
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       onClick={() => handleMarkServed(order.id)}
                       disabled={actionLoading === order.id}
-                      className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+                      className="w-full min-h-[44px] font-bold text-xs"
                     >
                       <ArrowRight className="w-4 h-4 mr-2" />
                       <span>{actionLoading === order.id ? 'Updating...' : 'Mark Served to Table'}</span>

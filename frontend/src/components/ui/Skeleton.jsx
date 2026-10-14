@@ -18,7 +18,7 @@ export function Skeleton({ className = '' }) {
 
 export function SkeletonRow({ cols = 5, className = '' }) {
   return (
-    <tr className={`border-b border-[#E5D8C6]/60 ${className}`} aria-hidden="true">
+    <tr className={`border-b border-[#E4DCD0]/60 ${className}`} aria-hidden="true">
       {Array.from({ length: cols }).map((_, idx) => (
         <td key={idx} className="px-5 py-4">
           <Skeleton className="h-4 w-full max-w-[120px]" />
@@ -30,7 +30,7 @@ export function SkeletonRow({ cols = 5, className = '' }) {
 
 export function SkeletonTable({ rows = 5, cols = 5, className = '' }) {
   return (
-    <tbody className={`divide-y divide-[#E5D8C6]/60 ${className}`}>
+    <tbody className={`divide-y divide-[#E4DCD0]/60 ${className}`}>
       {Array.from({ length: rows }).map((_, rIdx) => (
         <SkeletonRow key={rIdx} cols={cols} />
       ))}

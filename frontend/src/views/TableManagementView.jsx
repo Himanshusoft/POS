@@ -150,23 +150,23 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 text-[#17251F] dark:text-[#F7EFE4]">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#E5D8C6] p-5 sm:p-6 rounded-2xl shadow-sandstone">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 border border-[#92400E]/20 flex items-center justify-center text-[#92400E] shrink-0 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
             <LayoutGrid className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Table Management
               </h1>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#92400E]/10 text-[#92400E] border border-[#92400E]/20 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800 shadow-2xs font-sans">
                 Dining Floor Live
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Manage dining tables, seating capacity, real-time occupancy, and cashier dispatch
             </p>
           </div>
@@ -208,14 +208,14 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
               setFilterStatus('ALL');
             }
           }}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             filterStatus === 'ALL'
-              ? 'bg-white border-[#92400E] ring-2 ring-[#92400E] shadow-sandstone'
-              : 'bg-white border-[#E5D8C6] hover:border-[#92400E]/60 shadow-sandstone'
+              ? 'bg-[#FFFDF9] dark:bg-[#152320] border-[#173F36] ring-2 ring-[#173F36] shadow-editorial'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36]/60 shadow-editorial'
           }`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-[#5B6470]">Total Tables</div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-[#1F2937] font-mono tabular-nums mt-1">{summary.total}</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E] font-sans">Total Tables</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums mt-1">{summary.total}</div>
         </div>
 
         <div
@@ -228,17 +228,17 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
               setFilterStatus('AVAILABLE');
             }
           }}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
             filterStatus === 'AVAILABLE'
-              ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500 shadow-sandstone'
-              : 'bg-white border-[#E5D8C6] hover:border-emerald-300 shadow-sandstone'
+              ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500 shadow-editorial'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-emerald-300 shadow-editorial'
           }`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 font-sans">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             Available
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-800 font-mono tabular-nums mt-1">{summary.available}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono tabular-nums mt-1">{summary.available}</div>
         </div>
 
         <div
@@ -251,17 +251,17 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
               setFilterStatus('OCCUPIED');
             }
           }}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${
             filterStatus === 'OCCUPIED'
-              ? 'bg-rose-50/70 border-rose-500 ring-2 ring-rose-500 shadow-sandstone'
-              : 'bg-white border-[#E5D8C6] hover:border-rose-300 shadow-sandstone'
+              ? 'bg-rose-50/70 dark:bg-rose-950/40 border-rose-500 ring-2 ring-rose-500 shadow-editorial'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-rose-300 shadow-editorial'
           }`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-1.5 font-sans">
             <span className="w-2 h-2 rounded-full bg-rose-500"></span>
             Occupied
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-rose-800 font-mono tabular-nums mt-1">{summary.occupied}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-rose-800 dark:text-rose-300 font-mono tabular-nums mt-1">{summary.occupied}</div>
         </div>
 
         <div
@@ -274,32 +274,32 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
               setFilterStatus('RESERVED');
             }
           }}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 card-hover select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
             filterStatus === 'RESERVED'
-              ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-500 shadow-sandstone'
-              : 'bg-white border-[#E5D8C6] hover:border-amber-300 shadow-sandstone'
+              ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500 shadow-editorial'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-amber-300 shadow-editorial'
           }`}
         >
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-1.5 font-sans">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
             Reserved
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 font-mono tabular-nums mt-1">{summary.reserved}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 dark:text-amber-300 font-mono tabular-nums mt-1">{summary.reserved}</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E5D8C6] shadow-sandstone">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5 bg-[#FFFDF9] dark:bg-[#152320] p-3.5 sm:p-4 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {['ALL', 'AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE'].map((status) => (
             <button
               key={status}
               type="button"
               onClick={() => setFilterStatus(status)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                 filterStatus === status
-                  ? 'bg-[#92400E] text-white shadow-sm'
-                  : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+                  ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial'
+                  : 'bg-[#F7EFE4]/60 dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] border border-[#E4DCD0] dark:border-[#1E362E]'
               }`}
             >
               {status === 'ALL'
@@ -316,13 +316,13 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
         </div>
 
         <div className="relative w-full sm:w-64 shrink-0">
-          <Search className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by table number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-10 pr-3.5 py-2 text-xs sm:text-sm text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+            className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-10 pr-3.5 py-2 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] transition-all"
           />
         </div>
       </div>
@@ -331,13 +331,13 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="bg-white border border-[#E5D8C6] rounded-2xl p-5 shadow-sandstone space-y-3">
+            <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 shadow-editorial space-y-3">
               <div className="flex justify-between items-center">
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-5 w-16 rounded-full" />
               </div>
               <Skeleton className="h-4 w-20" />
-              <div className="pt-3 border-t border-[#E5D8C6]/50">
+              <div className="pt-3 border-t border-[#E4DCD0]/50 dark:border-[#1E362E]/50">
                 <Skeleton className="h-9 w-full rounded-xl" />
               </div>
             </div>
@@ -364,18 +364,18 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             return (
               <div
                 key={table.id}
-                className={`bg-white border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-sandstone card-hover group ${
+                className={`bg-[#FFFDF9] dark:bg-[#152320] border rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-editorial group ${
                   table.status === 'OCCUPIED'
-                    ? 'border-rose-200 bg-rose-50/15'
+                    ? 'border-rose-200 dark:border-rose-900 bg-rose-50/15 dark:bg-rose-950/10'
                     : table.status === 'AVAILABLE'
-                    ? 'border-emerald-200 bg-emerald-50/15'
-                    : 'border-[#E5D8C6]'
+                    ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/15 dark:bg-emerald-950/10'
+                    : 'border-[#E4DCD0] dark:border-[#1E362E]'
                 }`}
               >
                 {/* Table Header & Seating Info */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-extrabold text-[#1F2937] text-lg tracking-tight group-hover:text-[#92400E] transition-colors">
+                    <span className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-lg tracking-tight group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E] transition-colors">
                       {table.tableNumber.toLowerCase().startsWith('table')
                         ? table.tableNumber
                         : `Table ${table.tableNumber}`}
@@ -387,15 +387,15 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                     />
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-[#5B6470] mb-4 font-medium">
+                  <div className="flex items-center gap-3 text-xs text-[#657168] dark:text-[#9FB29E] mb-4 font-medium">
                     <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-[#92400E]" />
-                      <span className="font-bold text-[#1F2937] tabular-nums">{table.capacity} Seats</span>
+                      <Users className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums font-mono">{table.capacity} Seats</span>
                     </span>
                     {activeOrder && (
                       <>
-                        <span className="text-[#E5D8C6]">•</span>
-                        <span className="text-rose-700 font-semibold truncate max-w-[120px] font-mono">
+                        <span className="text-[#E4DCD0] dark:text-[#1E362E]">•</span>
+                        <span className="text-rose-700 dark:text-rose-400 font-semibold truncate max-w-[120px] font-mono">
                           {activeOrder.orderNumber}
                         </span>
                       </>
@@ -404,7 +404,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                 </div>
 
                 {/* Workflow Actions */}
-                <div className="space-y-2 pt-3 border-t border-[#E5D8C6]">
+                <div className="space-y-2 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
                   {/* Order Workflow Buttons */}
                   {table.status === 'AVAILABLE' ? (
                     <Button
@@ -445,7 +445,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                       value={table.status}
                       onChange={(e) => handleStatusChange(table.id, e.target.value)}
                       aria-label={`Status for ${table.tableNumber}`}
-                      className="text-xs bg-[#FAF7F2] border border-[#E5D8C6] text-[#1F2937] font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#92400E] cursor-pointer"
+                      className="text-xs bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#173F36] cursor-pointer"
                     >
                       <option value="AVAILABLE">Available</option>
                       <option value="OCCUPIED">Occupied</option>
@@ -458,7 +458,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                         type="button"
                         onClick={() => handleEditTable(table)}
                         aria-label={`Edit ${table.tableNumber}`}
-                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                        className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#101A18] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                         title="Edit Table"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -467,7 +467,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                         type="button"
                         onClick={() => handleDeleteTable(table.id, table.tableNumber)}
                         aria-label={`Delete ${table.tableNumber}`}
-                        className="p-1.5 rounded-lg text-[#5B6470] hover:text-[#EF4444] hover:bg-rose-50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#EF4444]"
+                        className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                         title="Delete Table"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -508,11 +508,11 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-[#1F2937]">Initial Status</label>
+            <label className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] font-sans">Initial Status</label>
             <select
               value={addForm.status}
               onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+              className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] font-semibold"
             >
               <option value="AVAILABLE">Available</option>
               <option value="OCCUPIED">Occupied</option>
@@ -521,7 +521,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             </select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"
@@ -567,11 +567,11 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-[#1F2937]">Table Status</label>
+            <label className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] font-sans">Table Status</label>
             <select
               value={editForm.status}
               onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-              className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold"
+              className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] font-semibold"
             >
               <option value="AVAILABLE">Available</option>
               <option value="OCCUPIED">Occupied</option>
@@ -580,7 +580,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             </select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6]">
+          <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="secondary"

@@ -386,7 +386,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
       await posService.settings.update('USER', 'user_preferences', userPrefForm);
       localStorage.setItem('pos_preferences', JSON.stringify(userPrefForm));
       addToast('Your personal station preferences were persisted to the database!', 'success');
-    } catch (err) {
+    } catch {
       localStorage.setItem('pos_preferences', JSON.stringify(userPrefForm));
       addToast('Preferences saved locally to this station.', 'info');
     } finally {
@@ -459,44 +459,47 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] min-h-screen text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#E5D8C6] p-5 rounded-2xl shadow-sm">
-        <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold text-[#1F2937] tracking-tight flex items-center gap-2">
-              <Settings className="w-6 h-6 text-[#92400E]" />
-              <span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
+            <Settings className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 {role === 'RESTAURANT_REGISTRATION_ADMIN'
                   ? 'Platform Governance & SaaS Settings'
                   : role === 'RESTAURANT_OWNER'
                     ? 'Restaurant Administration & Policy Settings'
                     : 'Station Preferences & Account Settings'}
-              </span>
-            </h1>
-            <Badge variant="success" size="sm">
-              <ShieldCheck className="w-3 h-3 mr-1" />
-              <span>Real-Time Database Persistence</span>
-            </Badge>
+              </h1>
+              <Badge variant="success" size="sm">
+                <ShieldCheck className="w-3 h-3 mr-1" />
+                <span>Real-Time Database Persistence</span>
+              </Badge>
+            </div>
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
+              Dynamic, persistent settings engine synchronized with PostgreSQL database tables across tenant, platform, and user scopes.
+            </p>
           </div>
-          <p className="text-xs text-[#5B6470] mt-1 font-medium">
-            Dynamic, persistent settings engine synchronized with PostgreSQL database tables across tenant, platform, and user scopes.
-          </p>
         </div>
 
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={fetchAllSettings}
           disabled={loading}
+          icon={RefreshCw}
+          loading={loading}
           title="Reload Settings from Database"
         >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-[#92400E]' : ''}`} />
-          <span>Reload</span>
+          Reload
         </Button>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-[#E5D8C6] pb-3 overflow-x-auto" role="tablist">
+      <div className="flex gap-2 border-b border-[#E4DCD0] dark:border-[#1E362E] pb-3 overflow-x-auto" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -506,10 +509,10 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               role="tab"
               aria-selected={isActive}
               onClick={() => handleTabClick(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                 isActive
-                  ? 'bg-[#92400E] text-white shadow-sm font-bold'
-                  : 'bg-[#FAF7F2] text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6]'
+                  ? 'bg-[#173F36] text-white shadow-editorial font-bold'
+                  : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E]'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -521,47 +524,47 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: PROFILE (All Roles) */}
       {activeTab === 'profile' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <User className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <User className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>User Account Profile</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Personal credentials and contact information for your authenticated session
             </p>
           </div>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Full Name *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Full Name *</label>
               <input
                 type="text"
                 required
                 value={profileForm.name}
                 onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Email Address *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Email Address *</label>
               <input
                 type="email"
                 required
                 value={profileForm.email}
                 onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Contact Phone</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Contact Phone</label>
               <input
                 type="text"
                 value={profileForm.phone}
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="+91 9876543210"
               />
             </div>
@@ -586,52 +589,52 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: SECURITY & PASSWORD (All Roles) */}
       {activeTab === 'security' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Lock className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Lock className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Security & Password Protection</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Ensure your account is protected with a secure password of at least 6 characters
             </p>
           </div>
 
           <form onSubmit={handleSavePassword} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Current Password *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Current Password *</label>
               <input
                 type="password"
                 required
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="••••••••"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">New Password *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">New Password *</label>
               <input
                 type="password"
                 required
                 minLength={6}
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="At least 6 characters"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Confirm New Password *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Confirm New Password *</label>
               <input
                 type="password"
                 required
                 minLength={6}
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="Repeat new password"
               />
             </div>
@@ -656,59 +659,59 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: RESTAURANT BRAND & INFO (Owner Only) */}
       {activeTab === 'restaurant' && role === 'RESTAURANT_OWNER' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Restaurant Brand & Business Identity</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Legal establishment details printed on customer invoices, receipts, and KDS tickets
             </p>
           </div>
 
           <form onSubmit={handleSaveRestaurantProfile} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Restaurant Brand Name *</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Restaurant Brand Name *</label>
               <input
                 type="text"
                 required
                 value={restForm.name}
                 onChange={(e) => setRestForm({ ...restForm, name: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-semibold transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Physical Address / City</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Physical Address / City</label>
               <input
                 type="text"
                 value={restForm.address}
                 onChange={(e) => setRestForm({ ...restForm, address: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="104 MG Road, Indiranagar, Bangalore"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Official Phone</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Official Phone</label>
                 <input
                   type="text"
                   value={restForm.phone}
                   onChange={(e) => setRestForm({ ...restForm, phone: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                   placeholder="+91 80 12345678"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Billing Email</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Billing Email</label>
                 <input
                   type="email"
                   value={restForm.email}
                   onChange={(e) => setRestForm({ ...restForm, email: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                   placeholder="billing@restaurant.com"
                 />
               </div>
@@ -716,11 +719,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Currency Code *</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Currency Code *</label>
                 <select
                   value={restForm.currency}
                   onChange={(e) => setRestForm({ ...restForm, currency: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-mono transition-all"
                 >
                   <option value="INR">INR (₹) - Indian Rupee</option>
                   <option value="USD">USD ($) - US Dollar</option>
@@ -728,11 +731,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   <option value="GBP">GBP (£) - British Pound</option>
                   <option value="AED">AED (د.إ) - UAE Dirham</option>
                 </select>
-                <span className="text-[10px] text-[#5B6470] mt-1 block">3-letter standard ISO currency code</span>
+                <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] mt-1 block">3-letter standard ISO currency code</span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Default Tax / GST (%) *</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Default Tax / GST (%) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -741,7 +744,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   required
                   value={restForm.taxRate}
                   onChange={(e) => setRestForm({ ...restForm, taxRate: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] font-mono tabular-nums transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-mono tabular-nums transition-all"
                 />
               </div>
             </div>
@@ -766,13 +769,13 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: OPERATIONS & BILLING (Owner Only) */}
       {activeTab === 'operations' && role === 'RESTAURANT_OWNER' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Operational & Billing Policies</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Fine-tune invoice generation, receipt printing, service charges, and customer billing rules
             </p>
           </div>
@@ -780,23 +783,23 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
           <form onSubmit={handleSaveOperations} className="space-y-4 max-w-xl">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Invoice Prefix</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Invoice Prefix</label>
                 <input
                   type="text"
                   value={operationsForm.invoicePrefix}
                   onChange={(e) => setOperationsForm({ ...operationsForm, invoicePrefix: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                   placeholder="INV-"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">GST / Tax Identification</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">GST / Tax Identification</label>
                 <input
                   type="text"
                   value={operationsForm.gstNumber}
                   onChange={(e) => setOperationsForm({ ...operationsForm, gstNumber: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                   placeholder="29AAAAA0000A1Z5"
                 />
               </div>
@@ -804,7 +807,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Service Charge Rate (%)</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Service Charge Rate (%)</label>
                 <input
                   type="number"
                   min="0"
@@ -812,16 +815,16 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   step="0.5"
                   value={operationsForm.serviceChargeRate}
                   onChange={(e) => setOperationsForm({ ...operationsForm, serviceChargeRate: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Default Tender Method</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Default Tender Method</label>
                 <select
                   value={operationsForm.defaultPaymentMethod}
                   onChange={(e) => setOperationsForm({ ...operationsForm, defaultPaymentMethod: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 >
                   <option value="CASH">Cash</option>
                   <option value="UPI">UPI / Digital QR</option>
@@ -831,40 +834,40 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Receipt Footer Message</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Receipt Footer Message</label>
               <input
                 type="text"
                 value={operationsForm.footerMessage}
                 onChange={(e) => setOperationsForm({ ...operationsForm, footerMessage: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="Thank you! Please visit again."
               />
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={operationsForm.autoPrintReceipt}
                   onChange={(e) => setOperationsForm({ ...operationsForm, autoPrintReceipt: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Auto-Trigger Thermal Receipt Printing</div>
-                  <div className="text-[11px] text-[#5B6470]">Instantly launch print dialog upon cashier bill settlement</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Auto-Trigger Thermal Receipt Printing</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Instantly launch print dialog upon cashier bill settlement</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={operationsForm.roundOffTotal}
                   onChange={(e) => setOperationsForm({ ...operationsForm, roundOffTotal: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Round Off Final Invoice Payable Amount</div>
-                  <div className="text-[11px] text-[#5B6470]">Rounds to nearest currency whole number for cash convenience</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Round Off Final Invoice Payable Amount</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Rounds to nearest currency whole number for cash convenience</div>
                 </div>
               </label>
             </div>
@@ -889,20 +892,20 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: KITCHEN & KDS RULES (Owner Only) */}
       {activeTab === 'kitchen' && role === 'RESTAURANT_OWNER' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <ChefHat className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Kitchen Display & Production Workflow Policies</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Establishment-wide kitchen routing, ticket sound indicators, and preparation timers
             </p>
           </div>
 
           <form onSubmit={handleSaveKitchenPolicy} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
                 Preparation Warning Threshold (Minutes)
               </label>
               <input
@@ -913,41 +916,41 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 onChange={(e) =>
                   setKitchenPolicyForm({ ...kitchenPolicyForm, alertCookingTimeMinutes: Number(e.target.value) })
                 }
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
-              <span className="text-[10px] text-[#5B6470] mt-1 block">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] mt-1 block">
                 Tickets in preparation longer than this will flash amber on kitchen display
               </span>
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={kitchenPolicyForm.autoAcceptOrders}
                   onChange={(e) =>
                     setKitchenPolicyForm({ ...kitchenPolicyForm, autoAcceptOrders: e.target.checked })
                   }
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Auto-Accept Incoming Orders to Kitchen Queue</div>
-                  <div className="text-[11px] text-[#5B6470]">Bypasses manual order acceptance step by chef</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Auto-Accept Incoming Orders to Kitchen Queue</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Bypasses manual order acceptance step by chef</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={kitchenPolicyForm.soundOnNewOrder}
                   onChange={(e) =>
                     setKitchenPolicyForm({ ...kitchenPolicyForm, soundOnNewOrder: e.target.checked })
                   }
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Chime on New Kitchen Ticket Arrival</div>
-                  <div className="text-[11px] text-[#5B6470]">Audible notification on KDS screens when waiter submits an order</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Chime on New Kitchen Ticket Arrival</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Audible notification on KDS screens when waiter submits an order</div>
                 </div>
               </label>
             </div>
@@ -972,20 +975,20 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: INVENTORY & WASTAGE POLICIES (Owner Only) */}
       {activeTab === 'inventory' && role === 'RESTAURANT_OWNER' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Boxes className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Boxes className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Inventory & Stock Depletion Policies</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Control recipe Bill of Materials (BOM) inventory consumption and low-stock alert thresholds
             </p>
           </div>
 
           <form onSubmit={handleSaveInventoryPolicy} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
                 Default Low-Stock Alert Threshold
               </label>
               <input
@@ -999,15 +1002,15 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                     lowStockThresholdDefault: Number(e.target.value),
                   })
                 }
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
-              <span className="text-[10px] text-[#5B6470] mt-1 block">
+              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] mt-1 block">
                 Ingredients with stock below this level trigger amber badges on dashboard
               </span>
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={inventoryPolicyForm.autoDeductOnPreparation}
@@ -1017,17 +1020,17 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                       autoDeductOnPreparation: e.target.checked,
                     })
                   }
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Auto-Deduct Ingredients via Recipe BOM</div>
-                  <div className="text-[11px] text-[#5B6470]">
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Auto-Deduct Ingredients via Recipe BOM</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
                     Automatically subtracts inventory items as soon as a dish order is marked READY or SERVED
                   </div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={inventoryPolicyForm.notifyLowStockOnLogin}
@@ -1037,11 +1040,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                       notifyLowStockOnLogin: e.target.checked,
                     })
                   }
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Display Low-Stock Warning Banner at Login</div>
-                  <div className="text-[11px] text-[#5B6470]">Alerts kitchen chefs and administrators upon signing in</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Display Low-Stock Warning Banner at Login</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Alerts kitchen chefs and administrators upon signing in</div>
                 </div>
               </label>
             </div>
@@ -1066,53 +1069,53 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: PLATFORM GOVERNANCE (Super Admin Only) */}
       {activeTab === 'platform' && role === 'RESTAURANT_REGISTRATION_ADMIN' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Server className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Server className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Platform Governance & Multi-Tenant SaaS Controls</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               System-wide platform parameters for customer onboarding, session controls, and platform support
             </p>
           </div>
 
           <form onSubmit={handleSavePlatform} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Platform Brand Name</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Platform Brand Name</label>
               <input
                 type="text"
                 value={platformForm.platformName}
                 onChange={(e) => setPlatformForm({ ...platformForm, platformName: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Support Desk Email</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Support Desk Email</label>
                 <input
                   type="email"
                   value={platformForm.supportEmail}
                   onChange={(e) => setPlatformForm({ ...platformForm, supportEmail: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Support Hotline Phone</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Support Hotline Phone</label>
                 <input
                   type="text"
                   value={platformForm.supportPhone}
                   onChange={(e) => setPlatformForm({ ...platformForm, supportPhone: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
                   Default Plan Duration (Days)
                 </label>
                 <input
@@ -1123,12 +1126,12 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setPlatformForm({ ...platformForm, defaultPlanDurationDays: Number(e.target.value) })
                   }
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
                   Session Inactivity Timeout (Mins)
                 </label>
                 <input
@@ -1139,35 +1142,35 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                   onChange={(e) =>
                     setPlatformForm({ ...platformForm, sessionTimeoutMinutes: Number(e.target.value) })
                   }
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={platformForm.allowNewRegistrations}
                   onChange={(e) => setPlatformForm({ ...platformForm, allowNewRegistrations: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Enable Restaurant Self-Registration</div>
-                  <div className="text-[11px] text-[#5B6470]">Allows new restaurant owners to sign up via public registration page</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Enable Restaurant Self-Registration</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Allows new restaurant owners to sign up via public registration page</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={platformForm.maintenanceMode}
                   onChange={(e) => setPlatformForm({ ...platformForm, maintenanceMode: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Platform Maintenance Lock</div>
-                  <div className="text-[11px] text-[#5B6470]">Prevents new POS orders during system maintenance windows</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Platform Maintenance Lock</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Prevents new POS orders during system maintenance windows</div>
                 </div>
               </label>
             </div>
@@ -1192,24 +1195,24 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: KITCHEN DISPLAY / CHEF STATION (Kitchen Admin Only) */}
       {activeTab === 'kitchen_view' && role === 'KITCHEN_ADMIN' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <ChefHat className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Kitchen Station Terminal Preferences</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Personalized display density and audio alert settings for your kitchen station
             </p>
           </div>
 
           <form onSubmit={handleSaveUserPreferences} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Ticket Display Density</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Ticket Display Density</label>
               <select
                 value={userPrefForm.density}
                 onChange={(e) => setUserPrefForm({ ...userPrefForm, density: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               >
                 <option value="comfortable">Comfortable (Larger text, kitchen readability)</option>
                 <option value="compact">Compact (Show more tickets simultaneously)</option>
@@ -1217,29 +1220,29 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Chime on Incoming Kitchen Tickets</div>
-                  <div className="text-[11px] text-[#5B6470]">Plays an audio tone when a waiter submits a new ticket</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Chime on Incoming Kitchen Tickets</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Plays an audio tone when a waiter submits a new ticket</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Show Toast Alerts for Expedited Dishes</div>
-                  <div className="text-[11px] text-[#5B6470]">Visual popup when priority orders are created</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Show Toast Alerts for Expedited Dishes</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Visual popup when priority orders are created</div>
                 </div>
               </label>
             </div>
@@ -1264,24 +1267,24 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: WAITER STATION TERMINAL (Waiter Only) */}
       {activeTab === 'waiter_view' && role === 'WAITER' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Waiter Service Station Preferences</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Configure default order landing view and table alert indicators
             </p>
           </div>
 
           <form onSubmit={handleSaveUserPreferences} className="space-y-4 max-w-xl">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Default Landing Screen</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Default Landing Screen</label>
               <select
                 value={userPrefForm.defaultScreen}
                 onChange={(e) => setUserPrefForm({ ...userPrefForm, defaultScreen: e.target.value })}
-                className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               >
                 <option value="dashboard">Shift Overview Dashboard</option>
                 <option value="tables">Floor Map & Table Grid</option>
@@ -1290,29 +1293,29 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Audio Alert on "Order Ready to Serve"</div>
-                  <div className="text-[11px] text-[#5B6470]">Plays an audible alert when the kitchen marks your dish ready</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Audio Alert on "Order Ready to Serve"</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Plays an audible alert when the kitchen marks your dish ready</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Visual Popup Alerts</div>
-                  <div className="text-[11px] text-[#5B6470]">Shows a green toast banner whenever kitchen prepares food</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Visual Popup Alerts</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Shows a green toast banner whenever kitchen prepares food</div>
                 </div>
               </label>
             </div>
@@ -1337,42 +1340,42 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: CASHIER TERMINAL (Receptionist Only) */}
       {activeTab === 'cashier_view' && role === 'RECEPTIONIST' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Cashier Terminal Preferences</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               Payment tender presets, quick denominations, and thermal printing preferences
             </p>
           </div>
 
           <form onSubmit={handleSaveUserPreferences} className="space-y-4 max-w-xl">
             <div className="space-y-3">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.quickCash}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, quickCash: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Enable Quick-Cash Tender Shortcut Pills</div>
-                  <div className="text-[11px] text-[#5B6470]">Shows instant ₹100, ₹500, ₹2000 cash buttons during bill payment</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Enable Quick-Cash Tender Shortcut Pills</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Shows instant ₹100, ₹500, ₹2000 cash buttons during bill payment</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Payment Settlement Confirmation Chime</div>
-                  <div className="text-[11px] text-[#5B6470]">Plays an audio feedback tone upon successful transaction recording</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Payment Settlement Confirmation Chime</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Plays an audio feedback tone upon successful transaction recording</div>
                 </div>
               </label>
             </div>
@@ -1397,13 +1400,13 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
 
       {/* TAB: GENERAL STATION PREFERENCES (All Roles) */}
       {activeTab === 'preferences' && (
-        <div className="bg-white border border-[#E5D8C6] rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-[#E5D8C6] pb-4">
-            <h3 className="text-base font-bold text-[#1F2937] flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#92400E]" />
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
+          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
+            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Personal Station & UI Preferences</span>
             </h3>
-            <p className="text-xs text-[#5B6470] mt-1">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
               These settings belong exclusively to your user account and persist across terminal sessions
             </p>
           </div>
@@ -1411,23 +1414,23 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
           <form onSubmit={handleSaveUserPreferences} className="space-y-4 max-w-xl">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Color Theme</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Color Theme</label>
                 <select
                   value={userPrefForm.theme}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, theme: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 >
-                  <option value="sandstone">Sandstone Warm Elegance (Default)</option>
-                  <option value="dark">POS Dark Mode</option>
+                  <option value="sandstone">Editorial Warm Ivory (Default)</option>
+                  <option value="dark">Editorial Deep Forest Dark</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] mb-1.5">Layout Density</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Layout Density</label>
                 <select
                   value={userPrefForm.density}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, density: e.target.value })}
-                  className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl px-3.5 py-2.5 text-xs text-[#1F2937] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 >
                   <option value="comfortable">Comfortable Touch (Default)</option>
                   <option value="compact">Compact High-Density</option>
@@ -1436,29 +1439,29 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </div>
 
             <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Audio Sound Cues</div>
-                  <div className="text-[11px] text-[#5B6470]">Play pleasant sound chimes on successful operations</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Audio Sound Cues</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Play pleasant sound chimes on successful operations</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#FAF7F2] border border-[#E5D8C6] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
                   onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#92400E] focus:ring-[#92400E] bg-white border-[#E5D8C6]"
+                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
-                  <div className="text-xs font-semibold text-[#1F2937]">Interactive Toast Notifications</div>
-                  <div className="text-[11px] text-[#5B6470]">Display popup alerts when actions complete</div>
+                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Interactive Toast Notifications</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Display popup alerts when actions complete</div>
                 </div>
               </label>
             </div>

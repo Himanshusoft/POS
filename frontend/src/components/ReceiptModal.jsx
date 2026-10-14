@@ -48,40 +48,40 @@ export default function ReceiptModal({ bill, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/65 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-md shadow-editorial-lg flex flex-col max-h-[90vh]">
         {/* Header Actions */}
-        <div className="p-4 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[#92400E] dark:text-[#D97706] font-semibold text-sm">
-            <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-            <span>Tax Invoice / Receipt</span>
+        <div className="p-4 border-b border-[#E4DCD0] dark:border-[#233630] flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[#173F36] dark:text-[#E4EFE9] font-bold text-sm">
+            <CheckCircle2 className="w-4.5 h-4.5 text-[#2D6A4F]" />
+            <span className="font-serif text-base">Tax Invoice / Guest Check</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 bg-[#92400E] hover:bg-[#78350F] text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm hover:-translate-y-0.5"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
             </button>
             <button
               onClick={onClose}
-              className="text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] p-1.5 rounded-lg hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors cursor-pointer"
+              className="text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] p-1.5 rounded-lg hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>
 
         {/* Printable Receipt Paper */}
-        <div className="p-6 overflow-y-auto flex-1 font-mono text-xs bg-[#FAF7F2] dark:bg-[#141210]">
-          <div id="printable-receipt" className="bg-white text-black p-6 rounded-lg shadow-sm border border-slate-200">
+        <div className="p-6 overflow-y-auto flex-1 font-mono text-xs bg-[#F7EFE4] dark:bg-[#0E1815]">
+          <div id="printable-receipt" className="bg-[#FFFDF9] text-[#17251F] p-6 rounded-xl shadow-editorial border border-[#E4DCD0]">
             {/* Store Header */}
-            <div className="text-center pb-4 border-b border-dashed border-gray-400">
-              <h2 className="text-lg font-bold uppercase tracking-wider">{restaurant?.name || 'POS RESTAURANT'}</h2>
-              <p className="text-[11px] text-gray-600 mt-1">{restaurant?.address || 'City Center Mall, Food Court'}</p>
-              <p className="text-[11px] text-gray-600">Tel: {restaurant?.phone || '+91 98765 43210'}</p>
+            <div className="text-center pb-4 border-b border-dashed border-[#173F36]/25">
+              <h2 className="font-serif text-xl font-bold uppercase tracking-widest text-[#173F36]">{restaurant?.name || 'POS RESTAURANT'}</h2>
+              <p className="text-[11px] text-[#657168] mt-1">{restaurant?.address || 'City Center Mall, Food Court'}</p>
+              <p className="text-[11px] text-[#657168]">Tel: {restaurant?.phone || '+91 98765 43210'}</p>
               {restaurant?.gstNumber && (
-                <p className="text-[11px] font-semibold text-gray-700 mt-0.5">GSTIN: {restaurant.gstNumber}</p>
+                <p className="text-[11px] font-semibold text-[#173F36] mt-0.5">GSTIN: {restaurant.gstNumber}</p>
               )}
             </div>
 

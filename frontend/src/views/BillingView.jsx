@@ -149,104 +149,87 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   const handleRazorpayPayment = async (bill) => {
     setSettling(true);
     try {
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded || !window.Razorpay) {
-        throw new Error('Razorpay Checkout SDK failed to load. Please check your internet connection.');
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load Razorpay SDK. Please check your internet connection.');
       }
 
-      const orderRes = await posService.payments.createRazorpayOrder({ billId: bill.id });
+      const orderRes = await posService.payments.createRazorpayOrder({
+        billId: bill.id,
+      });
+
       if (!orderRes.success || !orderRes.data) {
-        throw new Error(orderRes.message || 'Failed to create Razorpay payment order');
+        throw new Error(orderRes.message || 'Failed to initialize payment gateway order');
       }
 
-      const orderData = orderRes.data;
-
-      const customerName = bill.customerName || bill.order?.customerName || orderData.customerName || '';
-      const customerEmail = bill.customerEmail || bill.order?.customerEmail || orderData.restaurantEmail || restaurant?.email || '';
-      const customerPhone = bill.customerPhone || bill.order?.customerPhone || orderData.restaurantPhone || restaurant?.phone || '';
+      const { razorpayOrderId, amount, currency: orderCurrency, keyId } = orderRes.data;
 
       const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency || 'INR',
-        name: orderData.restaurantName || restaurant?.name || 'ApexPOS Restaurant',
-        description: `Bill #${bill.billNumber || bill.id.slice(0, 8)} Payment`,
-        order_id: orderData.orderId,
-        notes: {
-          billId: bill.id,
-          billNumber: bill.billNumber || '',
-          orderNumber: bill.order?.orderNumber || '',
+        key: keyId,
+        amount: amount,
+        currency: orderCurrency || 'INR',
+        name: restaurant?.name || 'Restaurant POS',
+        description: `Settlement for Bill #${bill.billNumber || bill.id.slice(0, 8)}`,
+        order_id: razorpayOrderId,
+        prefill: {
+          name: bill.order?.customerName || 'Valued Guest',
+          contact: bill.order?.customerPhone || '',
         },
-        handler: async (response) => {
+        theme: {
+          color: '#173F36',
+        },
+        handler: async function (response) {
           try {
-            setSettling(true);
-            const verifyPayload = {
+            const verifyRes = await posService.payments.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
               billId: bill.id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            };
+            });
 
-            const verifyRes = await posService.payments.verifyRazorpayPayment(verifyPayload);
             if (verifyRes.success) {
-              addToast('Razorpay payment verified & settled! Table released to AVAILABLE.', 'success');
-              const verifiedBill = verifyRes.data?.bill || {
+              addToast('Razorpay payment verified & settled! Table released.', 'success');
+              const paidBill = verifyRes.data?.bill || {
                 ...bill,
                 status: 'PAID',
                 paymentStatus: 'PAID',
                 payments: [
-                  {
+                  verifyRes.data?.payment || {
                     method: 'RAZORPAY',
-                    paymentMethod: 'RAZORPAY',
-                    amount: bill.totalAmount,
-                    transactionReference: response.razorpay_payment_id,
-                    razorpayPaymentId: response.razorpay_payment_id,
+                    amount: Number(amount / 100),
                     status: 'COMPLETED',
                     createdAt: new Date().toISOString(),
                   },
                   ...(bill.payments || []),
                 ],
               };
-              setReceiptBill(verifiedBill);
+              setReceiptBill(paidBill);
               setSelectedBillForPayment(null);
               await loadData();
             } else {
-              throw new Error(verifyRes.message || 'Razorpay payment verification failed');
+              addToast(verifyRes.message || 'Payment signature verification failed', 'error');
             }
           } catch (verifyErr) {
-            addToast(verifyErr.message || 'Payment verification failed on server', 'error');
+            addToast(verifyErr.message || 'Verification endpoint error', 'error');
           } finally {
             setSettling(false);
           }
         },
         modal: {
-          ondismiss: () => {
+          ondismiss: function () {
             setSettling(false);
-            addToast('Razorpay payment cancelled. Bill remains unpaid.', 'info');
+            addToast('Payment checkout was dismissed by cashier.', 'info');
           },
-          confirm_close: true,
-          escape: true,
-        },
-        prefill: {
-          name: customerName,
-          email: customerEmail,
-          contact: customerPhone,
-        },
-        theme: {
-          color: '#92400E',
-        },
-        retry: {
-          enabled: true,
-          max_count: 3,
         },
       };
 
       const razorpayInstance = new window.Razorpay(options);
-
       razorpayInstance.on('payment.failed', function (response) {
         setSettling(false);
-        const errMsg = response.error?.description || 'Payment failed with Razorpay';
-        addToast(errMsg, 'error');
+        addToast(
+          `Payment transaction failed: ${response.error?.description || 'Gateway error'}`,
+          'error'
+        );
       });
 
       razorpayInstance.open();
@@ -456,94 +439,88 @@ export default function BillingView({ preSelectedTable, initialTab }) {
     return opts;
   }, [billFilterCounts]);
 
-  // Filter bills dynamically
-  const filteredBills = bills.filter((b) => {
-    const matchSearch =
-      !billSearch.trim() ||
-      (b.billNumber && b.billNumber.toLowerCase().includes(billSearch.toLowerCase())) ||
-      (b.receptionist?.name && b.receptionist.name.toLowerCase().includes(billSearch.toLowerCase())) ||
-      (b.order?.table?.tableNumber && b.order.table.tableNumber.toLowerCase().includes(billSearch.toLowerCase()));
+  // Comprehensive filter logic for Bills
+  const filteredBills = React.useMemo(() => {
+    return bills.filter((b) => {
+      const info = getBillPaymentInfo(b);
 
-    const info = getBillPaymentInfo(b);
+      if (paymentModeFilter === 'PAID' && !info.isPaid) return false;
+      if (paymentModeFilter === 'UNPAID' && info.isPaid) return false;
+      if (['CASH', 'UPI', 'CARD', 'RAZORPAY', 'NET_BANKING', 'OTHER'].includes(paymentModeFilter)) {
+        if (!info.isPaid || info.mode !== paymentModeFilter) return false;
+      }
 
-    let matchMode = true;
-    if (paymentModeFilter === 'ALL') {
-      matchMode = true;
-    } else if (paymentModeFilter === 'PAID') {
-      matchMode = info.isPaid;
-    } else if (paymentModeFilter === 'UNPAID') {
-      matchMode = !info.isPaid;
-    } else if (paymentModeFilter === 'CASH') {
-      matchMode = info.isPaid && info.mode === 'CASH';
-    } else if (paymentModeFilter === 'UPI') {
-      matchMode = info.isPaid && info.mode === 'UPI';
-    } else if (paymentModeFilter === 'CARD') {
-      matchMode = info.isPaid && info.mode === 'CARD';
-    } else if (paymentModeFilter === 'RAZORPAY') {
-      matchMode = info.isPaid && info.mode === 'RAZORPAY';
-    } else if (paymentModeFilter === 'NET_BANKING') {
-      matchMode = info.isPaid && info.mode === 'NET_BANKING';
-    } else if (paymentModeFilter === 'OTHER') {
-      matchMode = info.isPaid && info.mode === 'OTHER';
-    }
+      if (billSearch) {
+        const query = billSearch.toLowerCase().trim();
+        const num = (b.billNumber || '').toLowerCase();
+        const staff = (b.receptionist?.name || '').toLowerCase();
+        const table = String(b.order?.table?.tableNumber || b.tableNumber || '').toLowerCase();
+        const grand = String(b.totalAmount || b.grandTotal || '');
+        if (!num.includes(query) && !staff.includes(query) && !table.includes(query) && !grand.includes(query)) {
+          return false;
+        }
+      }
 
-    return matchSearch && matchMode;
-  });
+      return true;
+    });
+  }, [bills, paymentModeFilter, billSearch]);
 
-  // Filter payments (Tab 2)
-  const filteredPayments = payments.filter((p) => {
-    if (paymentTxFilter === 'ALL') return true;
-    const mode = (p.paymentMethod || p.method || '').toUpperCase();
-    return mode === paymentTxFilter;
-  });
+  // Payments tab filter logic
+  const filteredPayments = React.useMemo(() => {
+    return payments.filter((p) => {
+      if (paymentTxFilter === 'ALL') return true;
+      const method = (p.paymentMethod || p.method || '').toUpperCase();
+      return method === paymentTxFilter;
+    });
+  }, [payments, paymentTxFilter]);
 
   const getMethodBadge = (mode) => {
     const normalized = (mode || '').toUpperCase();
     switch (normalized) {
       case 'CASH':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <Banknote className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
+            <Banknote className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
             <span>Cash</span>
           </span>
         );
       case 'UPI':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#D97706]/15 text-[#92400E] border border-[#D97706]/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <Smartphone className="w-3 h-3" />
             <span>UPI</span>
           </span>
         );
       case 'CARD':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-800 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
             <CreditCard className="w-3 h-3" />
             <span>Card</span>
           </span>
         );
       case 'RAZORPAY':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-900 border border-amber-200">
-            <Globe className="w-3 h-3 text-[#92400E]" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <Globe className="w-3 h-3 text-amber-600" />
             <span>Razorpay</span>
           </span>
         );
       case 'NET_BANKING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-50 text-purple-900 border border-purple-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
             <Globe className="w-3 h-3 text-purple-700" />
             <span>Net Banking</span>
           </span>
         );
       case 'OTHER':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-50 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E]">
             <span>Other</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-50 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E]">
             <span>{mode || '—'}</span>
           </span>
         );
@@ -551,23 +528,23 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 text-[#17251F] dark:text-[#F7EFE4]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-xs">
             <Receipt className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Billing & Cashier Dispatch
               </h1>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-[#92400E] dark:text-amber-400 font-bold border border-amber-200 dark:border-amber-800">
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] font-bold border border-emerald-200 dark:border-emerald-800 font-sans">
                 Receptionist Live
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Inspect guest bills, review ordered items, verify payment statuses, and settle Cash/UPI/Card transactions
             </p>
           </div>
@@ -579,22 +556,22 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             onClick={() => loadData(false)}
             title="Refresh Data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${refreshing || initialLoading ? 'animate-spin text-[#92400E] dark:text-[#D97706]' : 'text-[#5B6470] dark:text-[#A89B8C]'}`} />
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${refreshing || initialLoading ? 'animate-spin text-[#173F36] dark:text-[#9FB29E]' : 'text-[#657168] dark:text-[#9FB29E]'}`} />
             <span>Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-[#E5D8C6] dark:border-[#382F26] pb-3 overflow-x-auto" role="tablist">
+      <div className="flex items-center gap-2 border-b border-[#E4DCD0] dark:border-[#1E362E] pb-3 overflow-x-auto" role="tablist">
         <button
           role="tab"
           aria-selected={activeTab === 'bills'}
           onClick={() => handleTabChange('bills')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'bills'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+              : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E]'
           }`}
         >
           Generated Invoices <span className="tabular-nums">({bills.length})</span>
@@ -603,10 +580,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
           role="tab"
           aria-selected={activeTab === 'payments'}
           onClick={() => handleTabChange('payments')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'payments'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+              : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E]'
           }`}
         >
           Payment Transactions <span className="tabular-nums">({payments.length})</span>
@@ -615,10 +592,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
           role="tab"
           aria-selected={activeTab === 'pending'}
           onClick={() => handleTabChange('pending')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
             activeTab === 'pending'
-              ? 'bg-[#92400E] text-white shadow-sm font-bold'
-              : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+              : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E]'
           }`}
         >
           <span>Unbilled Orders <span className="tabular-nums">({pendingOrders.length})</span></span>
@@ -630,16 +607,16 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
       {/* LIVE BILL REQUESTS BANNER (FROM WAITERS) */}
       {pendingOrders.filter((o) => o.billRequested).length > 0 && (
-        <div className="bg-gradient-to-br from-amber-50/90 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-gradient-to-br from-amber-50/90 to-[#F7EFE4]/80 dark:from-amber-950/30 dark:to-[#152320] border border-amber-300 dark:border-amber-700 rounded-2xl p-5 shadow-editorial space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-950 dark:text-amber-300 flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200 flex items-center gap-2 font-sans">
               <span className="flex h-2.5 w-2.5 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
               </span>
               NEW BILL REQUEST ({pendingOrders.filter((o) => o.billRequested).length} pending from Waiters)
             </span>
-            <span className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+            <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
               Customers finished dining. Generate bill to allow waiter delivery & payment settlement.
             </span>
           </div>
@@ -648,20 +625,20 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             {pendingOrders.filter((o) => o.billRequested).map((req) => {
               const reqTotal = req.items?.reduce((sum, i) => sum + Number(i.subtotal || 0), 0) || 0;
               return (
-                <div key={req.id} className="bg-white dark:bg-[#1C1815] border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+                <div key={req.id} className="bg-[#FFFDF9] dark:bg-[#101A18] border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xs">
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-start">
-                      <span className="font-extrabold text-[#1F2937] dark:text-[#F7F3EC] text-base">
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-base font-serif">
                         Table #{req.table?.tableNumber || req.tableNumber || 'N/A'}
                       </span>
-                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
+                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse font-sans">
                         BILL REQUESTED
                       </span>
                     </div>
-                    <div className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium">
+                    <div className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
                       #{req.orderNumber} • {req.table?.capacity || 4} Guests • {req.items?.length || 0} Items
                     </div>
-                    <div className="text-base font-extrabold text-[#92400E] dark:text-[#D97706] font-mono pt-1 tabular-nums">
+                    <div className="text-base font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono pt-1 tabular-nums">
                       Total: {currency}{reqTotal.toFixed(2)}
                     </div>
                   </div>
@@ -685,15 +662,15 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       {activeTab === 'bills' && (
         <div className="space-y-4">
           {/* Filters Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#1C1815] p-3.5 sm:p-4 rounded-2xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#FFFDF9] dark:bg-[#152320] p-3.5 sm:p-4 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by Bill #, Receptionist, Table..."
                 value={billSearch}
                 onChange={(e) => setBillSearch(e.target.value)}
-                className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl pl-10 pr-4 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#5B6470] dark:placeholder-[#8C7E72] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] transition-all"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-10 pr-4 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
               />
             </div>
 
@@ -702,10 +679,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                 <button
                   key={opt.id}
                   onClick={() => setPaymentModeFilter(opt.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#92400E] ${
+                  className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#173F36] ${
                     paymentModeFilter === opt.id
-                      ? 'bg-[#92400E] text-white border-[#92400E] shadow-xs'
-                      : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                      ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] shadow-editorial'
+                      : 'bg-[#F7EFE4]/60 dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
                   }`}
                 >
                   {opt.label} <span className="tabular-nums">({opt.count})</span>
@@ -714,7 +691,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
             {initialLoading ? (
               <div className="p-4">
                 <SkeletonTable rows={5} columns={9} />
@@ -730,7 +707,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 z-10 bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+                  <thead className="sticky top-0 z-10 bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                     <tr>
                       <th className="px-5 py-4">Bill Number</th>
                       <th className="px-5 py-4">Generated By</th>
@@ -743,36 +720,36 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                       <th className="px-5 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                  <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                     {filteredBills.map((bill) => {
                       const info = getBillPaymentInfo(bill);
 
                       return (
-                        <tr key={bill.id} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60 transition-colors">
-                          <td className="px-5 py-4 font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                        <tr key={bill.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30 transition-colors">
+                          <td className="px-5 py-4 font-mono font-bold text-[#17251F] dark:text-[#F7EFE4]">
                             {bill.billNumber || `INV-${bill.id.slice(0, 8)}`}
-                            <span className="block text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-normal tabular-nums mt-0.5">
+                            <span className="block text-[10px] text-[#657168] dark:text-[#9FB29E] font-normal tabular-nums mt-0.5">
                               {new Date(bill.createdAt).toLocaleDateString()}
                             </span>
                           </td>
-                          <td className="px-5 py-4 text-[#1F2937] dark:text-[#F7F3EC]">
-                            <span className="font-semibold text-[#1F2937] dark:text-[#F7F3EC]">
+                          <td className="px-5 py-4 text-[#17251F] dark:text-[#F7EFE4]">
+                            <span className="font-semibold text-[#17251F] dark:text-[#F7EFE4]">
                               {bill.receptionist?.name || 'Reception Staff'}
                             </span>
                           </td>
-                          <td className="px-5 py-4 font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                          <td className="px-5 py-4 font-bold text-[#17251F] dark:text-[#F7EFE4]">
                             Table #{bill.order?.table?.tableNumber || bill.tableNumber || 'N/A'}
                           </td>
-                          <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
+                          <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                             {currency}{Number(bill.subtotal || 0).toFixed(2)}
                           </td>
-                          <td className="px-5 py-4 font-extrabold text-[#92400E] dark:text-[#D97706] font-mono text-sm tabular-nums">
+                          <td className="px-5 py-4 font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono text-sm tabular-nums">
                             {currency}{Number(bill.totalAmount || bill.grandTotal || 0).toFixed(2)}
                           </td>
                           <td className="px-5 py-4">
                             {info.isPaid ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-300 dark:border-emerald-800">
+                                <CheckCircle2 className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
                                 <span>PAID</span>
                               </span>
                             ) : info.isPartiallyPaid ? (
@@ -789,31 +766,31 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                             {info.isPaid || info.isPartiallyPaid ? (
                               getMethodBadge(info.mode)
                             ) : (
-                              <span className="text-[10px] text-[#9CA3AF] dark:text-[#6B7280] font-medium">Unsettled</span>
+                              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">Unsettled</span>
                             )}
                           </td>
                           <td className="px-5 py-4">
                             {info.isPaid && info.paidAt ? (
-                              <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono text-[11px] whitespace-nowrap tabular-nums">
+                              <span className="text-[#657168] dark:text-[#9FB29E] font-mono text-[11px] whitespace-nowrap tabular-nums">
                                 {formatPaidAt(info.paidAt)}
                               </span>
                             ) : (
-                              <span className="text-[#9CA3AF] dark:text-[#6B7280] text-[11px] font-mono">—</span>
+                              <span className="text-[#657168] dark:text-[#9FB29E] text-[11px] font-mono">—</span>
                             )}
                           </td>
                           <td className="px-5 py-4 text-right space-x-1.5 whitespace-nowrap">
                             <button
                               onClick={() => setSelectedBillForItems(bill)}
-                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] active:scale-95 text-[#1F2937] dark:text-[#F7F3EC] px-3 py-1.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] text-[11px] font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] active:scale-95 text-[#17251F] dark:text-[#F7EFE4] px-3 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] text-[11px] font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                               title="Inspect Ordered Items"
                             >
-                              <Eye className="w-3.5 h-3.5 text-[#92400E] dark:text-[#D97706]" />
+                              <Eye className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                               <span>View Items</span>
                             </button>
 
                             <button
                               onClick={() => setReceiptBill(bill)}
-                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] active:scale-95 text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] px-3 py-1.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] text-[11px] font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                              className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] active:scale-95 text-[#657168] hover:text-[#17251F] dark:hover:text-[#F7EFE4] px-3 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] text-[11px] font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                               title="Print Receipt"
                             >
                               <Printer className="w-3.5 h-3.5" />
@@ -823,7 +800,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                             {!info.isPaid && (
                               <button
                                 onClick={() => openPaymentModal(bill)}
-                                className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shadow-xs hover:shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E]"
+                                className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] px-3.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shadow-editorial hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                               >
                                 <DollarSign className="w-3.5 h-3.5" />
                                 <span>Settle</span>
@@ -845,10 +822,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       {activeTab === 'payments' && (
         <div className="space-y-4">
           {/* Payment Mode Filter */}
-          <div className="flex items-center justify-between gap-3 bg-white dark:bg-[#1C1815] p-3.5 sm:p-4 rounded-2xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sm">
+          <div className="flex items-center justify-between gap-3 bg-[#FFFDF9] dark:bg-[#152320] p-3.5 sm:p-4 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-[#92400E] dark:text-[#D97706]" />
-              <span className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">Filter by Payment Mode:</span>
+              <CreditCard className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E]" />
+              <span className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] font-sans">Filter by Payment Mode:</span>
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -856,10 +833,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                 <button
                   key={mode}
                   onClick={() => setPaymentTxFilter(mode)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#92400E] ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#173F36] ${
                     paymentTxFilter === mode
-                      ? 'bg-[#92400E] text-white border-[#92400E] shadow-xs'
-                      : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                      ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] shadow-editorial'
+                      : 'bg-[#F7EFE4]/60 dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
                   }`}
                 >
                   {mode === 'ALL' ? 'All Transactions' : mode}
@@ -868,7 +845,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
             {initialLoading ? (
               <div className="p-4">
                 <SkeletonTable rows={5} columns={6} />
@@ -882,7 +859,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 z-10 bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+                  <thead className="sticky top-0 z-10 bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                     <tr>
                       <th className="px-5 py-4">Payment ID</th>
                       <th className="px-5 py-4">Bill / Ref</th>
@@ -892,28 +869,28 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                       <th className="px-5 py-4">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                  <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                     {filteredPayments.map((p) => {
                       const mode = p.paymentMethod || p.method || 'CASH';
                       return (
-                        <tr key={p.id} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60 transition-colors">
-                          <td className="px-5 py-4 font-mono text-[#5B6470] dark:text-[#A89B8C]">
+                        <tr key={p.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30 transition-colors">
+                          <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E]">
                             #{p.id.slice(0, 8)}
                           </td>
-                          <td className="px-5 py-4 font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                          <td className="px-5 py-4 font-bold text-[#17251F] dark:text-[#F7EFE4]">
                             {p.bill?.billNumber || `Bill #${p.billId?.slice(0, 6)}`}
                           </td>
-                          <td className="px-5 py-4 font-semibold text-[#1F2937] dark:text-[#F7F3EC]">
+                          <td className="px-5 py-4 font-semibold text-[#17251F] dark:text-[#F7EFE4]">
                             {getMethodBadge(mode)}
                           </td>
-                          <td className="px-5 py-4 font-extrabold text-[#92400E] dark:text-[#D97706] font-mono text-sm tabular-nums">
+                          <td className="px-5 py-4 font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono text-sm tabular-nums">
                             {currency}{Number(p.amountPaid || p.amount || 0).toFixed(2)}
                           </td>
-                          <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
+                          <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                             {new Date(p.createdAt || Date.now()).toLocaleString()}
                           </td>
                           <td className="px-5 py-4">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
                               {p.status || 'COMPLETED'}
                             </span>
                           </td>
@@ -930,7 +907,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
       {/* TAB 3: UNBILLED ORDERS */}
       {activeTab === 'pending' && (
-        <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
           {initialLoading ? (
             <div className="p-4">
               <SkeletonTable rows={5} columns={5} />
@@ -944,7 +921,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                   <tr>
                     <th className="px-5 py-4">Table / Ticket</th>
                     <th className="px-5 py-4">Items Ordered</th>
@@ -953,7 +930,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                     <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                   {pendingOrders.map((ord) => {
                     const ordTotal = ord.items?.reduce((sum, i) => sum + Number(i.subtotal || 0), 0) || 0;
                     return (
@@ -961,24 +938,24 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                         key={ord.id}
                         className={`transition-colors ${
                           ord.billRequested
-                            ? 'bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 border-l-4 border-l-[#D97706]'
-                            : 'hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60'
+                            ? 'bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 border-l-4 border-l-amber-600'
+                            : 'hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30'
                         }`}
                       >
                         <td className="px-5 py-4">
-                          <div className="font-extrabold text-[#1F2937] dark:text-[#F7F3EC] text-sm flex items-center gap-1.5">
+                          <div className="font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm flex items-center gap-1.5 font-serif">
                             <span>Table #{ord.table?.tableNumber || ord.tableNumber || 'N/A'}</span>
                             {ord.billRequested && (
-                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-sans">
                                 REQUESTED
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] font-mono mt-0.5">
+                          <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-mono mt-0.5">
                             #{ord.orderNumber || ord.id.slice(0, 8)}
                           </div>
                           {ord.waiter && (
-                            <div className="text-[10px] text-[#92400E] dark:text-[#D97706] font-medium mt-0.5">
+                            <div className="text-[10px] text-[#173F36] dark:text-[#9FB29E] font-medium mt-0.5">
                               Waiter: {ord.waiter.name}
                             </div>
                           )}
@@ -986,27 +963,27 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                         <td className="px-5 py-4">
                           <div className="space-y-0.5 max-h-16 overflow-y-auto pr-1">
                             {ord.items?.map((it, idx) => (
-                              <div key={idx} className="text-[#1F2937] dark:text-[#F7F3EC] text-xs">
+                              <div key={idx} className="text-[#17251F] dark:text-[#F7EFE4] text-xs">
                                 <span className="font-semibold tabular-nums">{it.quantity}x</span> {it.menuItem?.name || it.name}
                               </div>
                             ))}
                           </div>
-                          <div className="text-xs font-bold text-[#92400E] dark:text-[#D97706] font-mono mt-1 tabular-nums">
+                          <div className="text-xs font-bold text-[#173F36] dark:text-[#9FB29E] font-mono mt-1 tabular-nums">
                             Total: {currency}{ordTotal.toFixed(2)}
                           </div>
                         </td>
                         <td className="px-5 py-4">
                           {ord.billRequested ? (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse font-sans">
                               BILL REQUESTED
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-sans">
                               {ord.status}
                             </span>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-[#5B6470] dark:text-[#A89B8C] font-mono tabular-nums">
+                        <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
                           {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-5 py-4 text-right">
@@ -1035,7 +1012,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
         title={
           selectedBillForItems ? (
             <span className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#92400E] dark:text-[#D97706]" />
+              <Receipt className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Invoice #{selectedBillForItems.billNumber || selectedBillForItems.id.slice(0, 8)}</span>
             </span>
           ) : 'Invoice Items'
@@ -1043,7 +1020,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
         subtitle={
           selectedBillForItems ? (
             <span>
-              Generated by: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{selectedBillForItems.receptionist?.name || 'Receptionist'}</strong> on {new Date(selectedBillForItems.createdAt).toLocaleString()}
+              Generated by: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{selectedBillForItems.receptionist?.name || 'Receptionist'}</strong> on {new Date(selectedBillForItems.createdAt).toLocaleString()}
             </span>
           ) : undefined
         }
@@ -1055,28 +1032,28 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             {(() => {
               const modalInfo = getBillPaymentInfo(selectedBillForItems);
               return (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#FAF7F2] dark:bg-[#25201C] p-3 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#F7EFE4]/60 dark:bg-[#101A18] p-3 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] text-xs">
                   <div>
-                    <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Table</span>
-                    <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                    <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium font-sans">Table</span>
+                    <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">
                       Table #{selectedBillForItems.order?.table?.tableNumber || 'N/A'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Payment Status</span>
-                    <span className={`font-bold ${modalInfo.isPaid ? 'text-emerald-700 dark:text-emerald-400' : 'text-[#92400E] dark:text-[#D97706]'}`}>
+                    <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium font-sans">Payment Status</span>
+                    <span className={`font-bold ${modalInfo.isPaid ? 'text-[#173F36] dark:text-[#9FB29E]' : 'text-amber-700 dark:text-amber-400'}`}>
                       {modalInfo.statusText}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Payment Mode</span>
-                    <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                    <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium font-sans">Payment Mode</span>
+                    <span className="font-bold text-[#17251F] dark:text-[#F7EFE4]">
                       {modalInfo.isPaid || modalInfo.isPartiallyPaid ? formatMethodName(modalInfo.mode) : 'Unsettled'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Paid At</span>
-                    <span className="font-mono text-[#1F2937] dark:text-[#F7F3EC] font-semibold text-[11px] tabular-nums">
+                    <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium font-sans">Paid At</span>
+                    <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold text-[11px] tabular-nums">
                       {modalInfo.isPaid && modalInfo.paidAt ? formatPaidAt(modalInfo.paidAt) : '—'}
                     </span>
                   </div>
@@ -1086,13 +1063,13 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
             {/* Ordered Items Table */}
             <div>
-              <h4 className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Utensils className="w-3.5 h-3.5 text-[#92400E] dark:text-[#D97706]" />
+              <h4 className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] uppercase tracking-wider mb-2 flex items-center gap-1.5 font-sans">
+                <Utensils className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                 <span>Ordered Items in Bill</span>
               </h4>
-              <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl overflow-hidden">
+              <div className="bg-[#F7EFE4]/40 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl overflow-hidden">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26]">
+                  <thead className="bg-[#F7EFE4]/80 dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] font-sans">
                     <tr>
                       <th className="px-3.5 py-2.5">Item Name</th>
                       <th className="px-3.5 py-2.5 text-center">Qty</th>
@@ -1100,19 +1077,19 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                       <th className="px-3.5 py-2.5 text-right">Subtotal</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                  <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                     {(selectedBillForItems.order?.items || []).map((it, idx) => (
-                      <tr key={idx} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#2F2722]/60">
-                        <td className="px-3.5 py-2.5 font-semibold text-[#1F2937] dark:text-[#F7F3EC]">
+                      <tr key={idx} className="hover:bg-[#F7EFE4]/60 dark:hover:bg-[#1E362E]/30">
+                        <td className="px-3.5 py-2.5 font-semibold text-[#17251F] dark:text-[#F7EFE4]">
                           {it.menuItem?.name || it.name || 'Dish Item'}
                         </td>
-                        <td className="px-3.5 py-2.5 text-center font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC] tabular-nums">
+                        <td className="px-3.5 py-2.5 text-center font-mono font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
                           {it.quantity}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono text-[#5B6470] dark:text-[#A89B8C] tabular-nums">
+                        <td className="px-3.5 py-2.5 text-right font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums">
                           {currency}{Number(it.unitPrice || it.price || 0).toFixed(2)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono font-bold text-[#92400E] dark:text-[#D97706] tabular-nums">
+                        <td className="px-3.5 py-2.5 text-right font-mono font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
                           {currency}{Number(it.subtotal || it.quantity * (it.unitPrice || it.price || 0)).toFixed(2)}
                         </td>
                       </tr>
@@ -1123,16 +1100,16 @@ export default function BillingView({ preSelectedTable, initialTab }) {
             </div>
 
             {/* Bill Totals Summary */}
-            <div className="bg-[#FAF7F2] dark:bg-[#25201C] p-3.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] space-y-1.5 text-xs">
-              <div className="flex justify-between text-[#5B6470] dark:text-[#A89B8C]">
+            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-3.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] space-y-1.5 text-xs">
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
                 <span>Subtotal:</span>
-                <span className="font-mono text-[#1F2937] dark:text-[#F7F3EC] font-semibold tabular-nums">
+                <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
                   {currency}{Number(selectedBillForItems.subtotal || 0).toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between text-[#5B6470] dark:text-[#A89B8C]">
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
                 <span>Tax ({selectedBillForItems.taxRate || 5}%):</span>
-                <span className="font-mono text-[#1F2937] dark:text-[#F7F3EC] font-semibold tabular-nums">
+                <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
                   {currency}{Number(selectedBillForItems.taxAmount || 0).toFixed(2)}
                 </span>
               </div>
@@ -1144,15 +1121,15 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                   </span>
                 </div>
               )}
-              <div className="pt-2 border-t border-[#E5D8C6] dark:border-[#382F26] flex justify-between text-sm font-bold">
-                <span className="text-[#1F2937] dark:text-[#F7F3EC]">Total Bill Amount:</span>
-                <span className="text-[#92400E] dark:text-[#D97706] font-mono text-base font-extrabold tabular-nums">
+              <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between text-sm font-bold">
+                <span className="text-[#17251F] dark:text-[#F7EFE4] font-serif">Total Bill Amount:</span>
+                <span className="text-[#173F36] dark:text-[#9FB29E] font-mono text-base font-extrabold tabular-nums">
                   {currency}{Number(selectedBillForItems.totalAmount || 0).toFixed(2)}
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
+            <div className="flex justify-end pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
               <Button
                 variant="outline"
                 onClick={() => setSelectedBillForItems(null)}
@@ -1181,52 +1158,52 @@ export default function BillingView({ preSelectedTable, initialTab }) {
         <form onSubmit={handleGenerateBill} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">Discount (%)</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Discount (%)</label>
               <input
                 type="number"
                 min="0"
                 max="100"
                 value={discountPercent}
                 onChange={(e) => setDiscountPercent(e.target.value)}
-                className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">Fixed Disc ({currency})</label>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Fixed Disc ({currency})</label>
               <input
                 type="number"
                 min="0"
                 value={discountAmount}
                 onChange={(e) => setDiscountAmount(e.target.value)}
-                className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">Tax Rate (%)</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Tax Rate (%)</label>
             <input
               type="number"
               min="0"
               max="100"
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
-              className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">Invoice Notes</label>
+            <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Invoice Notes</label>
             <input
               type="text"
               placeholder="e.g. Corporate discount applied"
               value={billNotes}
               onChange={(e) => setBillNotes(e.target.value)}
-              className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+              className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6] dark:border-[#382F26]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
               type="button"
               variant="outline"
@@ -1261,16 +1238,16 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       >
         {selectedBillForPayment && (
           <>
-            <div className="bg-[#FAF7F2] dark:bg-[#25201C] p-4 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] mb-4 text-center">
-              <span className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-semibold">Total Payable Amount</span>
-              <div className="text-3xl font-extrabold text-[#92400E] dark:text-[#D97706] font-mono mt-1 tabular-nums">
+            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-4 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] mb-4 text-center">
+              <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-semibold font-sans">Total Payable Amount</span>
+              <div className="text-3xl font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono mt-1 tabular-nums">
                 {currency}{Number(selectedBillForPayment.totalAmount || selectedBillForPayment.grandTotal || 0).toFixed(2)}
               </div>
             </div>
 
             <form onSubmit={handleSettlePayment} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-2">Payment Method</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-2 font-sans">Payment Method</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'CASH', label: 'Cash', icon: Banknote },
@@ -1285,10 +1262,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                         type="button"
                         key={mode.id}
                         onClick={() => setPaymentMethod(mode.id)}
-                        className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] ${
+                        className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
                           isSelected
-                            ? 'bg-amber-100 dark:bg-amber-950/60 text-[#92400E] dark:text-amber-300 border-[#92400E] dark:border-amber-600 shadow-xs'
-                            : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] hover:text-[#1F2937] dark:hover:text-[#F7F3EC]'
+                            ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] shadow-editorial'
+                            : 'bg-[#F7EFE4]/50 dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#1E362E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] hover:text-[#17251F] dark:hover:text-[#F7EFE4]'
                         }`}
                       >
                         <Icon className="w-5 h-5" />
@@ -1301,9 +1278,9 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
               {paymentMethod === 'RAZORPAY' ? (
                 <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
-                  <Globe className="w-4 h-4 text-[#92400E] dark:text-[#D97706] shrink-0 mt-0.5" />
+                  <Globe className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E] shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block text-[#92400E] dark:text-[#D97706]">Razorpay Test Mode Checkout</span>
+                    <span className="font-bold block text-[#173F36] dark:text-[#9FB29E]">Razorpay Test Mode Checkout</span>
                     <span>
                       Clicking below will securely open the official Razorpay Checkout for {currency}
                       <span className="tabular-nums font-mono font-bold">
@@ -1314,7 +1291,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">
                     Amount Received ({currency})
                   </label>
                   <input
@@ -1323,13 +1300,13 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                     required
                     value={amountPaid}
                     onChange={(e) => setAmountPaid(e.target.value)}
-                    className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] font-mono tabular-nums focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                    className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1.5">
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">
                   Transaction Reference / Notes
                 </label>
                 <input
@@ -1337,11 +1314,11 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                   placeholder={paymentMethod === 'RAZORPAY' ? 'Optional online transaction notes' : 'e.g. UPI Ref #12345 or Auth Code'}
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-sm text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6] dark:border-[#382F26]">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
                 <Button
                   type="button"
                   variant="outline"

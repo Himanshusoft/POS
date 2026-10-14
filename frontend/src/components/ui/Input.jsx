@@ -40,18 +40,18 @@ export function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center justify-between"
+          className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center justify-between tracking-wide"
         >
           <span>
             {label}
-            {required && <span className="text-[#DC2626] ml-1">*</span>}
+            {required && <span className="text-[#C53030] ml-1">*</span>}
           </span>
         </label>
       )}
 
       <div className="relative flex items-center">
         {Icon && (
-          <div className="absolute left-3.5 pointer-events-none text-[#5B6470] dark:text-[#A89B8C] shrink-0">
+          <div className="absolute left-3.5 pointer-events-none text-[#657168] dark:text-[#9FB29E] shrink-0">
             <Icon className="w-4 h-4" />
           </div>
         )}
@@ -72,26 +72,26 @@ export function Input({
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
           className={`
-            w-full rounded-xl text-xs sm:text-sm text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#73685C] transition-all duration-150
-            bg-[#FAF7F2] dark:bg-[#181512] border py-2.5 outline-none
+            w-full rounded-xl text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#8D9890] dark:placeholder-[#657168] transition-all duration-150
+            bg-[#FFFDF9] dark:bg-[#111D1A] border py-2.5 outline-none
             ${Icon ? 'pl-10 pr-3.5' : 'px-3.5'}
             ${error
-              ? 'border-[#DC2626] focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] bg-rose-50/20'
-              : 'border-[#E5D8C6] dark:border-[#382F26] hover:border-[#D9C3A5] dark:hover:border-[#524436] focus:border-[#92400E] dark:focus:border-[#D97706] focus:ring-1 focus:ring-[#92400E] dark:focus:ring-[#D97706] focus:bg-white dark:focus:bg-[#201C18]'
+              ? 'border-[#C53030] focus:border-[#C53030] focus:ring-1 focus:ring-[#C53030] bg-[#FDF0ED]/50'
+              : 'border-[#E4DCD0] dark:border-[#233630] hover:border-[#173F36]/40 dark:hover:border-[#3B574E] focus:border-[#173F36] dark:focus:border-[#4EBA87] focus:ring-2 focus:ring-[#173F36]/15 dark:focus:ring-[#4EBA87]/20 focus:bg-[#FFFDF9] dark:focus:bg-[#14221E]'
             }
-            disabled:bg-gray-100 dark:disabled:bg-[#161310] disabled:text-gray-400 dark:disabled:text-[#524436] disabled:cursor-not-allowed
+            disabled:bg-[#F4ECE0] dark:disabled:bg-[#0E1815] disabled:text-[#A0ABA2] dark:disabled:text-[#5A6D63] disabled:cursor-not-allowed
           `}
           {...props}
         />
       </div>
 
       {error ? (
-        <p id={errorId} className="text-xs text-[#DC2626] flex items-center gap-1 font-medium mt-0.5">
+        <p id={errorId} className="text-xs text-[#C53030] flex items-center gap-1 font-medium mt-0.5">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>{error}</span>
         </p>
       ) : helperText ? (
-        <p id={helperId} className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+        <p id={helperId} className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
           {helperText}
         </p>
       ) : null}

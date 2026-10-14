@@ -12,11 +12,12 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getItemAvailability } from '../utils/inventoryValidation';
+import { useMenuCategories, useMenuItems } from '../hooks/usePosQueries';
 
 /**
  * MenuItemImage helper:
  * Displays real image URL if provided in API/database.
- * If missing or fails to load, gracefully displays a neutral Sandstone dish placeholder.
+ * If missing or fails to load, gracefully displays an editorial dish placeholder.
  */
 function MenuItemImage({ image, name, categoryName }) {
   const [imgError, setImgError] = useState(false);
@@ -29,7 +30,7 @@ function MenuItemImage({ image, name, categoryName }) {
 
   if (resolvedUrl) {
     return (
-      <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 border border-[#E5D8C6] bg-[#FAF7F2] group">
+      <div className="relative w-full h-36 rounded-xl overflow-hidden mb-3 border border-[#E4DCD0] dark:border-[#1E362E] bg-[#F7EFE4]/40 dark:bg-[#101A18] group">
         <img
           src={resolvedUrl}
           alt={name}
@@ -37,25 +38,23 @@ function MenuItemImage({ image, name, categoryName }) {
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-32 rounded-xl mb-3 border border-[#E5D8C6] bg-gradient-to-br from-[#F7F3EC] to-[#FAF7F2] flex flex-col items-center justify-center text-[#5B6470] overflow-hidden">
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#92400E_1px,transparent_1px)] [background-size:10px_10px]" />
-      <div className="w-10 h-10 rounded-xl bg-white border border-[#E5D8C6] shadow-xs flex items-center justify-center text-[#92400E]">
+    <div className="relative w-full h-32 rounded-xl mb-3 border border-[#E4DCD0] dark:border-[#1E362E] bg-gradient-to-br from-[#F7EFE4] to-[#FFFDF9] dark:from-[#152320] dark:to-[#101A18] flex flex-col items-center justify-center text-[#657168] dark:text-[#9FB29E] overflow-hidden">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#173F36_1px,transparent_1px)] [background-size:10px_10px]" />
+      <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] shadow-xs flex items-center justify-center text-[#173F36] dark:text-[#9FB29E]">
         <UtensilsCrossed className="w-5 h-5" />
       </div>
-      <span className="text-[10px] font-semibold text-[#5B6470] mt-2 flex items-center gap-1">
+      <span className="text-[10px] font-semibold text-[#657168] dark:text-[#9FB29E] mt-2 flex items-center gap-1 font-sans">
         {categoryName || 'Menu Item'}
       </span>
     </div>
   );
 }
-
-import { useMenuCategories, useMenuItems } from '../hooks/usePosQueries';
 
 export default function WaiterMenuView() {
   const { restaurant, addToast } = useAuth();
@@ -78,22 +77,22 @@ export default function WaiterMenuView() {
   });
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] text-[#1F2937]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 text-[#17251F] dark:text-[#F7EFE4]">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#E5D8C6] shadow-sandstone">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] p-5 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl text-[#92400E] shrink-0">
+            <div className="p-2.5 bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20 rounded-xl text-[#173F36] dark:text-[#9FB29E] shrink-0">
               <UtensilsCrossed className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#1F2937] flex items-center gap-2">
+              <h1 className="text-xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
                 Restaurant Menu Catalog
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#FAF7F2] text-[#5B6470] border border-[#E5D8C6] font-medium">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E] font-medium font-sans">
                   Read Only
                 </span>
               </h1>
-              <p className="text-xs text-[#5B6470] mt-0.5">
+              <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5">
                 Browse official dish prices, categories, and kitchen availability
               </p>
             </div>
@@ -103,13 +102,13 @@ export default function WaiterMenuView() {
         {/* Search */}
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="w-4 h-4 text-[#5B6470] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search dishes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-9 pr-3 py-2 text-xs text-[#1F2937] placeholder-[#5B6470] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] w-64 min-h-[38px] transition-all"
+              className="bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-9 pr-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] w-64 min-h-[38px] transition-all"
             />
           </div>
         </div>
@@ -122,8 +121,8 @@ export default function WaiterMenuView() {
           onClick={() => setSelectedCategory('ALL')}
           className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer min-h-[36px] ${
             selectedCategory === 'ALL'
-              ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
-              : 'bg-white text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6] shadow-sandstone'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+              : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial'
           }`}
         >
           All Items ({menuItems.length})
@@ -137,8 +136,8 @@ export default function WaiterMenuView() {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer min-h-[36px] ${
                 selectedCategory === cat.id
-                  ? 'bg-[#92400E] text-white shadow-sandstone font-bold'
-                  : 'bg-white text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] border border-[#E5D8C6] shadow-sandstone'
+                  ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial font-bold'
+                  : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial'
               }`}
             >
               {cat.name} ({count})
@@ -151,7 +150,7 @@ export default function WaiterMenuView() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="bg-white border border-[#E5D8C6] rounded-2xl p-5 space-y-3 shadow-sandstone">
+            <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 space-y-3 shadow-editorial">
               <Skeleton className="h-36 w-full rounded-xl" />
               <div className="flex justify-between items-center">
                 <Skeleton className="h-4 w-20 rounded-md" />
@@ -159,7 +158,7 @@ export default function WaiterMenuView() {
               </div>
               <Skeleton className="h-5 w-3/4 rounded-md" />
               <Skeleton className="h-3 w-1/2 rounded-md" />
-              <div className="pt-3 border-t border-[#E5D8C6] flex justify-between">
+              <div className="pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between">
                 <Skeleton className="h-5 w-16 rounded-md" />
                 <Skeleton className="h-4 w-14 rounded-md" />
               </div>
@@ -167,10 +166,10 @@ export default function WaiterMenuView() {
           ))}
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-[#E5D8C6] text-[#9CA3AF] text-sm shadow-sandstone">
-          <UtensilsCrossed className="w-10 h-10 mx-auto text-[#9CA3AF] mb-2 stroke-1" />
-          <div className="font-bold text-[#1F2937]">No menu items found.</div>
-          <p className="text-xs text-[#5B6470] mt-1">Try selecting another category or clearing search query.</p>
+        <div className="text-center py-16 bg-[#FFFDF9] dark:bg-[#152320] rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] text-[#657168] dark:text-[#9FB29E] text-sm shadow-editorial">
+          <UtensilsCrossed className="w-10 h-10 mx-auto text-[#657168] dark:text-[#9FB29E] mb-2 stroke-1" />
+          <div className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">No menu items found.</div>
+          <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">Try selecting another category or clearing search query.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -182,10 +181,10 @@ export default function WaiterMenuView() {
             return (
               <div
                 key={item.id}
-                className={`bg-white border rounded-2xl p-5 shadow-sandstone transition flex flex-col justify-between group ${
+                className={`bg-[#FFFDF9] dark:bg-[#152320] border rounded-2xl p-5 shadow-editorial transition flex flex-col justify-between group ${
                   !isOrderable
-                    ? 'opacity-80 border-[#E5D8C6] hover:border-amber-400/60'
-                    : 'border-[#E5D8C6] hover:border-[#92400E] hover:shadow-sandstone-md hover:-translate-y-0.5'
+                    ? 'opacity-85 border-[#E4DCD0] dark:border-[#1E362E] hover:border-amber-400/60'
+                    : 'border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36] dark:hover:border-[#9FB29E] hover:shadow-md hover:-translate-y-0.5'
                 }`}
                 title={!isOrderable ? availability.reasonMessage : undefined}
               >
@@ -198,16 +197,16 @@ export default function WaiterMenuView() {
                   />
 
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[11px] font-semibold text-[#92400E] px-2.5 py-0.5 bg-[#FAF7F2] border border-[#E5D8C6] rounded-lg">
+                    <span className="text-[11px] font-semibold text-[#173F36] dark:text-[#9FB29E] px-2.5 py-0.5 bg-[#F7EFE4]/70 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg">
                       {categoryName}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border ${
                         !item.isAvailable
-                          ? 'bg-rose-50 text-rose-800 border-rose-200'
+                          ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                           : isOrderable
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-amber-50 text-amber-900 border-amber-300'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border-emerald-200 dark:border-emerald-800'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700'
                       }`}
                     >
                       {!item.isAvailable ? (
@@ -223,19 +222,19 @@ export default function WaiterMenuView() {
                       ) : (
                         <>
                           <AlertTriangle className="w-3 h-3 text-amber-600" />
-                          {availability.reasonCode === 'NO_RECIPE' ? 'No Recipe' : 'Insufficient Stock'}
+                          {availability.reasonCode === 'NO_RECIPE' ? 'No Recipe' : 'Low Stock'}
                         </>
                       )}
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-[#1F2937] text-sm group-hover:text-[#92400E] transition line-clamp-1">
+                  <h3 className="font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] text-sm group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E] transition line-clamp-1">
                     {item.name}
                   </h3>
 
                   {/* Prominent explanation when item is not orderable */}
                   {!isOrderable && (
-                    <div className="bg-amber-50/90 border border-amber-200 rounded-lg p-1.5 mt-2 text-[11px] text-amber-900 leading-snug flex items-start gap-1">
+                    <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-1.5 mt-2 text-[11px] text-amber-900 dark:text-amber-300 leading-snug flex items-start gap-1">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                       <span className="line-clamp-2 font-medium">
                         {availability.reasonMessage}
@@ -244,18 +243,18 @@ export default function WaiterMenuView() {
                   )}
 
                   {item.description && (
-                    <p className="text-xs text-[#5B6470] mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-[#E5D8C6] mt-4 flex items-center justify-between">
-                  <span className="text-base font-extrabold text-[#92400E] font-mono tabular-nums">
+                <div className="pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-4 flex items-center justify-between">
+                  <span className="text-base font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono tabular-nums">
                     {currency}
                     {Number(item.price).toFixed(2)}
                   </span>
-                  <span className="text-[11px] text-[#5B6470] font-medium">Official Price</span>
+                  <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-medium font-sans">Official Price</span>
                 </div>
               </div>
             );

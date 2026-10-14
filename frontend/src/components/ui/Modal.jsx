@@ -109,18 +109,18 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         tabIndex={-1}
-        className={`w-full ${maxWidth} bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] rounded-2xl shadow-sandstone-lg flex flex-col max-h-[90vh] animate-scale-in outline-none transition-colors duration-200 ${className}`}
+        className={`w-full ${maxWidth} bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] text-[#17251F] dark:text-[#F7EFE4] rounded-2xl shadow-editorial-lg flex flex-col max-h-[90vh] animate-scale-in outline-none transition-colors duration-200 ${className}`}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-5 border-b border-[#E5D8C6]/80 dark:border-[#382F26]/80 shrink-0">
+        <div className="flex items-start justify-between p-5 sm:p-6 border-b border-[#E4DCD0]/80 dark:border-[#233630]/80 shrink-0">
           <div>
             {title && (
-              <h2 id="modal-title" className="text-base sm:text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h2 id="modal-title" className="font-serif text-lg sm:text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight">
                 {title}
               </h2>
             )}
             {subtitle && (
-              <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium leading-relaxed">
+              <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium leading-relaxed">
                 {subtitle}
               </p>
             )}
@@ -129,20 +129,20 @@ export function Modal({
             type="button"
             onClick={() => onCloseRef.current?.()}
             aria-label="Close modal"
-            className="p-1.5 rounded-xl text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201A] transition-colors cursor-pointer shrink-0 ml-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#92400E] dark:focus-visible:ring-[#D97706]"
+            className="p-1.5 rounded-xl text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#E8EFEA] dark:hover:bg-[#1A2B26] transition-colors cursor-pointer shrink-0 ml-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] dark:focus-visible:ring-[#4EBA87]"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
         {/* Modal Content Body */}
-        <div className="p-5 overflow-y-auto flex-1 min-w-0">
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 min-w-0">
           {children}
         </div>
 
         {/* Optional Modal Footer */}
         {footer && (
-          <div className="p-4 bg-[#FAF7F2]/60 dark:bg-[#181512]/60 border-t border-[#E5D8C6]/80 dark:border-[#382F26]/80 rounded-b-2xl shrink-0">
+          <div className="p-4 sm:p-5 bg-[#F7EFE4]/60 dark:bg-[#0E1815]/60 border-t border-[#E4DCD0]/80 dark:border-[#233630]/80 rounded-b-2xl shrink-0">
             {footer}
           </div>
         )}

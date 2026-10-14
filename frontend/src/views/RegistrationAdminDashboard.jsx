@@ -378,7 +378,7 @@ export default function RegistrationAdminDashboard() {
 
   const planDistribution = useMemo(() => {
     const pList = overview?.plans || plans || [];
-    const colors = ['#92400E', '#D97706', '#16A34A', '#2563EB', '#7C3AED', '#EC4899'];
+    const colors = ['#173F36', '#2D6A4F', '#9FB29E', '#C07D37', '#657168', '#426B5B'];
     return pList.map((p, idx) => ({
       label: p.name,
       value: p.activeSubscribers || p._count?.subscriptions || 0,
@@ -388,8 +388,8 @@ export default function RegistrationAdminDashboard() {
   }, [overview, plans]);
 
   const tenantHealthData = useMemo(() => [
-    { label: 'Active', value: activeTenants, color: '#16A34A' },
-    { label: 'Suspended', value: suspendedTenants, color: '#EF4444' },
+    { label: 'Active', value: activeTenants, color: '#2D6A4F' },
+    { label: 'Suspended', value: suspendedTenants, color: '#C53030' },
   ], [activeTenants, suspendedTenants]);
 
   const tenantGrowthData = useMemo(() => {
@@ -423,33 +423,33 @@ export default function RegistrationAdminDashboard() {
 
   const userRoleDistribution = useMemo(() => {
     return [
-      { label: 'Active Tenants', value: activeTenants, color: '#16A34A', sublabel: 'Operating' },
-      { label: 'Suspended', value: suspendedTenants, color: '#EF4444', sublabel: 'Inactive' },
-      { label: 'Active Subs', value: activeSubscriptions, color: '#D97706', sublabel: 'Paid Licenses' },
-      { label: 'Platform Users', value: totalUsers, color: '#2563EB', sublabel: 'Staff Roster' },
+      { label: 'Active Tenants', value: activeTenants, color: '#2D6A4F', sublabel: 'Operating' },
+      { label: 'Suspended', value: suspendedTenants, color: '#C53030', sublabel: 'Inactive' },
+      { label: 'Active Subs', value: activeSubscriptions, color: '#C07D37', sublabel: 'Paid Licenses' },
+      { label: 'Platform Users', value: totalUsers, color: '#173F36', sublabel: 'Staff Roster' },
     ];
   }, [activeTenants, suspendedTenants, activeSubscriptions, totalUsers]);
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] text-[#1F2937] dark:text-[#F7F3EC]">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#F7EFE4] dark:bg-[#101A18] text-[#17251F] dark:text-[#F7EFE4]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/25 border border-[#173F36]/20 dark:border-[#173F36]/30 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-xs">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] bg-[#92400E]/15 text-[#92400E] dark:text-[#D97706] font-bold px-2.5 py-0.5 rounded-full border border-[#92400E]/30">
-                Platform Super Admin
+              <span className="text-[11px] bg-[#173F36]/10 text-[#173F36] dark:text-[#9FB29E] font-semibold px-2.5 py-0.5 rounded-full border border-[#173F36]/20">
+                Super Admin
               </span>
-              <span className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-medium">• Multi-Tenant SaaS Governance</span>
+              <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">• Multi-Tenant SaaS Governance</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight mt-1">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#173F36] dark:text-[#F7EFE4] tracking-tight mt-1">
               Platform Governance & Tenant Subscriptions
             </h1>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
-              Manage restaurant customer tenants, provision owner credentials, govern subscription plans, and monitor platform-wide metrics.
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5">
+              Overview of dining establishments, subscription tiers, and platform performance
             </p>
           </div>
         </div>
@@ -457,17 +457,17 @@ export default function RegistrationAdminDashboard() {
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] text-[#1F2937] dark:text-[#F7F3EC] rounded-xl text-xs font-semibold border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone hover:shadow-sandstone-md active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F7EFE4] dark:bg-[#1E2E2A] hover:bg-[#EBDDCB] dark:hover:bg-[#233630] text-[#17251F] dark:text-[#F7EFE4] rounded-xl text-xs font-semibold border border-[#E4DCD0] dark:border-[#233630] shadow-xs active:scale-95 transition-all cursor-pointer"
             title="Refresh Platform Data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#92400E] dark:text-[#D97706]' : 'text-[#5B6470] dark:text-[#A89B8C]'}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#173F36] dark:text-[#9FB29E]' : 'text-[#657168] dark:text-[#9FB29E]'}`} />
             <span>Refresh</span>
           </button>
 
           {activeTab === 'plans' ? (
             <button
               onClick={handleOpenCreatePlan}
-              className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+              className="flex items-center gap-2 bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-editorial hover:-translate-y-0.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Create Subscription Plan</span>
@@ -475,7 +475,7 @@ export default function RegistrationAdminDashboard() {
           ) : (
             <button
               onClick={() => setShowOnboardModal(true)}
-              className="flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+              className="flex items-center gap-2 bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-editorial hover:-translate-y-0.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Onboard Restaurant Tenant</span>
@@ -486,30 +486,30 @@ export default function RegistrationAdminDashboard() {
 
       {/* Error Banner with Retry */}
       {error && !overview && restaurants.length === 0 && (
-        <div className="bg-white dark:bg-[#1C1815] border border-rose-200 dark:border-rose-900 rounded-2xl p-8 text-center shadow-sandstone max-w-md mx-auto my-6">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-[#EF4444] flex items-center justify-center mx-auto mb-3">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#F5C6CB] dark:border-[#5C2328] rounded-2xl p-8 text-center shadow-editorial max-w-md mx-auto my-6">
+          <div className="w-12 h-12 rounded-xl bg-[#FDF0ED] dark:bg-[#2E1A1C] border border-[#F5C6CB] dark:border-[#5C2328] text-[#C53030] flex items-center justify-center mx-auto mb-3">
             <AlertCircle className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-[#1F2937] dark:text-[#F7F3EC]">Unable to load platform data</h3>
-          <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">{error}</p>
+          <h3 className="font-serif text-lg font-bold text-[#17251F] dark:text-[#F7EFE4]">Unable to load platform data</h3>
+          <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">{error}</p>
           <button
             onClick={fetchData}
-            className="mt-4 px-4 py-2 bg-[#92400E] hover:bg-[#78350F] text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            className="mt-4 px-4 py-2 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] rounded-xl text-xs font-semibold transition shadow-xs cursor-pointer"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* 4 KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Registered Tenants"
           value={loading && !overview ? '...' : totalTenants}
           subtitle="Platform tenant accounts"
           icon={Building2}
-          iconColor="text-[#92400E] dark:text-[#D97706]"
-          iconBg="bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30"
+          iconColor="text-[#173F36] dark:text-[#9FB29E]"
+          iconBg="bg-[#173F36]/10 dark:bg-[#173F36]/25 border border-[#173F36]/20"
         />
 
         <StatCard
@@ -517,8 +517,8 @@ export default function RegistrationAdminDashboard() {
           value={loading && !overview ? '...' : activeSubscriptions}
           subtitle="Operational with active plan"
           icon={ShieldCheck}
-          iconColor="text-[#16A34A] dark:text-emerald-400"
-          iconBg="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
+          iconColor="text-[#2D6A4F] dark:text-[#52B788]"
+          iconBg="bg-[#E8F3ED] dark:bg-[#1B382B] border border-[#C8E0D2] dark:border-[#2D6A4F]"
         />
 
         <StatCard
@@ -526,8 +526,8 @@ export default function RegistrationAdminDashboard() {
           value={loading && !overview ? '...' : suspendedTenants}
           subtitle="Blocked from terminal access"
           icon={ShieldAlert}
-          iconColor="text-[#EF4444] dark:text-rose-400"
-          iconBg="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800"
+          iconColor="text-[#C53030] dark:text-[#E57373]"
+          iconBg="bg-[#FDF0ED] dark:bg-[#381B1D] border border-[#F5C6CB] dark:border-[#7A2E33]"
         />
 
         <StatCard
@@ -535,18 +535,17 @@ export default function RegistrationAdminDashboard() {
           value={loading && !overview ? '...' : totalUsers}
           subtitle="Owners, chefs, waiters, cashiers"
           icon={Users}
-          iconColor="text-[#2563EB] dark:text-blue-400"
-          iconBg="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
+          iconColor="text-[#173F36] dark:text-[#9FB29E]"
+          iconBg="bg-[#F7EFE4] dark:bg-[#1E2E2A] border border-[#E4DCD0] dark:border-[#233630]"
         />
       </div>
 
-      {/* Analytics Visualization Section (Real SaaS Platform Data) */}
+      {/* Consolidated Platform Analytics (One section as per design specification) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* Restaurant Growth Over Time (Line Chart) */}
         <div className="lg:col-span-2">
           <ChartCard
             title="Platform Tenant Growth"
-            subtitle="Cumulative customer restaurants onboarded to the ApexPOS platform"
+            subtitle="Cumulative customer restaurants onboarded to the POS platform"
             badge="Tenant Scale"
             empty={tenantGrowthData.length === 0}
             emptyMessage="No restaurant tenants onboarded yet. Newly created accounts will plot growth here."
@@ -554,22 +553,21 @@ export default function RegistrationAdminDashboard() {
             <div className="pt-2">
               <LineChart
                 data={tenantGrowthData}
-                color="#92400E"
-                height={200}
+                color="#173F36"
+                height={210}
                 valueLabel="tenants"
               />
-              <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-                <span>Active Commercial Tenants: <strong className="text-[#16A34A] dark:text-emerald-400 font-bold">{activeTenants} active</strong></span>
-                <span>Total Onboarded: <strong className="font-mono text-[#1F2937] dark:text-[#F7F3EC]">{totalTenants} organizations</strong></span>
+              <div className="flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E] pt-3 border-t border-[#E4DCD0]/60 dark:border-[#233630]/60 font-medium">
+                <span>Active Operating Tenants: <strong className="text-[#2D6A4F] dark:text-[#52B788] font-bold">{activeTenants} active</strong></span>
+                <span>Total Registered: <strong className="font-mono text-[#17251F] dark:text-[#F7EFE4]">{totalTenants} organizations</strong></span>
               </div>
             </div>
           </ChartCard>
         </div>
 
-        {/* Subscription Plan Distribution (Donut Chart) */}
         <ChartCard
-          title="Subscription Plan Distribution"
-          subtitle="Active tenant subscriptions across tiers"
+          title="Subscription Tier Distribution"
+          subtitle="Active tenant subscriptions across licensing plans"
           badge="Live Plans"
         >
           <div className="py-1">
@@ -582,58 +580,14 @@ export default function RegistrationAdminDashboard() {
         </ChartCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        {/* Subscription ARR Revenue (Area Chart) */}
-        <ChartCard
-          title="Subscription Annual Run Rate (ARR)"
-          subtitle="Cumulative platform licensing contract value across active tenant tiers"
-          badge="Platform Revenue"
-          empty={subscriptionRevenueData.length === 0}
-          emptyMessage="No commercial subscriptions active."
-        >
-          <div className="pt-2">
-            <AreaChart
-              data={subscriptionRevenueData}
-              color="#16A34A"
-              gradientColor="#10B981"
-              currency="₹"
-              height={195}
-            />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>Licensed Tenants: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{activeSubscriptions} subscriptions</strong></span>
-              <span>Total Contract ARR: <strong className="font-mono text-[#16A34A] dark:text-emerald-400 font-bold">₹{(activeSubscriptions * 5000).toLocaleString()}</strong></span>
-            </div>
-          </div>
-        </ChartCard>
-
-        {/* Platform Governance & User Matrix (Vertical Bar Chart) */}
-        <ChartCard
-          title="Platform Governance & Role Matrix"
-          subtitle="Tenant operational statuses, paid subscriptions, and staff users"
-          badge="Governance"
-        >
-          <div className="pt-2">
-            <VerticalBarChart
-              data={userRoleDistribution}
-              height={195}
-              valueLabel="accounts"
-            />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>System Health: <strong className="text-[#16A34A] dark:text-emerald-400 font-bold">{suspendedTenants === 0 ? 'Optimal' : `${suspendedTenants} suspended`}</strong></span>
-              <span>Total Platform Users: <strong className="font-mono text-[#1F2937] dark:text-[#F7F3EC]">{totalUsers}</strong></span>
-            </div>
-          </div>
-        </ChartCard>
-      </div>
-
       {/* Tabs Switcher */}
-      <div className="flex items-center gap-2 border-b border-[#E5D8C6] dark:border-[#382F26] pb-3">
+      <div className="flex items-center gap-2 border-b border-[#E4DCD0] dark:border-[#233630] pb-3">
         <button
           onClick={() => setActiveTab('tenants')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'tenants'
-              ? 'bg-[#92400E] text-white shadow-sandstone'
-              : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial'
+              : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A]'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -642,10 +596,10 @@ export default function RegistrationAdminDashboard() {
 
         <button
           onClick={() => setActiveTab('plans')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'plans'
-              ? 'bg-[#92400E] text-white shadow-sandstone'
-              : 'text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+              ? 'bg-[#173F36] text-[#FFFDF9] shadow-editorial'
+              : 'text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A]'
           }`}
         >
           <CreditCard className="w-4 h-4" />
@@ -659,13 +613,13 @@ export default function RegistrationAdminDashboard() {
           {/* Search & Filter Bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-[#5B6470] dark:text-[#A89B8C] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[#657168] dark:text-[#9FB29E] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search by restaurant name, owner email, plan, city..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E] shadow-sm"
+                className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] dark:placeholder-[#657168] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36] shadow-xs font-medium"
               />
             </div>
 
@@ -674,10 +628,10 @@ export default function RegistrationAdminDashboard() {
                 <button
                   key={f}
                   onClick={() => setStatusFilter(f)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                     statusFilter === f
-                      ? 'bg-[#92400E] text-white border-[#92400E] shadow-sm'
-                      : 'bg-white dark:bg-[#1C1815] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C]'
+                      ? 'bg-[#173F36] text-[#FFFDF9] border-[#173F36] shadow-xs'
+                      : 'bg-[#FFFDF9] dark:bg-[#152320] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#233630] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A]'
                   }`}
                 >
                   {f === 'ALL' ? `All (${totalTenants})` : f === 'ACTIVE' ? `Active (${activeTenants})` : `Suspended (${suspendedTenants})`}
@@ -689,21 +643,21 @@ export default function RegistrationAdminDashboard() {
           {/* Tenants Grid */}
           {loading ? (
             <div className="h-64 flex flex-col items-center justify-center gap-3">
-              <RefreshCw className="w-8 h-8 text-[#92400E] animate-spin" />
-              <span className="text-sm text-[#5B6470] font-medium">Loading customer tenants...</span>
+              <RefreshCw className="w-8 h-8 text-[#173F36] animate-spin" />
+              <span className="text-sm text-[#657168] font-medium">Loading customer tenants...</span>
             </div>
           ) : filteredRestaurants.length === 0 ? (
-            <div className="bg-white border border-[#E5D8C6] rounded-2xl p-16 text-center shadow-sandstone card-hover">
-              <Building2 className="w-12 h-12 text-[#9CA3AF] mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-[#1F2937]">No restaurant tenants found</h3>
-              <p className="text-sm text-[#5B6470] mt-1 font-medium">
+            <div className="bg-[#FFFDF9] border border-[#E4DCD0] rounded-2xl p-16 text-center shadow-editorial">
+              <Building2 className="w-12 h-12 text-[#9FB29E] mx-auto mb-3" />
+              <h3 className="font-serif text-lg font-bold text-[#173F36]">No restaurant tenants found</h3>
+              <p className="text-sm text-[#657168] mt-1 font-medium">
                 {searchQuery || statusFilter !== 'ALL'
                   ? 'Try adjusting your search query or status filters.'
                   : 'Get started by onboarding your first restaurant customer tenant.'}
               </p>
               <button
                 onClick={() => setShowOnboardModal(true)}
-                className="mt-4 inline-flex items-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sandstone hover:shadow-sandstone-md cursor-pointer"
+                className="mt-4 inline-flex items-center gap-2 bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-editorial hover:-translate-y-0.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Onboard Restaurant Tenant</span>
@@ -719,8 +673,8 @@ export default function RegistrationAdminDashboard() {
                 return (
                   <div
                     key={rest.id}
-                    className={`bg-white dark:bg-[#1C1815] border rounded-2xl p-5 sm:p-6 transition-all shadow-sandstone card-hover flex flex-col justify-between ${
-                      !isSuspended ? 'border-[#E5D8C6] dark:border-[#382F26]' : 'border-rose-300 dark:border-rose-900 bg-rose-50/20 dark:bg-rose-950/20'
+                    className={`bg-[#FFFDF9] dark:bg-[#152320] border rounded-2xl p-5 sm:p-6 transition-all shadow-editorial flex flex-col justify-between ${
+                      !isSuspended ? 'border-[#E4DCD0] dark:border-[#233630]' : 'border-[#F5C6CB] dark:border-[#5C2328] bg-[#FDF0ED]/20 dark:bg-[#2A1719]/20'
                     }`}
                   >
                     <div>
@@ -728,94 +682,94 @@ export default function RegistrationAdminDashboard() {
                       <div className="flex items-start justify-between gap-3 mb-3.5">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-extrabold text-[#1F2937] dark:text-[#F7F3EC]">{rest.name}</h3>
+                            <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4]">{rest.name}</h3>
                             <span
-                              className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
+                              className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
                                 !isSuspended
-                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                  ? 'bg-[#E8F3ED] dark:bg-[#1B382B] text-[#2D6A4F] dark:text-[#52B788] border-[#C8E0D2] dark:border-[#2D6A4F]'
+                                  : 'bg-[#FDF0ED] dark:bg-[#381B1D] text-[#C53030] dark:text-[#E57373] border-[#F5C6CB] dark:border-[#7A2E33]'
                               }`}
                             >
                               {!isSuspended ? 'Active' : 'Suspended'}
                             </span>
 
                             {plan && (
-                              <span className="text-[10px] font-bold bg-[#D97706]/15 text-[#B45309] dark:text-[#D97706] border border-[#D97706]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                <Sparkles className="w-2.5 h-2.5" />
+                              <span className="text-[10px] font-semibold bg-[#F7EFE4] text-[#173F36] dark:bg-[#1E2E2A] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#233630] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5 text-[#173F36] dark:text-[#9FB29E]" />
                                 <span>{plan.name}</span>
                               </span>
                             )}
                           </div>
                           {rest.address && (
-                            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] flex items-center gap-1.5 mt-1 font-medium">
-                              <MapPin className="w-3.5 h-3.5 text-[#5B6470] dark:text-[#A89B8C] shrink-0" />
+                            <p className="text-xs text-[#657168] dark:text-[#9FB29E] flex items-center gap-1.5 mt-1 font-medium">
+                              <MapPin className="w-3.5 h-3.5 text-[#657168] dark:text-[#9FB29E] shrink-0" />
                               <span>{rest.address}</span>
                             </p>
                           )}
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className="text-xs font-mono bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] text-[#1F2937] dark:text-[#F7F3EC] px-2.5 py-1 rounded-xl font-bold shadow-sm">
+                          <span className="text-xs font-mono bg-[#F7EFE4] dark:bg-[#1E2E2A] border border-[#E4DCD0] dark:border-[#233630] text-[#173F36] dark:text-[#F7EFE4] px-2.5 py-1 rounded-xl font-bold shadow-xs">
                             {rest.currency} | Tax: {rest.taxRate}%
                           </span>
                         </div>
                       </div>
 
                       {/* Owner Information Box */}
-                      <div className="bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl p-3.5 my-3.5 space-y-2">
-                        <div className="text-[11px] font-bold text-[#92400E] dark:text-[#D97706] uppercase tracking-wider flex items-center justify-between">
+                      <div className="bg-[#F7EFE4] dark:bg-[#1C2C27] border border-[#E4DCD0] dark:border-[#233630] rounded-xl p-3.5 my-3.5 space-y-2">
+                        <div className="text-[11px] font-bold text-[#173F36] dark:text-[#9FB29E] uppercase tracking-wider flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <User className="w-3.5 h-3.5" />
                             <span>Restaurant Administrator / Owner</span>
                           </div>
-                          <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-semibold bg-white dark:bg-[#1C1815] px-2 py-0.5 rounded-md border border-[#E5D8C6] dark:border-[#382F26]">
+                          <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-semibold bg-[#FFFDF9] dark:bg-[#152320] px-2 py-0.5 rounded-md border border-[#E4DCD0] dark:border-[#233630]">
                             Tenant Admin
                           </span>
                         </div>
                         {rest.owner ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Name</span>
-                              <span className="text-[#1F2937] dark:text-[#F7F3EC] font-bold">{rest.owner.name}</span>
+                              <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium">Name</span>
+                              <span className="text-[#17251F] dark:text-[#F7EFE4] font-bold">{rest.owner.name}</span>
                             </div>
                             <div>
-                              <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Login Email</span>
-                              <span className="text-[#1F2937] dark:text-[#F7F3EC] font-mono text-[11px] font-semibold truncate block">{rest.owner.email}</span>
+                              <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium">Login Email</span>
+                              <span className="text-[#17251F] dark:text-[#F7EFE4] font-mono text-[11px] font-semibold truncate block">{rest.owner.email}</span>
                             </div>
                             {rest.owner.phone && (
                               <div>
-                                <span className="text-[#5B6470] dark:text-[#A89B8C] block text-[10px] font-medium">Phone</span>
-                                <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono font-medium">{rest.owner.phone}</span>
+                                <span className="text-[#657168] dark:text-[#9FB29E] block text-[10px] font-medium">Phone</span>
+                                <span className="text-[#657168] dark:text-[#9FB29E] font-mono font-medium">{rest.owner.phone}</span>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="text-xs text-[#D97706] italic font-medium">No admin user assigned</div>
+                          <div className="text-xs text-[#C07D37] italic font-medium">No admin user assigned</div>
                         )}
                       </div>
 
                       {/* Plan Limits & Current Usage Metrics */}
-                      <div className="grid grid-cols-3 gap-2 text-center py-3 border-y border-[#E5D8C6] dark:border-[#382F26] my-3.5 bg-[#FAF7F2] dark:bg-[#25201C] rounded-xl">
+                      <div className="grid grid-cols-3 gap-2 text-center py-3 border-y border-[#E4DCD0] dark:border-[#233630] my-3.5 bg-[#F7EFE4] dark:bg-[#1C2C27] rounded-xl">
                         <div>
-                          <div className="text-xs font-extrabold text-[#1F2937] dark:text-[#F7F3EC] font-mono">
+                          <div className="text-xs font-bold text-[#173F36] dark:text-[#F7EFE4] font-mono">
                             {rest.roleCounts?.waiters ?? 0}
-                            <span className="text-[#5B6470] dark:text-[#A89B8C] text-[10px] font-normal"> / {plan?.maxWaiters ?? 10}</span>
+                            <span className="text-[#657168] dark:text-[#9FB29E] text-[10px] font-normal"> / {plan?.maxWaiters ?? 10}</span>
                           </div>
-                          <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-semibold uppercase tracking-wider mt-0.5">Waiters</div>
+                          <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-semibold uppercase tracking-wider mt-0.5">Waiters</div>
                         </div>
                         <div>
-                          <div className="text-xs font-extrabold text-[#1F2937] dark:text-[#F7F3EC] font-mono">
+                          <div className="text-xs font-bold text-[#173F36] dark:text-[#F7EFE4] font-mono">
                             {rest.roleCounts?.kitchenAdmins ?? 0}
-                            <span className="text-[#5B6470] dark:text-[#A89B8C] text-[10px] font-normal"> / {plan?.maxKitchenAdmins ?? 2}</span>
+                            <span className="text-[#657168] dark:text-[#9FB29E] text-[10px] font-normal"> / {plan?.maxKitchenAdmins ?? 2}</span>
                           </div>
-                          <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-semibold uppercase tracking-wider mt-0.5">Kitchen Admins</div>
+                          <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-semibold uppercase tracking-wider mt-0.5">Kitchen Admins</div>
                         </div>
                         <div>
-                          <div className="text-xs font-extrabold text-[#1F2937] dark:text-[#F7F3EC] font-mono">
+                          <div className="text-xs font-bold text-[#173F36] dark:text-[#F7EFE4] font-mono">
                             {rest.roleCounts?.receptionists ?? 0}
-                            <span className="text-[#5B6470] dark:text-[#A89B8C] text-[10px] font-normal"> / {plan?.maxReceptionists ?? 2}</span>
+                            <span className="text-[#657168] dark:text-[#9FB29E] text-[10px] font-normal"> / {plan?.maxReceptionists ?? 2}</span>
                           </div>
-                          <div className="text-[10px] text-[#5B6470] dark:text-[#A89B8C] font-semibold uppercase tracking-wider mt-0.5">Receptionists</div>
+                          <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-semibold uppercase tracking-wider mt-0.5">Receptionists</div>
                         </div>
                       </div>
                     </div>
@@ -824,28 +778,34 @@ export default function RegistrationAdminDashboard() {
                     <div className="flex items-center justify-between gap-2 pt-3 flex-wrap sm:flex-nowrap">
                       <button
                         onClick={() => handleOpenSubModal(rest)}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] active:scale-95 text-[#92400E] dark:text-[#D97706] text-xs font-bold py-2.5 px-3 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] active:scale-95 text-[#173F36] dark:text-[#9FB29E] text-xs font-semibold py-2.5 px-3 rounded-xl border border-[#E4DCD0] dark:border-[#233630] shadow-xs transition-all cursor-pointer"
                         title="Manage Plan & Limits"
                       >
-                        <Sliders className="w-3.5 h-3.5 text-[#92400E] dark:text-[#D97706]" />
+                        <Sliders className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                         <span>Manage Subscription</span>
                       </button>
 
                       <button
-                        onClick={() => handleOpenResetModal(rest)}
-                        className="flex items-center justify-center gap-1.5 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] active:scale-95 text-[#1F2937] dark:text-[#F7F3EC] text-xs font-semibold py-2.5 px-3 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer"
+                        onClick={() => {
+                          setSelectedRestForReset(rest);
+                          setResetForm({
+                            newEmail: rest.owner?.email || '',
+                            newPassword: '',
+                          });
+                        }}
+                        className="flex items-center justify-center gap-1.5 bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] active:scale-95 text-[#17251F] dark:text-[#F7EFE4] text-xs font-semibold py-2.5 px-3 rounded-xl border border-[#E4DCD0] dark:border-[#233630] shadow-xs transition-all cursor-pointer"
                         title="Reset Owner Credentials"
                       >
-                        <KeyRound className="w-3.5 h-3.5 text-[#D97706]" />
+                        <KeyRound className="w-3.5 h-3.5 text-[#C07D37]" />
                         <span className="hidden sm:inline">Reset Login</span>
                       </button>
 
                       <button
                         onClick={() => handleToggleStatus(rest)}
-                        className={`flex items-center gap-1.5 text-xs font-bold py-2.5 px-3.5 rounded-xl border shadow-sandstone hover:shadow-sandstone-md active:scale-95 transition-all cursor-pointer ${
+                        className={`flex items-center gap-1.5 text-xs font-semibold py-2.5 px-3.5 rounded-xl border shadow-xs active:scale-95 transition-all cursor-pointer ${
                           rest.isActive
-                            ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/40'
-                            : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                            ? 'bg-[#FDF0ED] dark:bg-[#381B1D] text-[#C53030] dark:text-[#E57373] border-[#F5C6CB] dark:border-[#7A2E33] hover:bg-[#FCE3DF]'
+                            : 'bg-[#E8F3ED] dark:bg-[#1B382B] text-[#2D6A4F] dark:text-[#52B788] border-[#C8E0D2] dark:border-[#2D6A4F] hover:bg-[#D7EBE0]'
                         }`}
                         title={rest.isActive ? 'Suspend Restaurant' : 'Activate Restaurant'}
                       >
@@ -868,72 +828,72 @@ export default function RegistrationAdminDashboard() {
             {plans.map((p) => (
               <div
                 key={p.id}
-                className={`bg-white dark:bg-[#1C1815] border rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all shadow-sandstone card-hover ${
-                  p.isActive ? 'border-[#E5D8C6] dark:border-[#382F26]' : 'border-[#E5D8C6]/50 dark:border-[#382F26]/50 opacity-60'
+                className={`bg-[#FFFDF9] dark:bg-[#152320] border rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all shadow-editorial ${
+                  p.isActive ? 'border-[#E4DCD0] dark:border-[#233630]' : 'border-[#E4DCD0]/50 dark:border-[#233630]/50 opacity-60'
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
-                      <h3 className="text-lg font-extrabold text-[#1F2937] dark:text-[#F7F3EC]">{p.name}</h3>
-                      <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">{p.description || 'SaaS subscription tier'}</p>
+                      <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4]">{p.name}</h3>
+                      <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">{p.description || 'SaaS subscription tier'}</p>
                     </div>
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase ${
                         p.isActive
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                          : 'bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] border-[#E5D8C6] dark:border-[#382F26]'
+                          ? 'bg-[#E8F3ED] dark:bg-[#1B382B] text-[#2D6A4F] dark:text-[#52B788] border-[#C8E0D2] dark:border-[#2D6A4F]'
+                          : 'bg-[#F7EFE4] dark:bg-[#1E2E2A] text-[#657168] dark:text-[#9FB29E] border-[#E4DCD0] dark:border-[#233630]'
                       }`}
                     >
                       {p.isActive ? 'Active' : 'Archived'}
                     </span>
                   </div>
 
-                  <div className="my-4 pb-4 border-b border-[#E5D8C6] dark:border-[#382F26]">
-                    <div className="text-3xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] font-mono">
+                  <div className="my-4 pb-4 border-b border-[#E4DCD0] dark:border-[#233630]">
+                    <div className="text-3xl font-serif font-bold text-[#173F36] dark:text-[#F7EFE4]">
                       ₹{Number(p.price).toLocaleString()}
-                      <span className="text-xs text-[#5B6470] dark:text-[#A89B8C] font-normal"> / {p.durationDays} days</span>
+                      <span className="text-xs font-sans text-[#657168] dark:text-[#9FB29E] font-normal"> / {p.durationDays} days</span>
                     </div>
-                    <div className="text-xs text-[#92400E] dark:text-[#D97706] mt-1.5 flex items-center gap-1.5 font-bold">
+                    <div className="text-xs text-[#173F36] dark:text-[#9FB29E] mt-1.5 flex items-center gap-1.5 font-semibold">
                       <Building2 className="w-3.5 h-3.5" />
                       <span>{p.activeSubscribers || 0} active restaurant subscribers</span>
                     </div>
                   </div>
 
                   <div className="space-y-2 mb-4 text-xs">
-                    <span className="text-[11px] font-bold uppercase text-[#5B6470] dark:text-[#A89B8C] block tracking-wider">
+                    <span className="text-[11px] font-bold uppercase text-[#657168] dark:text-[#9FB29E] block tracking-wider">
                       Included Capacity Limits
                     </span>
-                    <div className="flex items-center justify-between text-[#5B6470] dark:text-[#A89B8C] py-1 border-b border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+                    <div className="flex items-center justify-between text-[#657168] dark:text-[#9FB29E] py-1 border-b border-[#E4DCD0]/60 dark:border-[#233630]/60">
                       <span>Waiters:</span>
-                      <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] font-mono">{p.maxWaiters ?? 10} Staff</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono">{p.maxWaiters ?? 10} Staff</span>
                     </div>
-                    <div className="flex items-center justify-between text-[#5B6470] dark:text-[#A89B8C] py-1 border-b border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+                    <div className="flex items-center justify-between text-[#657168] dark:text-[#9FB29E] py-1 border-b border-[#E4DCD0]/60 dark:border-[#233630]/60">
                       <span>Kitchen Admins:</span>
-                      <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] font-mono">{p.maxKitchenAdmins ?? 2} Staff</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono">{p.maxKitchenAdmins ?? 2} Staff</span>
                     </div>
-                    <div className="flex items-center justify-between text-[#5B6470] dark:text-[#A89B8C] py-1 border-b border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+                    <div className="flex items-center justify-between text-[#657168] dark:text-[#9FB29E] py-1 border-b border-[#E4DCD0]/60 dark:border-[#233630]/60">
                       <span>Receptionists:</span>
-                      <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] font-mono">{p.maxReceptionists ?? 2} Staff</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono">{p.maxReceptionists ?? 2} Staff</span>
                     </div>
-                    <div className="flex items-center justify-between text-[#5B6470] dark:text-[#A89B8C] py-1 border-b border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+                    <div className="flex items-center justify-between text-[#657168] dark:text-[#9FB29E] py-1 border-b border-[#E4DCD0]/60 dark:border-[#233630]/60">
                       <span>Max Dining Tables:</span>
-                      <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] font-mono">{p.maxTables} Tables</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono">{p.maxTables} Tables</span>
                     </div>
-                    <div className="flex items-center justify-between text-[#5B6470] dark:text-[#A89B8C] py-1 border-b border-[#E5D8C6]/60 dark:border-[#382F26]/60">
+                    <div className="flex items-center justify-between text-[#657168] dark:text-[#9FB29E] py-1 border-b border-[#E4DCD0]/60 dark:border-[#233630]/60">
                       <span>Max Menu Items:</span>
-                      <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC] font-mono">{p.maxMenuItems} Dishes</span>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono">{p.maxMenuItems} Dishes</span>
                     </div>
                   </div>
 
                   {Array.isArray(p.features) && p.features.length > 0 && (
                     <div className="space-y-1.5 mb-4">
-                      <span className="text-[11px] font-bold uppercase text-[#5B6470] dark:text-[#A89B8C] block tracking-wider">
+                      <span className="text-[11px] font-bold uppercase text-[#657168] dark:text-[#9FB29E] block tracking-wider">
                         Feature Modules
                       </span>
                       {p.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-[#1F2937] dark:text-[#F7F3EC]">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 shrink-0" />
+                        <div key={idx} className="flex items-center gap-2 text-xs text-[#17251F] dark:text-[#F7EFE4]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#52B788] shrink-0" />
                           <span className="font-medium">{feat}</span>
                         </div>
                       ))}
@@ -941,12 +901,12 @@ export default function RegistrationAdminDashboard() {
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
+                <div className="pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
                   <button
                     onClick={() => handleOpenEditPlan(p)}
-                    className="w-full flex items-center justify-center gap-1.5 bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] active:scale-95 text-[#92400E] dark:text-[#D97706] text-xs font-bold py-2.5 rounded-xl border border-[#E5D8C6] dark:border-[#382F26] shadow-sandstone hover:shadow-sandstone-md transition-all cursor-pointer"
+                    className="w-full flex items-center justify-center gap-1.5 bg-[#FFFDF9] dark:bg-[#152320] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] active:scale-95 text-[#173F36] dark:text-[#9FB29E] text-xs font-semibold py-2.5 rounded-xl border border-[#E4DCD0] dark:border-[#233630] shadow-xs transition-all cursor-pointer"
                   >
-                    <Edit3 className="w-3.5 h-3.5 text-[#92400E] dark:text-[#D97706]" />
+                    <Edit3 className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                     <span>Edit Plan Parameters</span>
                   </button>
                 </div>
@@ -959,49 +919,49 @@ export default function RegistrationAdminDashboard() {
       {/* ONBOARD RESTAURANT MODAL */}
       {showOnboardModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-3xl w-full max-w-xl p-6 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[#1F2937] dark:text-[#F7F3EC]">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E5D8C6] dark:border-[#382F26]">
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-xl p-6 sm:p-7 shadow-editorial relative max-h-[90vh] overflow-y-auto text-[#17251F] dark:text-[#F7EFE4]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E4DCD0] dark:border-[#233630]">
               <div>
-                <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-[#92400E] dark:text-[#D97706]" />
+                <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
                   <span>Onboard New Restaurant Tenant</span>
                 </h3>
-                <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+                <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
                   Provisions tenant database space, creates Owner account, and links Subscription Plan
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleAutofillOnboard}
-                className="text-[11px] text-[#92400E] dark:text-[#D97706] hover:text-[#78350F] dark:hover:text-[#F59E0B] font-semibold flex items-center gap-1 bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors shadow-sm"
+                className="text-[11px] text-[#173F36] dark:text-[#9FB29E] hover:text-[#12332C] dark:hover:text-[#F7EFE4] font-semibold flex items-center gap-1 bg-[#F7EFE4] dark:bg-[#1E2E2A] border border-[#E4DCD0] dark:border-[#233630] px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors shadow-xs"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
                 <span>Auto-fill Demo</span>
               </button>
             </div>
 
             <form onSubmit={handleOnboardSubmit} className="space-y-4 mt-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Restaurant Name *</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Restaurant Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Bukhara Spice Kitchen"
                   value={onboardForm.restaurantName}
                   onChange={(e) => setOnboardForm({ ...onboardForm, restaurantName: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E] focus:ring-1 focus:ring-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Assign Subscription Plan *</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Assign Subscription Plan *</label>
                 <select
                   value={onboardForm.planId}
                   onChange={(e) => setOnboardForm({ ...onboardForm, planId: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E] font-medium"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-medium"
                 >
                   {plans.map((p) => (
-                    <option key={p.id} value={p.id} className="dark:bg-[#1C1815] dark:text-[#F7F3EC]">
+                    <option key={p.id} value={p.id} className="dark:bg-[#152320] dark:text-[#F7EFE4]">
                       {p.name} — ₹{Number(p.price).toLocaleString()} / year ({p.maxWaiters ?? 10} Waiters, {p.maxKitchenAdmins ?? 2} Kitchen Admins, {p.maxReceptionists ?? 2} Receptionists)
                     </option>
                   ))}
@@ -1010,105 +970,105 @@ export default function RegistrationAdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Currency Symbol</label>
+                  <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Currency Symbol</label>
                   <input
                     type="text"
                     value={onboardForm.currency}
                     onChange={(e) => setOnboardForm({ ...onboardForm, currency: e.target.value })}
-                    className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                    className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     placeholder="₹ or $"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Tax Rate (%)</label>
+                  <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Tax Rate (%)</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={onboardForm.taxRate}
                     onChange={(e) => setOnboardForm({ ...onboardForm, taxRate: e.target.value })}
-                    className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                    className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Location / Address</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Location / Address</label>
                 <input
                   type="text"
                   placeholder="e.g. 104 MG Road, Bangalore"
                   value={onboardForm.address}
                   onChange={(e) => setOnboardForm({ ...onboardForm, address: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
-              <div className="pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
-                <span className="text-[11px] font-bold uppercase text-[#92400E] dark:text-[#D97706] block mb-2">
+              <div className="pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
+                <span className="text-[11px] font-bold uppercase text-[#173F36] dark:text-[#9FB29E] block mb-2">
                   Restaurant Administrator Credentials
                 </span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Owner Full Name *</label>
+                    <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Owner Full Name *</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Alok Verma"
                       value={onboardForm.ownerName}
                       onChange={(e) => setOnboardForm({ ...onboardForm, ownerName: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Phone Number</label>
+                    <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Phone Number</label>
                     <input
                       type="text"
                       placeholder="e.g. +91 9876543210"
                       value={onboardForm.phone}
                       onChange={(e) => setOnboardForm({ ...onboardForm, phone: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280]"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Owner Email *</label>
+                    <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Owner Email *</label>
                     <input
                       type="email"
                       required
                       placeholder="owner@example.com"
                       value={onboardForm.ownerEmail}
                       onChange={(e) => setOnboardForm({ ...onboardForm, ownerEmail: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Initial Password *</label>
+                    <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Initial Password *</label>
                     <input
                       type="password"
                       required
                       placeholder="Min 6 characters"
                       value={onboardForm.password}
                       onChange={(e) => setOnboardForm({ ...onboardForm, password: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#E5D8C6] dark:border-[#382F26]">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#233630]">
                 <button
                   type="button"
                   onClick={() => setShowOnboardModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer border border-[#E5D8C6] dark:border-[#382F26]"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] transition-colors cursor-pointer border border-[#E4DCD0] dark:border-[#233630]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingOnboard}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#92400E] hover:bg-[#78350F] text-white transition-all shadow-sandstone cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-all shadow-editorial cursor-pointer"
                 >
                   {submittingOnboard ? 'Onboarding Establishment...' : 'Onboard Restaurant'}
                 </button>
@@ -1121,25 +1081,25 @@ export default function RegistrationAdminDashboard() {
       {/* MANAGE SUBSCRIPTION MODAL */}
       {selectedRestForSub && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-[#1F2937] dark:text-[#F7F3EC]">
-            <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#92400E] dark:text-[#D97706]" />
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-md p-6 shadow-editorial relative text-[#17251F] dark:text-[#F7EFE4]">
+            <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>Manage Plan & Subscription</span>
             </h3>
-            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">
-              Configure subscription tier for <span className="text-[#1F2937] dark:text-[#F7F3EC] font-semibold">{selectedRestForSub.name}</span>
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">
+              Configure subscription tier for <span className="text-[#17251F] dark:text-[#F7EFE4] font-semibold">{selectedRestForSub.name}</span>
             </p>
 
             <form onSubmit={handleUpdateSubscription} className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Select Plan</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Select Plan</label>
                 <select
                   value={subForm.planId}
                   onChange={(e) => setSubForm({ ...subForm, planId: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36]"
                 >
                   {plans.map((p) => (
-                    <option key={p.id} value={p.id} className="dark:bg-[#1C1815] dark:text-[#F7F3EC]">
+                    <option key={p.id} value={p.id} className="dark:bg-[#152320] dark:text-[#F7EFE4]">
                       {p.name} — ₹{Number(p.price).toLocaleString()} / year ({p.maxWaiters ?? 10} Waiters, {p.maxKitchenAdmins ?? 2} Kitchen Admins, {p.maxReceptionists ?? 2} Receptionists)
                     </option>
                   ))}
@@ -1147,42 +1107,42 @@ export default function RegistrationAdminDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Subscription Status</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Subscription Status</label>
                 <select
                   value={subForm.status}
                   onChange={(e) => setSubForm({ ...subForm, status: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36]"
                 >
-                  <option value="ACTIVE" className="dark:bg-[#1C1815] dark:text-[#F7F3EC]">ACTIVE (Normal Operations)</option>
-                  <option value="SUSPENDED" className="dark:bg-[#1C1815] dark:text-[#F7F3EC]">SUSPENDED (Temporarily Blocked)</option>
-                  <option value="EXPIRED" className="dark:bg-[#1C1815] dark:text-[#F7F3EC]">EXPIRED (Renewal Required)</option>
+                  <option value="ACTIVE" className="dark:bg-[#152320] dark:text-[#F7EFE4]">ACTIVE (Normal Operations)</option>
+                  <option value="SUSPENDED" className="dark:bg-[#152320] dark:text-[#F7EFE4]">SUSPENDED (Temporarily Blocked)</option>
+                  <option value="EXPIRED" className="dark:bg-[#152320] dark:text-[#F7EFE4]">EXPIRED (Renewal Required)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Extend Duration (Days from now)</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Extend Duration (Days from now)</label>
                 <input
                   type="number"
                   min="1"
                   max="365"
                   value={subForm.durationDays}
                   onChange={(e) => setSubForm({ ...subForm, durationDays: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-mono"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
                 <button
                   type="button"
                   onClick={() => setSelectedRestForSub(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer border border-[#E5D8C6] dark:border-[#382F26]"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] transition-colors cursor-pointer border border-[#E4DCD0] dark:border-[#233630]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingSub}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#92400E] hover:bg-[#78350F] text-white transition-all shadow-sandstone cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-all shadow-editorial cursor-pointer"
                 >
                   {submittingSub ? 'Updating...' : 'Save Subscription'}
                 </button>
@@ -1195,50 +1155,50 @@ export default function RegistrationAdminDashboard() {
       {/* RESET OWNER CREDENTIALS MODAL */}
       {selectedRestForReset && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-[#1F2937] dark:text-[#F7F3EC]">
-            <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-[#D97706]" />
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-md p-6 shadow-editorial relative text-[#17251F] dark:text-[#F7EFE4]">
+            <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-[#C07D37]" />
               <span>Reset Owner Credentials</span>
             </h3>
-            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">
-              Update login credentials for <span className="text-[#1F2937] dark:text-[#F7F3EC] font-semibold">{selectedRestForReset.name}</span>
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">
+              Update login credentials for <span className="text-[#17251F] dark:text-[#F7EFE4] font-semibold">{selectedRestForReset.name}</span>
             </p>
 
             <form onSubmit={handleResetCredentials} className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">New Owner Email</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">New Owner Email</label>
                 <input
                   type="email"
                   placeholder="Leave as is or enter new email"
                   value={resetForm.newEmail}
                   onChange={(e) => setResetForm({ ...resetForm, newEmail: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">New Password (leave empty to keep current)</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">New Password (leave empty to keep current)</label>
                 <input
                   type="password"
                   placeholder="Min 6 characters"
                   value={resetForm.newPassword}
                   onChange={(e) => setResetForm({ ...resetForm, newPassword: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
                 <button
                   type="button"
                   onClick={() => setSelectedRestForReset(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer border border-[#E5D8C6] dark:border-[#382F26]"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] transition-colors cursor-pointer border border-[#E4DCD0] dark:border-[#233630]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReset}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#92400E] hover:bg-[#78350F] text-white transition-all shadow-sandstone cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-all shadow-editorial cursor-pointer"
                 >
                   {submittingReset ? 'Updating...' : 'Save New Credentials'}
                 </button>
@@ -1251,130 +1211,130 @@ export default function RegistrationAdminDashboard() {
       {/* CREATE / EDIT PLAN MODAL */}
       {showPlanModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-3xl w-full max-w-lg p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-[#1F2937] dark:text-[#F7F3EC]">
-            <h3 className="text-lg font-bold text-[#1F2937] dark:text-[#F7F3EC] flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-[#92400E] dark:text-[#D97706]" />
+          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-lg p-6 shadow-editorial relative max-h-[90vh] overflow-y-auto text-[#17251F] dark:text-[#F7EFE4]">
+            <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
               <span>{editingPlan ? 'Edit Subscription Plan' : 'Create Subscription Plan'}</span>
             </h3>
-            <p className="text-xs text-[#5B6470] dark:text-[#A89B8C] mt-1 font-medium">
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">
               Define pricing and resource capacity limits for restaurant tenants
             </p>
 
             <form onSubmit={handlePlanSubmit} className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Plan Name *</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Plan Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Growth Plan"
                   value={planForm.name}
                   onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Short Description</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Short Description</label>
                 <input
                   type="text"
                   placeholder="e.g. For expanding restaurants and bistros"
                   value={planForm.description}
                   onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Price (₹)</label>
+                  <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Price (₹)</label>
                   <input
                     type="number"
                     min="0"
                     value={planForm.price}
                     onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-                    className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E] font-mono"
+                    className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Duration (Days)</label>
+                  <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Duration (Days)</label>
                   <input
                     type="number"
                     min="1"
                     value={planForm.durationDays}
                     onChange={(e) => setPlanForm({ ...planForm, durationDays: e.target.value })}
-                    className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] focus:outline-none focus:border-[#92400E] font-mono"
+                    className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-mono"
                   />
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#E5D8C6] dark:border-[#382F26]">
-                <span className="text-[11px] font-bold uppercase text-[#92400E] dark:text-[#D97706] block mb-2">
+              <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#233630]">
+                <span className="text-[11px] font-bold uppercase text-[#173F36] dark:text-[#9FB29E] block mb-2">
                   Enforced Resource Limits
                 </span>
                 <div className="grid grid-cols-3 gap-2 mb-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Max Waiters</label>
+                    <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Max Waiters</label>
                     <input
                       type="number"
                       min="1"
                       value={planForm.maxWaiters}
                       onChange={(e) => setPlanForm({ ...planForm, maxWaiters: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Kitchen Admins</label>
+                    <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Kitchen Admins</label>
                     <input
                       type="number"
                       min="1"
                       value={planForm.maxKitchenAdmins}
                       onChange={(e) => setPlanForm({ ...planForm, maxKitchenAdmins: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Receptionists</label>
+                    <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Receptionists</label>
                     <input
                       type="number"
                       min="1"
                       value={planForm.maxReceptionists}
                       onChange={(e) => setPlanForm({ ...planForm, maxReceptionists: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Max Tables</label>
+                    <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Max Tables</label>
                     <input
                       type="number"
                       min="1"
                       value={planForm.maxTables}
                       onChange={(e) => setPlanForm({ ...planForm, maxTables: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Max Dishes</label>
+                    <label className="block text-[11px] font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Max Dishes</label>
                     <input
                       type="number"
                       min="1"
                       value={planForm.maxMenuItems}
                       onChange={(e) => setPlanForm({ ...planForm, maxMenuItems: e.target.value })}
-                      className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] font-mono"
+                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1F2937] dark:text-[#F7F3EC] mb-1">Features (comma separated)</label>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Features (comma separated)</label>
                 <input
                   type="text"
                   placeholder="POS Terminal, Kitchen Display, Inventory BOM, Reports"
                   value={planForm.features}
                   onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })}
-                  className="w-full bg-[#FAF7F2] dark:bg-[#25201C] border border-[#E5D8C6] dark:border-[#382F26] rounded-xl px-3 py-2 text-xs text-[#1F2937] dark:text-[#F7F3EC] placeholder-[#9CA3AF] dark:placeholder-[#6B7280] focus:outline-none focus:border-[#92400E]"
+                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
                 />
               </div>
 
@@ -1384,25 +1344,25 @@ export default function RegistrationAdminDashboard() {
                   id="planActiveCheck"
                   checked={planForm.isActive}
                   onChange={(e) => setPlanForm({ ...planForm, isActive: e.target.checked })}
-                  className="rounded bg-[#FAF7F2] dark:bg-[#25201C] border-[#E5D8C6] dark:border-[#382F26] text-[#92400E] focus:ring-0"
+                  className="rounded bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#233630] text-[#173F36] focus:ring-0 accent-[#173F36]"
                 />
-                <label htmlFor="planActiveCheck" className="text-xs text-[#1F2937] dark:text-[#F7F3EC] font-medium">
+                <label htmlFor="planActiveCheck" className="text-xs text-[#17251F] dark:text-[#F7EFE4] font-medium">
                   Plan is active for onboarding
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E5D8C6] dark:border-[#382F26]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
                 <button
                   type="button"
                   onClick={() => setShowPlanModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#5B6470] dark:text-[#A89B8C] hover:text-[#1F2937] dark:hover:text-[#F7F3EC] hover:bg-[#F1E8DB] dark:hover:bg-[#25201C] transition-colors cursor-pointer border border-[#E5D8C6] dark:border-[#382F26]"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] transition-colors cursor-pointer border border-[#E4DCD0] dark:border-[#233630]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPlan}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#92400E] hover:bg-[#78350F] text-white transition-all shadow-sandstone cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-all shadow-editorial cursor-pointer"
                 >
                   {submittingPlan ? 'Saving...' : editingPlan ? 'Update Plan' : 'Create Plan'}
                 </button>

@@ -288,14 +288,14 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
   };
 
   return (
-    <div className="min-h-screen w-screen bg-[#FAF7F2] flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 relative select-none font-sans overflow-y-auto">
+    <div className="min-h-screen w-screen bg-[#F7EFE4] flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 relative select-none font-sans overflow-y-auto">
       {/* Ambient background glow accents */}
-      <div className="fixed top-12 left-1/4 w-96 h-96 bg-[#E7DCCB]/40 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="fixed bottom-12 right-1/4 w-96 h-96 bg-[#D97706]/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="fixed top-12 left-1/4 w-96 h-96 bg-[#E4DCD0]/40 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-12 right-1/4 w-96 h-96 bg-[#173F36]/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* Decorative leaf / geometric motif */}
       <svg
-        className="fixed -bottom-10 -right-10 w-72 h-72 text-[#E5D8C6]/40 pointer-events-none select-none -z-10"
+        className="fixed -bottom-10 -right-10 w-72 h-72 text-[#E4DCD0]/40 pointer-events-none select-none -z-10"
         viewBox="0 0 200 200"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -312,26 +312,26 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
       <div className="w-full max-w-[440px] my-auto py-6 animate-fade-in relative z-10">
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#92400E] to-[#D97706] flex items-center justify-center shadow-lg shadow-[#92400E]/20 mx-auto mb-3 border border-white/40">
-            <UtensilsCrossed className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-[#173F36] flex items-center justify-center shadow-editorial mx-auto mb-3 border border-[#E4DCD0]">
+            <UtensilsCrossed className="w-7 h-7 text-[#FFFDF9]" />
           </div>
-          <h2 className="text-2xl font-black text-[#1F2937] tracking-tight">POS</h2>
-          <p className="text-xs text-[#5B6470] mt-1 font-medium tracking-wide">
+          <h2 className="text-2xl font-serif font-bold text-[#173F36] tracking-tight">POS Terminal</h2>
+          <p className="text-xs text-[#657168] mt-1 font-medium tracking-wide">
             Enterprise Password Recovery
           </p>
         </div>
 
-        {/* Main Sandstone Authentication Card */}
-        <div className="bg-white border border-[#E5D8C6] rounded-3xl p-7 sm:p-9 shadow-[0_10px_35px_-5px_rgba(41,35,31,0.06)] transition-all">
+        {/* Main Ivory Authentication Card */}
+        <div className="bg-[#FFFDF9] border border-[#E4DCD0] rounded-2xl p-7 sm:p-9 shadow-editorial transition-all">
           {/* Error Banner */}
           {errorMsg && (
-            <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-start gap-2.5 animate-slide-up">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="mb-5 p-3 rounded-xl bg-[#FDF0ED] border border-[#F5C6CB] text-[#C53030] text-xs font-medium flex items-start gap-2.5 animate-slide-up">
+              <AlertCircle className="w-4 h-4 text-[#C53030] shrink-0 mt-0.5" />
               <span className="flex-1 leading-snug">{errorMsg}</span>
               <button
                 type="button"
                 onClick={() => setErrorMsg('')}
-                className="text-rose-500 hover:text-rose-700 p-0.5"
+                className="text-[#C53030] hover:opacity-80 p-0.5"
                 title="Dismiss error"
               >
                 <X className="w-3.5 h-3.5" />
@@ -345,22 +345,22 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
           {step === 'forgot' && (
             <div>
               <div className="text-center mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] flex items-center justify-center mx-auto mb-2.5 text-[#92400E]">
+                <div className="w-10 h-10 rounded-xl bg-[#F7EFE4] border border-[#E4DCD0] flex items-center justify-center mx-auto mb-2.5 text-[#173F36]">
                   <Mail className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-[#1F2937] tracking-tight">Forgot Password?</h3>
-                <p className="text-xs text-[#5B6470] mt-1 leading-relaxed">
+                <h3 className="text-2xl font-serif font-bold text-[#173F36] tracking-tight">Forgot Password?</h3>
+                <p className="text-xs text-[#657168] mt-1 leading-relaxed">
                   Enter your registered email address and we'll send you a verification code.
                 </p>
               </div>
 
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-[#17251F] mb-1.5 uppercase tracking-wide">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Mail className="w-4 h-4 text-[#657168] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="email"
                       required
@@ -371,7 +371,7 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                         setEmail(e.target.value);
                         if (errorMsg) setErrorMsg('');
                       }}
-                      className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm text-[#1F2937] placeholder-[#8C7E72] focus:outline-none focus:border-[#92400E] focus:ring-2 focus:ring-[#92400E]/20 transition-all font-medium"
+                      className="w-full bg-[#FFFDF9] border border-[#E4DCD0] rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm text-[#17251F] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] focus:ring-2 focus:ring-[#173F36]/15 transition-all font-medium"
                       placeholder="email@example.com"
                     />
                   </div>
@@ -380,11 +380,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:bg-[#5F280A] text-white font-bold text-sm rounded-xl transition-all duration-200 shadow-md shadow-[#92400E]/20 hover:shadow-lg hover:shadow-[#92400E]/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#92400E] focus:ring-offset-2 mt-2"
+                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] font-semibold text-sm rounded-xl transition-all duration-200 shadow-editorial cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#173F36] focus:ring-offset-2 hover:-translate-y-0.5 mt-2"
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#FFFDF9]" />
                       <span>Sending...</span>
                     </>
                   ) : (
@@ -396,11 +396,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 </button>
               </form>
 
-              <div className="mt-6 pt-5 border-t border-[#E5D8C6] text-center">
+              <div className="mt-6 pt-5 border-t border-[#E4DCD0] text-center">
                 <button
                   type="button"
                   onClick={handleReturnToLogin}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#92400E] hover:text-[#78350F] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#173F36] hover:text-[#12332C] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Back to Sign In</span>
@@ -415,14 +415,14 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
           {step === 'verify' && (
             <div>
               <div className="text-center mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] flex items-center justify-center mx-auto mb-2.5 text-[#92400E]">
+                <div className="w-10 h-10 rounded-xl bg-[#F7EFE4] border border-[#E4DCD0] flex items-center justify-center mx-auto mb-2.5 text-[#173F36]">
                   <KeyRound className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-[#1F2937] tracking-tight">Verify Your Email</h3>
-                <p className="text-xs text-[#5B6470] mt-1 leading-relaxed">
+                <h3 className="text-2xl font-serif font-bold text-[#173F36] tracking-tight">Verify Your Email</h3>
+                <p className="text-xs text-[#657168] mt-1 leading-relaxed">
                   Enter the 6-digit verification code sent to:
                 </p>
-                <p className="text-xs font-bold text-[#1F2937] mt-0.5 break-all bg-[#FAF7F2] py-1 px-2.5 rounded-lg border border-[#E5D8C6] inline-block max-w-full">
+                <p className="text-xs font-bold text-[#17251F] mt-0.5 break-all bg-[#F7EFE4] py-1 px-2.5 rounded-lg border border-[#E4DCD0] inline-block max-w-full">
                   {email || 'your email'}
                 </p>
               </div>
@@ -430,7 +430,7 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
               <form onSubmit={handleVerifyOtp} className="space-y-5">
                 {/* 6-Digit OTP Individual Inputs */}
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-2 uppercase tracking-wide text-center">
+                  <label className="block text-xs font-semibold text-[#17251F] mb-2 uppercase tracking-wide text-center">
                     Verification Code
                   </label>
                   <div
@@ -447,7 +447,7 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-full h-12 sm:h-13 text-center text-lg sm:text-xl font-bold bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl text-[#92400E] focus:outline-none focus:border-[#92400E] focus:ring-2 focus:ring-[#92400E]/20 transition-all font-mono"
+                        className="w-full h-12 sm:h-13 text-center text-lg sm:text-xl font-bold bg-[#FFFDF9] border border-[#E4DCD0] rounded-xl text-[#173F36] focus:outline-none focus:border-[#173F36] focus:ring-2 focus:ring-[#173F36]/15 transition-all font-mono"
                         placeholder="•"
                       />
                     ))}
@@ -457,11 +457,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 <button
                   type="submit"
                   disabled={loading || otpValues.join('').length !== 6}
-                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:bg-[#5F280A] text-white font-bold text-sm rounded-xl transition-all duration-200 shadow-md shadow-[#92400E]/20 hover:shadow-lg hover:shadow-[#92400E]/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#92400E] focus:ring-offset-2 mt-2"
+                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] font-semibold text-sm rounded-xl transition-all duration-200 shadow-editorial cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#173F36] focus:ring-offset-2 hover:-translate-y-0.5 mt-2"
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#FFFDF9]" />
                       <span>Verifying...</span>
                     </>
                   ) : (
@@ -474,12 +474,12 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
               </form>
 
               {/* Resend OTP Section with Timer */}
-              <div className="mt-5 p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] text-center text-xs space-y-1">
-                <span className="text-[#5B6470]">Didn't receive the code? </span>
+              <div className="mt-5 p-3.5 rounded-xl bg-[#F7EFE4] border border-[#E4DCD0] text-center text-xs space-y-1">
+                <span className="text-[#657168]">Didn't receive the code? </span>
                 {resendCooldown > 0 ? (
-                  <div className="font-semibold text-[#78350F] inline-flex items-center gap-1.5 mt-0.5">
+                  <div className="font-semibold text-[#173F36] inline-flex items-center gap-1.5 mt-0.5">
                     <span>Resend available in:</span>
-                    <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-[#E5D8C6] text-[#92400E]">
+                    <span className="font-mono bg-[#FFFDF9] px-1.5 py-0.5 rounded border border-[#E4DCD0] text-[#173F36]">
                       00:{resendCooldown < 10 ? `0${resendCooldown}` : resendCooldown}
                     </span>
                   </div>
@@ -488,7 +488,7 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                     type="button"
                     onClick={handleResendOtp}
                     disabled={resending}
-                    className="font-bold text-[#92400E] hover:text-[#78350F] transition-colors underline cursor-pointer inline-flex items-center gap-1 ml-1"
+                    className="font-bold text-[#173F36] hover:text-[#12332C] transition-colors underline cursor-pointer inline-flex items-center gap-1 ml-1"
                   >
                     {resending ? (
                       <>
@@ -503,11 +503,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
               </div>
 
               {/* Back Button */}
-              <div className="mt-5 pt-4 border-t border-[#E5D8C6] flex items-center justify-between text-xs">
+              <div className="mt-5 pt-4 border-t border-[#E4DCD0] flex items-center justify-between text-xs">
                 <button
                   type="button"
                   onClick={() => navigateTo('forgot', '/forgot-password')}
-                  className="inline-flex items-center gap-1 font-semibold text-[#5B6470] hover:text-[#1F2937] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 font-semibold text-[#657168] hover:text-[#17251F] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Change Email</span>
@@ -515,7 +515,7 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 <button
                   type="button"
                   onClick={handleReturnToLogin}
-                  className="font-semibold text-[#92400E] hover:text-[#78350F] transition-colors cursor-pointer"
+                  className="font-semibold text-[#173F36] hover:text-[#12332C] transition-colors cursor-pointer"
                 >
                   Back to Sign In
                 </button>
@@ -529,11 +529,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
           {step === 'reset' && (
             <div>
               <div className="text-center mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#FAF7F2] border border-[#E5D8C6] flex items-center justify-center mx-auto mb-2.5 text-[#92400E]">
+                <div className="w-10 h-10 rounded-xl bg-[#F7EFE4] border border-[#E4DCD0] flex items-center justify-center mx-auto mb-2.5 text-[#173F36]">
                   <Lock className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-[#1F2937] tracking-tight">Create New Password</h3>
-                <p className="text-xs text-[#5B6470] mt-1 leading-relaxed">
+                <h3 className="text-2xl font-serif font-bold text-[#173F36] tracking-tight">Create New Password</h3>
+                <p className="text-xs text-[#657168] mt-1 leading-relaxed">
                   Create a new secure password for your POS account.
                 </p>
               </div>
@@ -541,11 +541,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
               <form onSubmit={handleResetPassword} className="space-y-4">
                 {/* New Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-[#17251F] mb-1.5 uppercase tracking-wide">
                     New Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Lock className="w-4 h-4 text-[#657168] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type={showNewPassword ? 'text' : 'password'}
                       required
@@ -556,13 +556,13 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                         setNewPassword(e.target.value);
                         if (errorMsg) setErrorMsg('');
                       }}
-                      className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-10 pr-11 py-2.5 sm:py-3 text-sm text-[#1F2937] placeholder-[#8C7E72] focus:outline-none focus:border-[#92400E] focus:ring-2 focus:ring-[#92400E]/20 transition-all font-medium"
+                      className="w-full bg-[#FFFDF9] border border-[#E4DCD0] rounded-xl pl-10 pr-11 py-2.5 sm:py-3 text-sm text-[#17251F] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] focus:ring-2 focus:ring-[#173F36]/15 transition-all font-medium"
                       placeholder="Enter new password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] p-1.5 rounded-lg transition-colors cursor-pointer"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#657168] hover:text-[#17251F] hover:bg-[#F7EFE4] p-1.5 rounded-lg transition-colors cursor-pointer"
                       title={showNewPassword ? 'Hide password' : 'Show password'}
                     >
                       {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -572,11 +572,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-[#1F2937] mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-[#17251F] mb-1.5 uppercase tracking-wide">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-[#5B6470] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Lock className="w-4 h-4 text-[#657168] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
@@ -586,20 +586,20 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                         setConfirmPassword(e.target.value);
                         if (errorMsg) setErrorMsg('');
                       }}
-                      className="w-full bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl pl-10 pr-11 py-2.5 sm:py-3 text-sm text-[#1F2937] placeholder-[#8C7E72] focus:outline-none focus:border-[#92400E] focus:ring-2 focus:ring-[#92400E]/20 transition-all font-medium"
+                      className="w-full bg-[#FFFDF9] border border-[#E4DCD0] rounded-xl pl-10 pr-11 py-2.5 sm:py-3 text-sm text-[#17251F] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] focus:ring-2 focus:ring-[#173F36]/15 transition-all font-medium"
                       placeholder="Confirm new password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5B6470] hover:text-[#1F2937] hover:bg-[#F1E8DB] p-1.5 rounded-lg transition-colors cursor-pointer"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#657168] hover:text-[#17251F] hover:bg-[#F7EFE4] p-1.5 rounded-lg transition-colors cursor-pointer"
                       title={showConfirmPassword ? 'Hide password' : 'Show password'}
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {confirmPassword && !passwordsMatch && (
-                    <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+                    <p className="text-[11px] text-[#C53030] mt-1 font-medium flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       <span>Passwords do not match.</span>
                     </p>
@@ -607,25 +607,25 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 </div>
 
                 {/* Password Requirement Rules Checklist */}
-                <div className="p-3 bg-[#FAF7F2] border border-[#E5D8C6] rounded-xl text-xs space-y-1.5">
-                  <span className="font-semibold text-[#1F2937] block text-[11px] uppercase tracking-wider mb-1">
+                <div className="p-3 bg-[#F7EFE4] border border-[#E4DCD0] rounded-xl text-xs space-y-1.5">
+                  <span className="font-semibold text-[#17251F] block text-[11px] uppercase tracking-wider mb-1">
                     Password must contain:
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px]">
-                    <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-700 font-semibold' : 'text-[#5B6470]'}`}>
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasMinLength ? 'text-emerald-600' : 'text-[#8C7E72]'}`} />
+                    <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-[#2D6A4F] font-semibold' : 'text-[#657168]'}`}>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasMinLength ? 'text-[#2D6A4F]' : 'text-[#9FB29E]'}`} />
                       <span>At least 8 characters</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasUppercase ? 'text-emerald-700 font-semibold' : 'text-[#5B6470]'}`}>
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasUppercase ? 'text-emerald-600' : 'text-[#8C7E72]'}`} />
+                    <div className={`flex items-center gap-1.5 ${hasUppercase ? 'text-[#2D6A4F] font-semibold' : 'text-[#657168]'}`}>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasUppercase ? 'text-[#2D6A4F]' : 'text-[#9FB29E]'}`} />
                       <span>One uppercase letter</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasLowercase ? 'text-emerald-700 font-semibold' : 'text-[#5B6470]'}`}>
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasLowercase ? 'text-emerald-600' : 'text-[#8C7E72]'}`} />
+                    <div className={`flex items-center gap-1.5 ${hasLowercase ? 'text-[#2D6A4F] font-semibold' : 'text-[#657168]'}`}>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasLowercase ? 'text-[#2D6A4F]' : 'text-[#9FB29E]'}`} />
                       <span>One lowercase letter</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-700 font-semibold' : 'text-[#5B6470]'}`}>
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasNumber ? 'text-emerald-600' : 'text-[#8C7E72]'}`} />
+                    <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-[#2D6A4F] font-semibold' : 'text-[#657168]'}`}>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${hasNumber ? 'text-[#2D6A4F]' : 'text-[#9FB29E]'}`} />
                       <span>One number</span>
                     </div>
                   </div>
@@ -634,11 +634,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 <button
                   type="submit"
                   disabled={loading || !isPasswordValid || !passwordsMatch}
-                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:bg-[#5F280A] text-white font-bold text-sm rounded-xl transition-all duration-200 shadow-md shadow-[#92400E]/20 hover:shadow-lg hover:shadow-[#92400E]/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#92400E] focus:ring-offset-2 mt-2"
+                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] font-semibold text-sm rounded-xl transition-all duration-200 shadow-editorial cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#173F36] focus:ring-offset-2 hover:-translate-y-0.5 mt-2"
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#FFFDF9]" />
                       <span>Updating Password...</span>
                     </>
                   ) : (
@@ -650,11 +650,11 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
                 </button>
               </form>
 
-              <div className="mt-5 pt-4 border-t border-[#E5D8C6] text-center">
+              <div className="mt-5 pt-4 border-t border-[#E4DCD0] text-center">
                 <button
                   type="button"
                   onClick={() => navigateTo('forgot', '/forgot-password')}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#5B6470] hover:text-[#1F2937] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#657168] hover:text-[#17251F] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Restart Password Recovery</span>
@@ -668,23 +668,23 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
           {/* ======================================================== */}
           {step === 'success' && (
             <div className="text-center py-2 animate-scale-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center mx-auto mb-4 text-emerald-600 shadow-sm animate-bounce-short">
+              <div className="w-16 h-16 rounded-full bg-[#E8F3ED] border-2 border-[#C8E0D2] flex items-center justify-center mx-auto mb-4 text-[#2D6A4F] shadow-xs">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
-              <h3 className="text-xl font-black text-[#1F2937] tracking-tight">
+              <h3 className="text-2xl font-serif font-bold text-[#173F36] tracking-tight">
                 Password Updated Successfully
               </h3>
 
-              <p className="text-xs text-[#5B6470] mt-2 leading-relaxed max-w-xs mx-auto">
+              <p className="text-xs text-[#657168] mt-2 leading-relaxed max-w-xs mx-auto">
                 Your POS password has been updated. You can now sign in using your new password.
               </p>
 
-              <div className="mt-6 pt-4 border-t border-[#E5D8C6]">
+              <div className="mt-6 pt-4 border-t border-[#E4DCD0]">
                 <button
                   type="button"
                   onClick={handleReturnToLogin}
-                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#92400E] hover:bg-[#78350F] active:bg-[#5F280A] text-white font-bold text-sm rounded-xl transition-all duration-200 shadow-md shadow-[#92400E]/20 hover:shadow-lg hover:shadow-[#92400E]/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#92400E] focus:ring-offset-2"
+                  className="w-full h-12 flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] font-semibold text-sm rounded-xl transition-all duration-200 shadow-editorial cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#173F36] focus:ring-offset-2 hover:-translate-y-0.5"
                 >
                   <span>Back to Sign In</span>
                   <ArrowRight className="w-4 h-4" />
@@ -694,16 +694,16 @@ export default function ForgotPasswordView({ initialStep = 'forgot', onNavigateT
           )}
 
           {/* Security Guarantee Notice */}
-          <div className="mt-6 pt-4 border-t border-[#E5D8C6] text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-[#5B6470] font-medium">
-              <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
+          <div className="mt-6 pt-4 border-t border-[#E4DCD0] text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[#657168] font-medium">
+              <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
               <span>POS Encrypted Auth Session</span>
             </div>
           </div>
         </div>
 
         {/* Support note */}
-        <div className="mt-4 p-2.5 rounded-xl bg-white/70 border border-[#E5D8C6] text-center text-xs text-[#5B6470]">
+        <div className="mt-4 p-2.5 rounded-xl bg-[#FFFDF9]/80 border border-[#E4DCD0] text-center text-xs text-[#657168]">
           <span>Need help? Contact your restaurant system administrator.</span>
         </div>
       </div>

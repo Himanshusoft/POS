@@ -20,7 +20,6 @@ import {
   Globe,
   SlidersHorizontal,
 } from 'lucide-react';
-
 import { usePendingBillingOrders, useBills, usePayments, usePosMutations } from '../hooks/usePosQueries';
 
 export default function ReceptionistDashboardView({ setActiveTab }) {
@@ -62,7 +61,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
     }
   };
 
-  // Safe helper to extract payment info from bill (reusing the same logic from BillingView)
+  // Safe helper to extract payment info from bill
   const getBillPaymentInfo = (bill) => {
     if (!bill) {
       return {
@@ -121,8 +120,8 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
     switch (mode?.toUpperCase()) {
       case 'CASH':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            <Banknote className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
+            <Banknote className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
             <span>Cash</span>
           </span>
         );
@@ -142,14 +141,14 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
         );
       case 'RAZORPAY':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 dark:bg-amber-950/40 text-[#92400E] dark:text-[#D97706] border border-amber-200 dark:border-amber-800">
-            <Globe className="w-3 h-3 text-[#92400E] dark:text-[#D97706]" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <Globe className="w-3 h-3 text-amber-600 dark:text-amber-400" />
             <span>Razorpay</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#FAF7F2] dark:bg-[#201C18] text-[#5B6470] dark:text-[#A89B8C] border border-[#E5D8C6] dark:border-[#382F26]">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E]">
             <span>{mode || 'Unsettled'}</span>
           </span>
         );
@@ -197,10 +196,10 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
   // Real-data analytics breakdown
   const paymentBreakdown = useMemo(() => {
     const methods = {
-      CASH: { label: 'Cash', count: 0, amount: 0, color: '#16A34A' },
+      CASH: { label: 'Cash', count: 0, amount: 0, color: '#173F36' },
       UPI: { label: 'UPI / QR', count: 0, amount: 0, color: '#2563EB' },
       CARD: { label: 'Card (POS)', count: 0, amount: 0, color: '#6366F1' },
-      RAZORPAY: { label: 'Razorpay Online', count: 0, amount: 0, color: '#D97706' },
+      RAZORPAY: { label: 'Razorpay Online', count: 0, amount: 0, color: '#9FB29E' },
       OTHER: { label: 'Other', count: 0, amount: 0, color: '#8B5CF6' },
     };
 
@@ -261,24 +260,24 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
   const recentPendingOrders = useMemo(() => pendingOrders.slice(0, 5), [pendingOrders]);
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 bg-[#FAF7F2] dark:bg-[#141210] min-h-screen text-[#1F2937] dark:text-[#F7F3EC] transition-colors duration-200">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0 text-[#17251F] dark:text-[#F7EFE4] transition-colors duration-200">
       {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] p-5 sm:p-6 rounded-2xl shadow-sandstone">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706] shrink-0 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
             <LayoutDashboard className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937] dark:text-[#F7F3EC] tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Billing & Cashier Dashboard
               </h1>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 dark:bg-[#16A34A]/20 text-[#16A34A] dark:text-[#34D399] border border-[#16A34A]/20 dark:border-[#16A34A]/30 flex items-center gap-1 shadow-2xs">
-                <CheckCircle2 className="w-3 h-3 text-[#16A34A] dark:text-[#34D399]" />
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 shadow-2xs font-sans">
+                <CheckCircle2 className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
                 <span>Receptionist Live</span>
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#5B6470] dark:text-[#A89B8C] mt-0.5 font-medium">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
               Monitor payments, invoices, billing activity and unbilled orders.
             </p>
           </div>
@@ -294,7 +293,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           >
             <RefreshCw
               className={`w-3.5 h-3.5 mr-1.5 ${
-                refreshing || loading ? 'animate-spin text-[#92400E] dark:text-[#D97706]' : 'text-[#5B6470] dark:text-[#A89B8C]'
+                refreshing || loading ? 'animate-spin text-[#173F36] dark:text-[#9FB29E]' : 'text-[#657168] dark:text-[#9FB29E]'
               }`}
             />
             <span>Refresh</span>
@@ -330,17 +329,17 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
 
       {/* LIVE BILL REQUEST NOTIFICATION BANNER */}
       {billRequestsCount > 0 && (
-        <div className="bg-gradient-to-br from-amber-50/90 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-gradient-to-br from-amber-50/90 to-[#F7EFE4]/80 dark:from-amber-950/30 dark:to-[#152320] border border-amber-300 dark:border-amber-700 rounded-2xl p-4 sm:p-5 shadow-editorial flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex h-3 w-3 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
             </span>
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-950 dark:text-amber-200 block">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200 block font-sans">
                 {billRequestsCount} Bill {billRequestsCount === 1 ? 'Request' : 'Requests'} Pending from Waiters
               </span>
-              <span className="text-xs text-amber-900/80 dark:text-amber-300/80 font-medium">
+              <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
                 Dine-in guests finished meals and requested billing. Process invoice in Billing Dispatch.
               </span>
             </div>
@@ -363,7 +362,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl p-5 shadow-sandstone space-y-3"
+              className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-5 shadow-editorial space-y-3"
             >
               <div className="flex justify-between items-center">
                 <Skeleton className="h-4 w-28" />
@@ -381,11 +380,11 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               value={totalInvoices}
               subtitle="Invoices generated"
               icon={Receipt}
-              iconColor="text-[#92400E] dark:text-[#D97706]"
-              iconBg="bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30"
+              iconColor="text-[#173F36] dark:text-[#9FB29E]"
+              iconBg="bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20"
               onClick={() => navigateToBillingTab('bills')}
               badge={
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-[#92400E] dark:text-[#D97706] border border-amber-200 dark:border-amber-800">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
                   {paidBillsCount} Paid
                 </span>
               }
@@ -398,7 +397,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               subtitle="Transactions processed"
               icon={CreditCard}
               iconColor="text-[#2563EB] dark:text-[#60A5FA]"
-              iconBg="bg-[#2563EB]/10 dark:bg-[#2563EB]/20 border border-[#2563EB]/20 dark:border-[#2563EB]/30"
+              iconBg="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800"
               onClick={() => navigateToBillingTab('payments')}
               badge={
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -413,16 +412,16 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               value={unbilledOrdersCount}
               subtitle="Orders awaiting billing"
               icon={Clock}
-              iconColor="text-[#D97706] dark:text-[#F59E0B]"
-              iconBg="bg-[#D97706]/10 dark:bg-[#D97706]/20 border border-[#D97706]/20 dark:border-[#D97706]/30"
+              iconColor="text-[#173F36] dark:text-[#9FB29E]"
+              iconBg="bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20"
               onClick={() => navigateToBillingTab('pending')}
               badge={
                 billRequestsCount > 0 ? (
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
                     {billRequestsCount} Req
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#1E362E]">
                     Live
                   </span>
                 )
@@ -444,7 +443,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                     Pending
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
                     All Settled
                   </span>
                 )
@@ -464,7 +463,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           action={
             <button
               onClick={() => navigateToBillingTab('payments')}
-              className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-[#173F36] dark:text-[#9FB29E] hover:underline flex items-center gap-1 cursor-pointer font-sans"
             >
               <span>Transactions</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -476,14 +475,14 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           <div className="pt-2">
             <AreaChart
               data={paymentTrendData}
-              color="#16A34A"
-              gradientColor="#10B981"
+              color="#173F36"
+              gradientColor="#9FB29E"
               currency={currency}
               height={195}
             />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>Settled Volume: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{payments.length} transactions</strong></span>
-              <span>Net Collected: <strong className="font-mono text-[#16A34A] dark:text-emerald-400 font-bold">{currency}{paymentBreakdown.totalAmount.toFixed(2)}</strong></span>
+            <div className="flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E] pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E] font-medium font-sans">
+              <span>Settled Volume: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{payments.length} transactions</strong></span>
+              <span>Net Collected: <strong className="font-mono text-[#173F36] dark:text-[#9FB29E] font-bold">{currency}{paymentBreakdown.totalAmount.toFixed(2)}</strong></span>
             </div>
           </div>
         </ChartCard>
@@ -495,7 +494,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           badge="Settlement Mix"
         >
           {paymentBreakdown.items.length === 0 ? (
-            <div className="py-10 text-center text-xs text-[#5B6470] dark:text-[#A89B8C]">
+            <div className="py-10 text-center text-xs text-[#657168] dark:text-[#9FB29E]">
               No payment transactions recorded yet today.
             </div>
           ) : (
@@ -512,17 +511,17 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                 {paymentBreakdown.items.map((item) => (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF7F2] dark:bg-[#201C18] border border-[#E5D8C6]/70 dark:border-[#382F26]"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 border border-[#E4DCD0] dark:border-[#1E362E]"
                   >
-                    <span className="flex items-center gap-2 font-medium text-[#1F2937] dark:text-[#F7F3EC]">
+                    <span className="flex items-center gap-2 font-medium text-[#17251F] dark:text-[#F7EFE4]">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                       <span className="truncate">{item.label}</span>
                     </span>
                     <div className="text-right">
-                      <span className="font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC] block">
+                      <span className="font-mono font-bold text-[#173F36] dark:text-[#9FB29E] block">
                         {currency}{item.amount.toFixed(2)}
                       </span>
-                      <span className="text-[10px] text-[#5B6470] dark:text-[#A89B8C]">
+                      <span className="text-[10px] text-[#657168] dark:text-[#9FB29E]">
                         {item.value} txns
                       </span>
                     </div>
@@ -549,9 +548,9 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               height={195}
               currency={currency}
             />
-            <div className="flex items-center justify-between text-xs text-[#5B6470] dark:text-[#A89B8C] pt-3 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50 font-medium">
-              <span>Primary Gateway: <strong className="text-[#1F2937] dark:text-[#F7F3EC]">{paymentBreakdown.items[0]?.label || 'None'}</strong></span>
-              <span>Paid Bills: <strong className="font-mono text-[#1F2937] dark:text-[#F7F3EC]">{paidBillsCount} of {bills.length}</strong></span>
+            <div className="flex items-center justify-between text-xs text-[#657168] dark:text-[#9FB29E] pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E] font-medium font-sans">
+              <span>Primary Gateway: <strong className="text-[#17251F] dark:text-[#F7EFE4]">{paymentBreakdown.items[0]?.label || 'None'}</strong></span>
+              <span>Paid Bills: <strong className="font-mono text-[#173F36] dark:text-[#9FB29E]">{paidBillsCount} of {bills.length}</strong></span>
             </div>
           </div>
         </ChartCard>
@@ -565,44 +564,44 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           <div className="space-y-6 py-1">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Invoice Settlement Ratio</span>
-                <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono">
+                <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-sans">Invoice Settlement Ratio</span>
+                <span className="text-[#657168] dark:text-[#9FB29E] font-mono">
                   {bills.length} Invoices ({bills.length > 0 ? Math.round((paidBillsCount / bills.length) * 100) : 0}% settled)
                 </span>
               </div>
               <StatusDistributionBar
                 segments={[
-                  { label: 'Paid Bills', count: paidBillsCount, color: '#16A34A' },
+                  { label: 'Paid Bills', count: paidBillsCount, color: '#173F36' },
                   { label: 'Unpaid Bills', count: unpaidBillsCount, color: '#EF4444' },
                 ]}
               />
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-[#E5D8C6]/50 dark:border-[#382F26]/50">
+            <div className="space-y-2 pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E]">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#1F2937] dark:text-[#F7F3EC]">Guest Dining & Billing Pipeline</span>
-                <span className="text-[#5B6470] dark:text-[#A89B8C] font-mono">
+                <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-sans">Guest Dining & Billing Pipeline</span>
+                <span className="text-[#657168] dark:text-[#9FB29E] font-mono">
                   {bills.length + pendingOrders.length} Total Operations
                 </span>
               </div>
               <StatusDistributionBar
                 segments={[
-                  { label: 'Paid Invoices', count: paidBillsCount, color: '#16A34A' },
+                  { label: 'Paid Invoices', count: paidBillsCount, color: '#173F36' },
                   { label: 'Awaiting Payment', count: unpaidBillsCount, color: '#EF4444' },
-                  { label: 'Unbilled Dining', count: unbilledOrdersCount, color: '#D97706' },
+                  { label: 'Unbilled Dining', count: unbilledOrdersCount, color: '#9FB29E' },
                 ]}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 text-center">
-                <span className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] font-medium block">Total Collected</span>
-                <span className="text-base font-extrabold font-mono text-emerald-800 dark:text-emerald-300 mt-0.5 block">
+                <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-medium block font-sans">Total Collected</span>
+                <span className="text-base font-extrabold font-mono text-[#173F36] dark:text-[#9FB29E] mt-0.5 block">
                   {currency}{paymentBreakdown.totalAmount.toFixed(2)}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 text-center">
-                <span className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] font-medium block">Waiter Bill Requests</span>
+                <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-medium block font-sans">Waiter Bill Requests</span>
                 <span className="text-base font-extrabold font-mono text-amber-900 dark:text-amber-300 mt-0.5 block">
                   {billRequestsCount} Pending
                 </span>
@@ -615,15 +614,15 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
       {/* TWO COLUMN GRID: UNBILLED ORDERS & RECENT PAYMENT TRANSACTIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* SECTION: UNBILLED ORDERS */}
-        <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-sandstone overflow-hidden flex flex-col">
-          <div className="p-4 sm:p-5 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between gap-3 bg-[#FAF7F2]/50 dark:bg-[#201C18]/50">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl shadow-editorial overflow-hidden flex flex-col">
+          <div className="p-4 sm:p-5 border-b border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-between gap-3 bg-[#F7EFE4]/40 dark:bg-[#101A18]/40">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-[#92400E] dark:text-[#D97706]">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-800 dark:text-amber-300">
                 <Clock className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[#1F2937] dark:text-[#F7F3EC]">Unbilled Orders</h2>
-                <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C]">
+                <h2 className="text-sm font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Unbilled Orders</h2>
+                <p className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
                   {pendingOrders.length} order{pendingOrders.length === 1 ? '' : 's'} awaiting invoice generation
                 </p>
               </div>
@@ -631,7 +630,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
 
             <button
               onClick={() => navigateToBillingTab('pending')}
-              className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-[#173F36] dark:text-[#9FB29E] hover:underline flex items-center gap-1 cursor-pointer font-sans"
             >
               <span>View All</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -642,7 +641,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
             {loading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center py-2 border-b border-[#E5D8C6]/50 dark:border-[#382F26]/50 last:border-0">
+                  <div key={i} className="flex justify-between items-center py-2 border-b border-[#E4DCD0]/50 dark:border-[#1E362E]/50 last:border-0">
                     <Skeleton className="h-4 w-28" />
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-6 w-20 rounded-lg" />
@@ -651,17 +650,17 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               </div>
             ) : recentPendingOrders.length === 0 ? (
               <div className="py-12 px-4 text-center">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-2">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[#173F36] dark:text-[#9FB29E] flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
-                <p className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">No unbilled orders</p>
-                <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+                <p className="text-xs font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">No unbilled orders</p>
+                <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                   All served orders have invoices created or are in kitchen preparation.
                 </p>
               </div>
             ) : (
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+                <thead className="bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                   <tr>
                     <th className="px-4 py-3">Table</th>
                     <th className="px-4 py-3">Order No.</th>
@@ -670,23 +669,23 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                   {recentPendingOrders.map((ord) => {
                     const ordTotal = ord.items?.reduce((sum, i) => sum + Number(i.subtotal || 0), 0) || 0;
                     return (
                       <tr
                         key={ord.id}
-                        className={`hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60 transition-colors ${
+                        className={`hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30 transition-colors ${
                           ord.billRequested ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''
                         }`}
                       >
-                        <td className="px-4 py-3 font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                        <td className="px-4 py-3 font-bold text-[#17251F] dark:text-[#F7EFE4]">
                           Table #{ord.table?.tableNumber || ord.tableNumber || 'N/A'}
                         </td>
-                        <td className="px-4 py-3 font-mono text-[#5B6470] dark:text-[#A89B8C]">
+                        <td className="px-4 py-3 font-mono text-[#657168] dark:text-[#9FB29E]">
                           #{ord.orderNumber || ord.id.slice(0, 8)}
                         </td>
-                        <td className="px-4 py-3 font-mono font-bold text-[#92400E] dark:text-[#D97706] tabular-nums">
+                        <td className="px-4 py-3 font-mono font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
                           {currency}{ordTotal.toFixed(2)}
                         </td>
                         <td className="px-4 py-3">
@@ -703,7 +702,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => navigateToBillingTab('pending')}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#92400E] hover:bg-[#78350F] text-white transition-colors cursor-pointer shadow-2xs"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-colors cursor-pointer shadow-editorial"
                             title="Generate Bill in Billing Terminal"
                           >
                             <Receipt className="w-3 h-3" />
@@ -720,15 +719,15 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
         </div>
 
         {/* SECTION: RECENT PAYMENT TRANSACTIONS */}
-        <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-sandstone overflow-hidden flex flex-col">
-          <div className="p-4 sm:p-5 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between gap-3 bg-[#FAF7F2]/50 dark:bg-[#201C18]/50">
+        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl shadow-editorial overflow-hidden flex flex-col">
+          <div className="p-4 sm:p-5 border-b border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-between gap-3 bg-[#F7EFE4]/40 dark:bg-[#101A18]/40">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-[#2563EB] dark:text-[#60A5FA]">
                 <CreditCard className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[#1F2937] dark:text-[#F7F3EC]">Recent Payment Transactions</h2>
-                <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C]">
+                <h2 className="text-sm font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Recent Payment Transactions</h2>
+                <p className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
                   {payments.length} total transaction{payments.length === 1 ? '' : 's'} recorded
                 </p>
               </div>
@@ -736,7 +735,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
 
             <button
               onClick={() => navigateToBillingTab('payments')}
-              className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-[#173F36] dark:text-[#9FB29E] hover:underline flex items-center gap-1 cursor-pointer font-sans"
             >
               <span>View All</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -747,7 +746,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
             {loading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex justify-between items-center py-2 border-b border-[#E5D8C6]/50 dark:border-[#382F26]/50 last:border-0">
+                  <div key={i} className="flex justify-between items-center py-2 border-b border-[#E4DCD0]/50 dark:border-[#1E362E]/50 last:border-0">
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-4 w-20" />
@@ -756,17 +755,17 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               </div>
             ) : recentPayments.length === 0 ? (
               <div className="py-12 px-4 text-center">
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <div className="w-10 h-10 rounded-full bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] flex items-center justify-center mx-auto mb-2">
                   <Banknote className="w-5 h-5" />
                 </div>
-                <p className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">No payment transactions yet</p>
-                <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+                <p className="text-xs font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">No payment transactions yet</p>
+                <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                   Payments settled via Cash, UPI, Card, or Razorpay will appear here.
                 </p>
               </div>
             ) : (
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+                <thead className="bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                   <tr>
                     <th className="px-4 py-3">Bill No.</th>
                     <th className="px-4 py-3">Table</th>
@@ -776,29 +775,29 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                     <th className="px-4 py-3 text-right">Paid At</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+                <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                   {recentPayments.map((p) => {
                     const mode = p.paymentMethod || p.method || 'CASH';
                     return (
-                      <tr key={p.id} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60 transition-colors">
-                        <td className="px-4 py-3 font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                      <tr key={p.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30 transition-colors">
+                        <td className="px-4 py-3 font-mono font-bold text-[#17251F] dark:text-[#F7EFE4]">
                           {p.bill?.billNumber || `Bill #${p.billId?.slice(0, 6)}`}
                         </td>
-                        <td className="px-4 py-3 text-[#5B6470] dark:text-[#A89B8C]">
+                        <td className="px-4 py-3 text-[#657168] dark:text-[#9FB29E]">
                           Table #{p.bill?.order?.table?.tableNumber || '—'}
                         </td>
-                        <td className="px-4 py-3 font-mono font-bold text-[#92400E] dark:text-[#D97706] tabular-nums">
+                        <td className="px-4 py-3 font-mono font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
                           {currency}{Number(p.amountPaid || p.amount || 0).toFixed(2)}
                         </td>
                         <td className="px-4 py-3">
                           {getMethodBadge(mode)}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-200 dark:border-emerald-800">
                             {p.status || 'COMPLETED'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-[11px] text-[#5B6470] dark:text-[#A89B8C] tabular-nums">
+                        <td className="px-4 py-3 text-right font-mono text-[11px] text-[#657168] dark:text-[#9FB29E] tabular-nums">
                           {formatDateTime(p.createdAt)}
                         </td>
                       </tr>
@@ -812,15 +811,15 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
       </div>
 
       {/* SECTION: RECENT GENERATED INVOICES */}
-      <div className="bg-white dark:bg-[#1C1815] border border-[#E5D8C6] dark:border-[#382F26] rounded-2xl shadow-sandstone overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-[#E5D8C6] dark:border-[#382F26] flex items-center justify-between gap-3 bg-[#FAF7F2]/50 dark:bg-[#201C18]/50">
+      <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl shadow-editorial overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-between gap-3 bg-[#F7EFE4]/40 dark:bg-[#101A18]/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#92400E]/10 dark:bg-[#92400E]/20 border border-[#92400E]/20 dark:border-[#92400E]/30 flex items-center justify-center text-[#92400E] dark:text-[#D97706]">
+            <div className="w-8 h-8 rounded-xl bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E]">
               <Receipt className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#1F2937] dark:text-[#F7F3EC]">Recent Generated Invoices</h2>
-              <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C]">
+              <h2 className="text-sm font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">Recent Generated Invoices</h2>
+              <p className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
                 Compact ledger of guest bills, grand totals, and settlement statuses
               </p>
             </div>
@@ -828,7 +827,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
 
           <button
             onClick={() => navigateToBillingTab('bills')}
-            className="text-xs font-bold text-[#92400E] dark:text-[#D97706] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-bold text-[#173F36] dark:text-[#9FB29E] hover:underline flex items-center gap-1 cursor-pointer font-sans"
           >
             <span>View All Invoices</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -839,7 +838,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           {loading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex justify-between items-center py-2 border-b border-[#E5D8C6]/50 dark:border-[#382F26]/50 last:border-0">
+                <div key={i} className="flex justify-between items-center py-2 border-b border-[#E4DCD0]/50 dark:border-[#1E362E]/50 last:border-0">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-4 w-20" />
                   <Skeleton className="h-4 w-24" />
@@ -849,17 +848,17 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
             </div>
           ) : recentBills.length === 0 ? (
             <div className="py-12 px-4 text-center">
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center mx-auto mb-2">
+              <div className="w-10 h-10 rounded-full bg-[#F7EFE4] dark:bg-[#101A18] text-[#657168] dark:text-[#9FB29E] flex items-center justify-center mx-auto mb-2">
                 <Receipt className="w-5 h-5" />
               </div>
-              <p className="text-xs font-bold text-[#1F2937] dark:text-[#F7F3EC]">No invoices generated yet</p>
-              <p className="text-[11px] text-[#5B6470] dark:text-[#A89B8C] mt-0.5">
+              <p className="text-xs font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">No invoices generated yet</p>
+              <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">
                 Generate guest invoices from completed orders in the Billing terminal.
               </p>
             </div>
           ) : (
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] dark:bg-[#25201C] text-[#5B6470] dark:text-[#A89B8C] uppercase text-[10px] font-bold border-b border-[#E5D8C6] dark:border-[#382F26] tracking-wider">
+              <thead className="bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                 <tr>
                   <th className="px-5 py-3.5">Bill No.</th>
                   <th className="px-5 py-3.5">Table</th>
@@ -870,24 +869,24 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5D8C6] dark:divide-[#382F26] text-[#1F2937] dark:text-[#F7F3EC]">
+              <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                 {recentBills.map((bill) => {
                   const info = getBillPaymentInfo(bill);
                   return (
-                    <tr key={bill.id} className="hover:bg-[#FAF7F2]/60 dark:hover:bg-[#25201C]/60 transition-colors">
-                      <td className="px-5 py-3.5 font-mono font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                    <tr key={bill.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/30 transition-colors">
+                      <td className="px-5 py-3.5 font-mono font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         {bill.billNumber || `BILL-${bill.id.slice(0, 8)}`}
                       </td>
-                      <td className="px-5 py-3.5 font-bold text-[#1F2937] dark:text-[#F7F3EC]">
+                      <td className="px-5 py-3.5 font-bold text-[#17251F] dark:text-[#F7EFE4]">
                         Table #{bill.order?.table?.tableNumber || bill.tableNumber || 'N/A'}
                       </td>
-                      <td className="px-5 py-3.5 font-mono font-extrabold text-[#92400E] dark:text-[#D97706] text-sm tabular-nums">
+                      <td className="px-5 py-3.5 font-mono font-extrabold text-[#173F36] dark:text-[#9FB29E] text-sm tabular-nums">
                         {currency}{Number(bill.totalAmount || bill.grandTotal || 0).toFixed(2)}
                       </td>
                       <td className="px-5 py-3.5">
                         {info.isPaid ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-[#173F36] dark:text-[#9FB29E] border border-emerald-300 dark:border-emerald-800">
+                            <CheckCircle2 className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
                             <span>PAID</span>
                           </span>
                         ) : (
@@ -897,18 +896,18 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        {info.isPaid ? getMethodBadge(info.mode) : <span className="text-[10px] text-[#9CA3AF] dark:text-[#6B7280]">Unsettled</span>}
+                        {info.isPaid ? getMethodBadge(info.mode) : <span className="text-[10px] text-[#657168] dark:text-[#9FB29E]">Unsettled</span>}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-[#5B6470] dark:text-[#A89B8C] tabular-nums">
+                      <td className="px-5 py-3.5 font-mono text-[11px] text-[#657168] dark:text-[#9FB29E] tabular-nums">
                         {formatDateTime(bill.createdAt)}
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <button
                           onClick={() => navigateToBillingTab('bills')}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FAF7F2] dark:bg-[#25201C] hover:bg-[#F1E8DB] dark:hover:bg-[#2F2722] text-[#1F2937] dark:text-[#F7F3EC] border border-[#E5D8C6] dark:border-[#382F26] transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] text-[#17251F] dark:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#1E362E] transition-colors cursor-pointer shadow-editorial"
                           title="Inspect Invoice Details"
                         >
-                          <Eye className="w-3 h-3 text-[#92400E] dark:text-[#D97706]" />
+                          <Eye className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
                           <span>View</span>
                         </button>
                       </td>
