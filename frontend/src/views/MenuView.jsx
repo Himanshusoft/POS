@@ -214,7 +214,8 @@ export default function MenuView() {
         dietary: itemForm.dietary,
         isVeg: itemForm.dietary === 'VEG' || itemForm.dietary === 'JAIN',
         isAvailable: Boolean(itemForm.isAvailable),
-        preparationTime: Number(itemForm.preparationTime) || 15,
+        preparationTime: itemForm.preparationTime !== '' && itemForm.preparationTime !== null && !isNaN(Number(itemForm.preparationTime)) ? Number(itemForm.preparationTime) : 15,
+        prepTime: itemForm.preparationTime !== '' && itemForm.preparationTime !== null && !isNaN(Number(itemForm.preparationTime)) ? Number(itemForm.preparationTime) : 15,
         imageUrl: finalImageUrl,
         removeImage: itemForm.removeImage || undefined,
       };
@@ -529,7 +530,7 @@ export default function MenuView() {
                         {currency}{Number(itm.price).toFixed(2)}
                       </td>
                       <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums">
-                        {itm.preparationTime || 15} mins
+                        {itm.preparationTime ?? itm.recipe?.prepTime ?? 15} mins
                       </td>
                       <td className="px-5 py-4">
                         <button
@@ -576,7 +577,7 @@ export default function MenuView() {
                               categoryId: itm.categoryId,
                               dietary: itm.dietary || (itm.isVeg !== undefined ? (itm.isVeg ? 'VEG' : 'NON-VEG') : ''),
                               isAvailable: itm.isAvailable,
-                              preparationTime: itm.preparationTime || 15,
+                              preparationTime: itm.preparationTime ?? itm.recipe?.prepTime ?? 15,
                               imageFile: null,
                               imagePreview: itm.imageUrl ? getImageUrl(itm.imageUrl) : null,
                               removeImage: false,

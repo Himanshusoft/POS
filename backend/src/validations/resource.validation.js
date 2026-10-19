@@ -49,6 +49,8 @@ export const validateWastage = (data) => result([
   ...(!Number.isFinite(Number(data?.quantity)) || Number(data.quantity) <= 0 ? ['quantity must be positive'] : []),
   ...(data?.unit !== undefined && !units.includes(data.unit) ? [`unit must be one of ${units.join(', ')}`] : []),
   ...(typeof data?.reason !== 'string' || !data.reason.trim() || data.reason.length > 500 ? ['reason is required and must be at most 500 characters'] : []),
+  ...(data?.notes !== undefined && data.notes !== null && (typeof data.notes !== 'string' || data.notes.length > 2000) ? ['notes must be a string of at most 2000 characters'] : []),
+  ...(data?.incidentNotes !== undefined && data.incidentNotes !== null && (typeof data.incidentNotes !== 'string' || data.incidentNotes.length > 2000) ? ['incidentNotes must be a string of at most 2000 characters'] : []),
 ]);
 
 export const validateAvailability = (data) => result(typeof data?.isAvailable === 'boolean' ? [] : ['isAvailable must be a boolean']);
@@ -62,7 +64,25 @@ export const validateInventoryUpdate = (data) => {
     if (data?.[field] !== undefined && (!Number.isFinite(Number(data[field])) || Number(data[field]) < 0)) errors.push(`${field} must be non-negative`);
   }
   if (data?.unit !== undefined && !units.includes(data.unit)) errors.push(`unit must be one of ${units.join(', ')}`);
+  if (data?.sku !== undefined && data.sku !== null && data.sku !== '') {
+    if (typeof data.sku !== 'string' || data.sku.trim().length > 50) {
+      errors.push('sku must be a string of at most 50 characters');
+    }
+  }
   return result(errors);
+};
+
+export const normalizeCurrencyCode = (val) => {
+  if (!val || typeof val !== 'string') return val;
+  const str = val.trim();
+  if (/^[A-Za-z]{3}$/.test(str)) return str.toUpperCase();
+  const match = str.match(/\b([A-Za-z]{3})\b/);
+  if (match) return match[1].toUpperCase();
+  const symbolMap = { '₹': 'INR', '$': 'USD', '€': 'EUR', '£': 'GBP', 'د.إ': 'AED' };
+  for (const [sym, code] of Object.entries(symbolMap)) {
+    if (str.includes(sym)) return code;
+  }
+  return str.toUpperCase();
 };
 
 export const validateRestaurantProfile = (data, partial = false) => {
@@ -71,6 +91,9 @@ export const validateRestaurantProfile = (data, partial = false) => {
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 150)) errors.push('name must be a non-empty string of at most 150 characters');
   if (data?.email !== undefined && data.email !== null && (typeof data.email !== 'string' || !validEmail(data.email))) errors.push('email must be valid');
   if (data?.taxRate !== undefined && (!Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) errors.push('taxRate must be between 0 and 100');
+  if (data?.currency !== undefined && typeof data.currency === 'string') {
+    data.currency = normalizeCurrencyCode(data.currency);
+  }
   if (data?.currency !== undefined && (typeof data.currency !== 'string' || !/^[A-Z]{3}$/.test(data.currency))) errors.push('currency must be a three-letter uppercase currency code');
   if (partial && !Object.keys(data || {}).some((key) => ['name', 'address', 'phone', 'email', 'currency', 'taxRate'].includes(key))) errors.push('At least one supported field is required');
   return result(errors);
@@ -88,11 +111,23 @@ export const validateRecipeIngredientUpdate = (data) => result([
   ...(!Object.keys(data || {}).some((key) => ['quantityRequired', 'unit'].includes(key)) ? ['At least one supported field is required'] : []),
 ]);
 
-export const validateBillUpdate = (data) => result(
-  data?.discountAmount === undefined || (Number.isFinite(Number(data.discountAmount)) && Number(data.discountAmount) >= 0)
-    ? (data && Object.hasOwn(data, 'discountAmount') ? [] : ['discountAmount is required'])
-    : ['discountAmount must be non-negative'],
-);
+export const validateBillUpdate = (data) => {
+  const errors = [];
+  const hasField = data && Object.keys(data).some((k) => ['discountAmount', 'discountPercent', 'taxRate', 'notes'].includes(k));
+  if (!hasField) {
+    errors.push('At least one of discountAmount, discountPercent, taxRate, or notes is required');
+  }
+  if (data?.discountAmount !== undefined && (!Number.isFinite(Number(data.discountAmount)) || Number(data.discountAmount) < 0)) {
+    errors.push('discountAmount must be non-negative');
+  }
+  if (data?.discountPercent !== undefined && (!Number.isFinite(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100)) {
+    errors.push('discountPercent must be between 0 and 100');
+  }
+  if (data?.taxRate !== undefined && (!Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) {
+    errors.push('taxRate must be between 0 and 100');
+  }
+  return result(errors);
+};
 
 export const validateOrderUpdate = (data) => result([
   ...(data?.notes !== undefined && data.notes !== null && (typeof data.notes !== 'string' || data.notes.length > 2000) ? ['notes must be at most 2000 characters'] : []),

@@ -5,71 +5,94 @@ import { cachedQuery, buildCacheKey, invalidateUserCache } from '../utils/cache.
 
 export const createStaff = async (restaurantId, data) => {
   const email = data.email.trim().toLowerCase();
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-  });
-  if (existingUser) {
-    const error = new Error('A user with this email address already exists');
-    error.statusCode = 409;
-    throw error;
-  }
 
-  // Enforce Subscription Plan Role-Specific Staff Limits (10 Waiters, 2 Kitchen Admins, 2 Receptionists)
-  const subscription = await prisma.subscription.findUnique({
-    where: { restaurantId },
-    include: { plan: true },
-  });
-  if (subscription && subscription.status === 'ACTIVE' && subscription.plan) {
-    const plan = subscription.plan;
-    if (data.role === 'WAITER') {
-      const waiterCount = await prisma.user.count({ where: { restaurantId, role: 'WAITER' } });
-      const maxWaiters = plan.maxWaiters ?? 10;
-      if (waiterCount >= maxWaiters) {
-        const error = new Error(`Waiter limit reached for your ${plan.name} (${maxWaiters} max). Cannot add more waiters.`);
-        error.statusCode = 422;
-        throw error;
-      }
-    } else if (data.role === 'KITCHEN_ADMIN') {
-      const chefCount = await prisma.user.count({ where: { restaurantId, role: 'KITCHEN_ADMIN' } });
-      const maxChefs = plan.maxKitchenAdmins ?? 2;
-      if (chefCount >= maxChefs) {
-        const error = new Error(`Kitchen Admin limit reached for your ${plan.name} (${maxChefs} max). Cannot add more kitchen admins.`);
-        error.statusCode = 422;
-        throw error;
-      }
-    } else if (data.role === 'RECEPTIONIST') {
-      const recCount = await prisma.user.count({ where: { restaurantId, role: 'RECEPTIONIST' } });
-      const maxRec = plan.maxReceptionists ?? 2;
-      if (recCount >= maxRec) {
-        const error = new Error(`Receptionist limit reached for your ${plan.name} (${maxRec} max). Cannot add more receptionists.`);
-        error.statusCode = 422;
-        throw error;
-      }
+  let phoneValue = null;
+  if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
+    const raw = String(data.phone).trim();
+    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+    const digits = cleaned.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      const error = new Error('Enter a valid 10-digit mobile number');
+      error.statusCode = 400;
+      throw error;
     }
+    phoneValue = digits;
   }
 
   const hashedPassword = await hashPassword(data.password);
 
-  const newUser = await prisma.user.create({
-    data: {
-      restaurantId,
-      name: data.name,
-      email,
-      password: hashedPassword,
-      role: data.role,
-      phone: data.phone || null,
-      isActive: data.isActive !== undefined ? data.isActive : true,
-    },
-    select: {
-      id: true,
-      restaurantId: true,
-      name: true,
-      email: true,
-      role: true,
-      phone: true,
-      isActive: true,
-      createdAt: true,
-    },
+  const newUser = await prisma.$transaction(async (tx) => {
+    const existingUser = await tx.user.findUnique({
+      where: { email },
+    });
+    if (existingUser) {
+      const error = new Error('A user with this email address already exists');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    // Enforce Subscription Plan Role-Specific Staff Limits (10 Waiters, 2 Kitchen Admins, 2 Receptionists)
+    const subscription = await tx.subscription.findUnique({
+      where: { restaurantId },
+      include: { plan: true },
+    });
+    const plan = (subscription && subscription.status === 'ACTIVE' && subscription.plan)
+      ? subscription.plan
+      : null;
+    const maxWaiters = plan?.maxWaiters ?? 10;
+    const maxChefs = plan?.maxKitchenAdmins ?? 2;
+    const maxRec = plan?.maxReceptionists ?? 2;
+
+    if (data.role === 'WAITER') {
+      const waiterCount = await tx.user.count({ where: { restaurantId, role: 'WAITER' } });
+      if (waiterCount >= maxWaiters) {
+        const error = new Error(
+          `Waiter capacity reached (${waiterCount}/${maxWaiters}). Upgrade your subscription or free an existing seat before adding another Waiter.`
+        );
+        error.statusCode = 422;
+        throw error;
+      }
+    } else if (data.role === 'KITCHEN_ADMIN') {
+      const chefCount = await tx.user.count({ where: { restaurantId, role: 'KITCHEN_ADMIN' } });
+      if (chefCount >= maxChefs) {
+        const error = new Error(
+          `Kitchen Admin capacity reached (${chefCount}/${maxChefs}). Upgrade your subscription or free an existing seat before adding another Kitchen Admin.`
+        );
+        error.statusCode = 422;
+        throw error;
+      }
+    } else if (data.role === 'RECEPTIONIST') {
+      const recCount = await tx.user.count({ where: { restaurantId, role: 'RECEPTIONIST' } });
+      if (recCount >= maxRec) {
+        const error = new Error(
+          `Receptionist capacity reached (${recCount}/${maxRec}). Upgrade your subscription or free an existing seat before adding another Receptionist.`
+        );
+        error.statusCode = 422;
+        throw error;
+      }
+    }
+
+    return await tx.user.create({
+      data: {
+        restaurantId,
+        name: data.name,
+        email,
+        password: hashedPassword,
+        role: data.role,
+        phone: phoneValue,
+        isActive: data.isActive !== undefined ? data.isActive : true,
+      },
+      select: {
+        id: true,
+        restaurantId: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
   });
 
   await invalidateUserCache(restaurantId);
@@ -120,30 +143,93 @@ export const getStaffById = async (restaurantId, id) => {
 
 export const updateStaff = async (restaurantId, id, data) => {
   // Verify user belongs to same restaurant
-  await getStaffById(restaurantId, id);
+  const existingUser = await getStaffById(restaurantId, id);
 
   const updateData = {};
   if (data.name) updateData.name = data.name;
-  if (data.role) updateData.role = data.role;
-  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.phone !== undefined) {
+    if (data.phone === null || data.phone === '') {
+      updateData.phone = null;
+    } else {
+      const raw = String(data.phone).trim();
+      const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+      const digits = cleaned.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        const error = new Error('Enter a valid 10-digit mobile number');
+        error.statusCode = 400;
+        throw error;
+      }
+      updateData.phone = digits;
+    }
+  }
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
   if (data.password) {
     updateData.password = await hashPassword(data.password);
   }
 
-  const updated = await prisma.user.update({
-    where: { id },
-    data: updateData,
-    select: {
-      id: true,
-      restaurantId: true,
-      name: true,
-      email: true,
-      role: true,
-      phone: true,
-      isActive: true,
-      updatedAt: true,
-    },
+  const isRoleChanging = Boolean(data.role && data.role !== existingUser.role);
+  if (data.role) {
+    updateData.role = data.role;
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (isRoleChanging) {
+      const subscription = await tx.subscription.findUnique({
+        where: { restaurantId },
+        include: { plan: true },
+      });
+      const plan = (subscription && subscription.status === 'ACTIVE' && subscription.plan)
+        ? subscription.plan
+        : null;
+      const maxWaiters = plan?.maxWaiters ?? 10;
+      const maxChefs = plan?.maxKitchenAdmins ?? 2;
+      const maxRec = plan?.maxReceptionists ?? 2;
+
+      const targetRole = data.role;
+      // Exclude current staff member from target count
+      const targetCount = await tx.user.count({
+        where: {
+          restaurantId,
+          role: targetRole,
+          NOT: { id },
+        },
+      });
+
+      if (targetRole === 'WAITER' && targetCount >= maxWaiters) {
+        const error = new Error(
+          `Waiter capacity reached (${targetCount}/${maxWaiters}). Upgrade your subscription or free an existing seat before reassigning to Waiter.`
+        );
+        error.statusCode = 422;
+        throw error;
+      } else if (targetRole === 'KITCHEN_ADMIN' && targetCount >= maxChefs) {
+        const error = new Error(
+          `Kitchen Admin capacity reached (${targetCount}/${maxChefs}). Upgrade your subscription or free an existing seat before reassigning to Kitchen Admin.`
+        );
+        error.statusCode = 422;
+        throw error;
+      } else if (targetRole === 'RECEPTIONIST' && targetCount >= maxRec) {
+        const error = new Error(
+          `Receptionist capacity reached (${targetCount}/${maxRec}). Upgrade your subscription or free an existing seat before reassigning to Receptionist.`
+        );
+        error.statusCode = 422;
+        throw error;
+      }
+    }
+
+    return await tx.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        restaurantId: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
   });
 
   await invalidateUserCache(restaurantId, id);

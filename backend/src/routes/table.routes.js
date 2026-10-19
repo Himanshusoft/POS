@@ -15,7 +15,7 @@ router.use(validateQuery);
 router.get('/', tableController.getTables);
 router.get('/:id', tableController.getTableById);
 router.post('/', authorizeRoles(ROLES.RESTAURANT_OWNER), validateRequest((data) => validateTable(data)), tableController.createTable);
-router.patch('/:id/status', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.WAITER, ROLES.RECEPTIONIST), validateRequest(validateTableStatus), tableController.updateTableStatus);
+router.patch('/:id/status', authorizeRoles(ROLES.WAITER), validateRequest(validateTableStatus), tableController.updateTableStatus);
 router.patch('/:id', authorizeRoles(ROLES.RESTAURANT_OWNER), validateRequest((data) => validateTable(data, true)), tableController.updateTable);
 router.put('/:id', authorizeRoles(ROLES.RESTAURANT_OWNER), validateRequest((data) => validateTable(data, true)), tableController.updateTable);
 router.delete('/:id', authorizeRoles(ROLES.RESTAURANT_OWNER), tableController.deleteTable);

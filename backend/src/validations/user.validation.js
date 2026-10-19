@@ -15,6 +15,14 @@ export const validateCreateStaff = (data) => {
   }
   if (data?.name?.length > 120) errors.push('name must be at most 120 characters');
   if (data?.email?.length > 254) errors.push('email must be at most 254 characters');
+  if (data?.phone !== undefined && data?.phone !== null && data?.phone !== '') {
+    const raw = String(data.phone).trim();
+    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+    const digits = cleaned.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      errors.push('Enter a valid 10-digit mobile number');
+    }
+  }
   return { isValid: errors.length === 0, errors };
 };
 
@@ -29,6 +37,14 @@ export const validateUpdateStaff = (data) => {
   }
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 120)) errors.push('name must be a non-empty string of at most 120 characters');
   if (!Object.keys(data || {}).some((key) => ['name', 'role', 'phone', 'isActive', 'password'].includes(key))) errors.push('At least one supported field is required');
+  if (data?.phone !== undefined && data?.phone !== null && data?.phone !== '') {
+    const raw = String(data.phone).trim();
+    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+    const digits = cleaned.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      errors.push('Enter a valid 10-digit mobile number');
+    }
+  }
   return { isValid: errors.length === 0, errors };
 };
 

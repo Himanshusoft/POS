@@ -22,6 +22,32 @@ import {
 
 import { useUsers, usePosMutations } from '../hooks/usePosQueries';
 
+const sanitizePhoneInput = (val) => {
+  if (!val) return '';
+  let str = String(val).trim();
+  if (str.startsWith('+91')) {
+    str = str.slice(3);
+  }
+  let digits = str.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+  return digits.slice(0, 10);
+};
+
+const validatePhoneInput = (val) => {
+  if (!val || !val.trim()) {
+    return '';
+  }
+  const digits = val.replace(/\D/g, '');
+  if (digits.length !== 10) {
+    return 'Enter a valid 10-digit mobile number';
+  }
+  return '';
+};
+
 export default function StaffView() {
   const { restaurant, addToast } = useAuth();
   const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(restaurant?.id);
@@ -52,15 +78,114 @@ export default function StaffView() {
     password: '',
   });
 
+  // Phone Validation & Submitting States
+  const [phoneError, setPhoneError] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState('');
+  const [submittingAdd, setSubmittingAdd] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  const handlePhoneChange = (e) => {
+    const sanitized = sanitizePhoneInput(e.target.value);
+    setForm((prev) => ({ ...prev, phone: sanitized }));
+    if (sanitized.length > 0 && sanitized.length < 10) {
+      setPhoneError('Enter a valid 10-digit mobile number');
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  const handleEditPhoneChange = (e) => {
+    const sanitized = sanitizePhoneInput(e.target.value);
+    setEditForm((prev) => ({ ...prev, phone: sanitized }));
+    if (sanitized.length > 0 && sanitized.length < 10) {
+      setEditPhoneError('Enter a valid 10-digit mobile number');
+    } else {
+      setEditPhoneError('');
+    }
+  };
+
+  const handleOpenAdd = () => {
+    setForm({ name: '', email: '', password: '', phone: '', role: 'WAITER' });
+    setPhoneError('');
+    setShowAddModal(true);
+  };
+
   const fetchStaff = () => refetch();
 
-  // Compute counts by role
+  // Authoritative subscription plan limits (defaults to Standard Annual Plan: 10 Waiters, 2 Kitchen Admins, 2 Receptionists)
+  const plan = restaurant?.subscription?.plan;
+  const planName = plan?.name || 'Standard Annual Plan';
+  const maxWaiters = plan?.maxWaiters ?? 10;
+  const maxChefs = plan?.maxKitchenAdmins ?? 2;
+  const maxReceptionists = plan?.maxReceptionists ?? 2;
+
+  // Assigned staff counts scoped to current restaurant
   const waiterCount = staff.filter((u) => u.role === 'WAITER').length;
   const chefCount = staff.filter((u) => u.role === 'KITCHEN_ADMIN').length;
   const receptionistCount = staff.filter((u) => u.role === 'RECEPTIONIST').length;
 
+  // Remaining capacity (never negative) and over-limit counts
+  const waiterAvailable = Math.max(0, maxWaiters - waiterCount);
+  const waiterOver = Math.max(0, waiterCount - maxWaiters);
+
+  const chefAvailable = Math.max(0, maxChefs - chefCount);
+  const chefOver = Math.max(0, chefCount - maxChefs);
+
+  const receptionistAvailable = Math.max(0, maxReceptionists - receptionistCount);
+  const receptionistOver = Math.max(0, receptionistCount - maxReceptionists);
+
+  // Slot helper for Add Staff modal
+  const getAddRoleSlotsLabel = (targetRole) => {
+    let count = 0;
+    let max = 10;
+    if (targetRole === 'WAITER') {
+      count = waiterCount;
+      max = maxWaiters;
+    } else if (targetRole === 'KITCHEN_ADMIN') {
+      count = chefCount;
+      max = maxChefs;
+    } else if (targetRole === 'RECEPTIONIST') {
+      count = receptionistCount;
+      max = maxReceptionists;
+    }
+
+    if (count > max) {
+      return `(Over limit by ${count - max} • 0 slots left)`;
+    } else if (count === max) {
+      return `(${count}/${max} • Full)`;
+    }
+    const avail = max - count;
+    return `(${avail} slot${avail === 1 ? '' : 's'} left)`;
+  };
+
+  // Slot helper for Edit Staff modal (excludes currently editing staff member)
+  const getEditRoleSlotsLabel = (targetRole) => {
+    if (editingStaff?.role === targetRole) {
+      return '(Current Role)';
+    }
+    const count = staff.filter((u) => u.role === targetRole && u.id !== editingStaff?.id).length;
+    let max = 10;
+    if (targetRole === 'WAITER') {
+      max = maxWaiters;
+    } else if (targetRole === 'KITCHEN_ADMIN') {
+      max = maxChefs;
+    } else if (targetRole === 'RECEPTIONIST') {
+      max = maxReceptionists;
+    }
+
+    if (count > max) {
+      return `(Over limit by ${count - max} • 0 slots left)`;
+    } else if (count === max) {
+      return `(${count}/${max} • Full)`;
+    }
+    const avail = max - count;
+    return `(${avail} slot${avail === 1 ? '' : 's'} left)`;
+  };
+
   const handleCreateStaff = async (e) => {
     e.preventDefault();
+    if (submittingAdd) return;
+
     if (!form.name || !form.email || !form.password) {
       addToast('Name, Email and Password are required', 'warning');
       return;
@@ -70,15 +195,56 @@ export default function StaffView() {
       return;
     }
 
+    // Enforce role capacity before creating staff
+    if (form.role === 'WAITER' && waiterCount >= maxWaiters) {
+      addToast(
+        `Waiter capacity reached (${waiterCount}/${maxWaiters}). Upgrade your subscription or free an existing seat before adding another Waiter.`,
+        'error'
+      );
+      return;
+    }
+    if (form.role === 'KITCHEN_ADMIN' && chefCount >= maxChefs) {
+      addToast(
+        `Kitchen Admin capacity reached (${chefCount}/${maxChefs}). Upgrade your subscription or free an existing seat before adding another Kitchen Admin.`,
+        'error'
+      );
+      return;
+    }
+    if (form.role === 'RECEPTIONIST' && receptionistCount >= maxReceptionists) {
+      addToast(
+        `Receptionist capacity reached (${receptionistCount}/${maxReceptionists}). Upgrade your subscription or free an existing seat before adding another Receptionist.`,
+        'error'
+      );
+      return;
+    }
+
+    if (form.phone && form.phone.trim()) {
+      const err = validatePhoneInput(form.phone);
+      if (err) {
+        setPhoneError(err);
+        addToast(err, 'warning');
+        return;
+      }
+    }
+
+    setSubmittingAdd(true);
     try {
-      await posService.users.create(form);
+      await posService.users.create({
+        ...form,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+      });
       addToast(`Staff member "${form.name}" added successfully!`, 'success');
       setShowAddModal(false);
       setForm({ name: '', email: '', password: '', phone: '', role: 'WAITER' });
+      setPhoneError('');
       invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to create staff member', 'error');
+    } finally {
+      setSubmittingAdd(false);
     }
   };
 
@@ -86,16 +252,17 @@ export default function StaffView() {
     setEditingStaff(usr);
     setEditForm({
       name: usr.name || '',
-      phone: usr.phone || '',
+      phone: sanitizePhoneInput(usr.phone || ''),
       role: usr.role || 'WAITER',
       password: '',
     });
+    setEditPhoneError('');
     setShowEditModal(true);
   };
 
   const handleUpdateStaff = async (e) => {
     e.preventDefault();
-    if (!editingStaff) return;
+    if (submittingEdit || !editingStaff) return;
     if (!editForm.name.trim()) {
       addToast('Name is required', 'warning');
       return;
@@ -105,6 +272,42 @@ export default function StaffView() {
       return;
     }
 
+    // Role Reassignment Capacity Validation
+    if (editForm.role !== editingStaff.role) {
+      const targetRole = editForm.role;
+      const targetCount = staff.filter((u) => u.role === targetRole && u.id !== editingStaff.id).length;
+      let targetLimit = 10;
+      let targetRoleLabel = 'Waiter';
+      if (targetRole === 'WAITER') {
+        targetLimit = maxWaiters;
+        targetRoleLabel = 'Waiter';
+      } else if (targetRole === 'KITCHEN_ADMIN') {
+        targetLimit = maxChefs;
+        targetRoleLabel = 'Kitchen Admin';
+      } else if (targetRole === 'RECEPTIONIST') {
+        targetLimit = maxReceptionists;
+        targetRoleLabel = 'Receptionist';
+      }
+
+      if (targetCount >= targetLimit) {
+        addToast(
+          `${targetRoleLabel} capacity reached (${targetCount}/${targetLimit}). Upgrade your subscription or free an existing seat before reassigning to ${targetRoleLabel}.`,
+          'error'
+        );
+        return;
+      }
+    }
+
+    if (editForm.phone && editForm.phone.trim()) {
+      const err = validatePhoneInput(editForm.phone);
+      if (err) {
+        setEditPhoneError(err);
+        addToast(err, 'warning');
+        return;
+      }
+    }
+
+    setSubmittingEdit(true);
     try {
       const payload = {
         name: editForm.name.trim(),
@@ -116,10 +319,13 @@ export default function StaffView() {
       await posService.users.update(editingStaff.id, payload);
       addToast(`Staff details for "${editForm.name}" updated!`, 'success');
       setShowEditModal(false);
+      setEditPhoneError('');
       invalidateUsers();
       fetchStaff();
     } catch (err) {
       addToast(err.message || 'Failed to update staff member', 'error');
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -206,7 +412,7 @@ export default function StaffView() {
           <Button
             variant="primary"
             size="md"
-            onClick={() => setShowAddModal(true)}
+            onClick={handleOpenAdd}
             icon={UserPlus}
           >
             Add Staff Member
@@ -219,15 +425,23 @@ export default function StaffView() {
         <div className="flex items-center gap-2 mb-3.5">
           <Sparkles className="w-4 h-4 text-[#173F36] dark:text-[#9FB29E]" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E]">
-            Subscription Role Capacities (Standard Annual Plan)
+            Subscription Role Capacities ({planName})
           </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {/* Waiters Box */}
-          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-[#173F36]/40 transition-colors shadow-editorial">
+          <div className={`bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border ${
+            waiterOver > 0
+              ? 'border-rose-400/80 dark:border-rose-700/80 bg-rose-50/20 dark:bg-rose-950/20'
+              : 'border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36]/40'
+          } rounded-xl p-3.5 flex items-center justify-between transition-colors shadow-editorial`}>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#173F36]/10 text-[#173F36] dark:text-[#9FB29E] flex items-center justify-center border border-[#173F36]/20 shadow-2xs">
+              <div className={`w-9 h-9 rounded-xl ${
+                waiterOver > 0
+                  ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                  : 'bg-[#173F36]/10 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20'
+              } flex items-center justify-center shadow-2xs`}>
                 <Coffee className="w-4 h-4" />
               </div>
               <div>
@@ -235,20 +449,43 @@ export default function StaffView() {
                 <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">POS & Tables</div>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-mono tabular-nums font-bold text-[#173F36] dark:text-[#9FB29E]">
-                {waiterCount} / 10
+            <div className="text-right flex flex-col items-end">
+              <span className={`text-sm font-mono tabular-nums font-bold ${
+                waiterOver > 0
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-[#173F36] dark:text-[#9FB29E]'
+              }`}>
+                {waiterCount} / {maxWaiters}
               </span>
-              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
-                {10 - waiterCount} available
-              </span>
+              {waiterOver > 0 ? (
+                <>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400 block font-semibold tabular-nums">
+                    Over limit by {waiterOver}
+                  </span>
+                  <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                    0 available
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                  {waiterAvailable} available
+                </span>
+              )}
             </div>
           </div>
 
           {/* Kitchen Admins Box */}
-          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-[#D97706]/40 transition-colors shadow-editorial">
+          <div className={`bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border ${
+            chefOver > 0
+              ? 'border-rose-400/80 dark:border-rose-700/80 bg-rose-50/20 dark:bg-rose-950/20'
+              : 'border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#D97706]/40'
+          } rounded-xl p-3.5 flex items-center justify-between transition-colors shadow-editorial`}>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-[#D97706] dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800 shadow-2xs">
+              <div className={`w-9 h-9 rounded-xl ${
+                chefOver > 0
+                  ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                  : 'bg-amber-50 dark:bg-amber-950/30 text-[#D97706] dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+              } flex items-center justify-center shadow-2xs`}>
                 <ChefHat className="w-4 h-4" />
               </div>
               <div>
@@ -256,20 +493,43 @@ export default function StaffView() {
                 <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">KDS & Recipes</div>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-mono tabular-nums font-bold text-[#D97706] dark:text-amber-400">
-                {chefCount} / 2
+            <div className="text-right flex flex-col items-end">
+              <span className={`text-sm font-mono tabular-nums font-bold ${
+                chefOver > 0
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-[#D97706] dark:text-amber-400'
+              }`}>
+                {chefCount} / {maxChefs}
               </span>
-              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
-                {2 - chefCount} available
-              </span>
+              {chefOver > 0 ? (
+                <>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400 block font-semibold tabular-nums">
+                    Over limit by {chefOver}
+                  </span>
+                  <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                    0 available
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                  {chefAvailable} available
+                </span>
+              )}
             </div>
           </div>
 
           {/* Receptionists Box */}
-          <div className="bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3.5 flex items-center justify-between hover:border-emerald-500/40 transition-colors shadow-editorial">
+          <div className={`bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border ${
+            receptionistOver > 0
+              ? 'border-rose-400/80 dark:border-rose-700/80 bg-rose-50/20 dark:bg-rose-950/20'
+              : 'border-[#E4DCD0] dark:border-[#1E362E] hover:border-emerald-500/40'
+          } rounded-xl p-3.5 flex items-center justify-between transition-colors shadow-editorial`}>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800 shadow-2xs">
+              <div className={`w-9 h-9 rounded-xl ${
+                receptionistOver > 0
+                  ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                  : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+              } flex items-center justify-center shadow-2xs`}>
                 <Receipt className="w-4 h-4" />
               </div>
               <div>
@@ -277,13 +537,28 @@ export default function StaffView() {
                 <div className="text-[10px] text-[#657168] dark:text-[#9FB29E] font-medium">Billing & Cashier</div>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
-                {receptionistCount} / 2
+            <div className="text-right flex flex-col items-end">
+              <span className={`text-sm font-mono tabular-nums font-bold ${
+                receptionistOver > 0
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-emerald-700 dark:text-emerald-400'
+              }`}>
+                {receptionistCount} / {maxReceptionists}
               </span>
-              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
-                {2 - receptionistCount} available
-              </span>
+              {receptionistOver > 0 ? (
+                <>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400 block font-semibold tabular-nums">
+                    Over limit by {receptionistOver}
+                  </span>
+                  <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                    0 available
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] block font-medium tabular-nums">
+                  {receptionistAvailable} available
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -313,7 +588,7 @@ export default function StaffView() {
             title="No Staff Members Found"
             description="Add your waiters, kitchen chefs, and receptionists to give them station access."
             actionLabel="Add First Staff Member"
-            onAction={() => setShowAddModal(true)}
+            onAction={handleOpenAdd}
             actionIcon={UserPlus}
           />
         ) : (
@@ -348,6 +623,10 @@ export default function StaffView() {
                               ? 'Kitchen Admin'
                               : usr.role === 'RESTAURANT_OWNER'
                               ? 'Restaurant Admin'
+                              : usr.role === 'RECEPTIONIST'
+                              ? 'Receptionist'
+                              : usr.role === 'WAITER'
+                              ? 'Waiter'
                               : usr.role.replace('_', ' ')}
                           </span>
                         </span>
@@ -418,7 +697,10 @@ export default function StaffView() {
       {/* ADD STAFF MODAL */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setPhoneError('');
+        }}
         title="Add Staff Member"
         subtitle="Assign role and provision credentials within plan capacity limits"
       >
@@ -454,10 +736,14 @@ export default function StaffView() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
+              id="staff-phone"
               label="Phone Number"
-              placeholder="+91 9876543210"
+              placeholder="e.g. 9876543210"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={handlePhoneChange}
+              maxLength={10}
+              error={phoneError}
+              helperText={!phoneError ? '10-digit local mobile number' : undefined}
               icon={Phone}
             />
 
@@ -468,10 +754,27 @@ export default function StaffView() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
               >
-                <option value="WAITER">Waiter ({10 - waiterCount} slots left)</option>
-                <option value="KITCHEN_ADMIN">Kitchen Admin ({2 - chefCount} slots left)</option>
-                <option value="RECEPTIONIST">Receptionist ({2 - receptionistCount} slots left)</option>
+                <option value="WAITER">Waiter {getAddRoleSlotsLabel('WAITER')}</option>
+                <option value="KITCHEN_ADMIN">Kitchen Admin {getAddRoleSlotsLabel('KITCHEN_ADMIN')}</option>
+                <option value="RECEPTIONIST">Receptionist {getAddRoleSlotsLabel('RECEPTIONIST')}</option>
               </select>
+              {(() => {
+                let count = 0;
+                let max = 10;
+                let roleLabel = 'Waiter';
+                if (form.role === 'WAITER') { count = waiterCount; max = maxWaiters; roleLabel = 'Waiter'; }
+                else if (form.role === 'KITCHEN_ADMIN') { count = chefCount; max = maxChefs; roleLabel = 'Kitchen Admin'; }
+                else if (form.role === 'RECEPTIONIST') { count = receptionistCount; max = maxReceptionists; roleLabel = 'Receptionist'; }
+
+                if (count >= max) {
+                  return (
+                    <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
+                      ⚠️ {roleLabel} capacity reached ({count}/{max}). Upgrade subscription or free an existing seat before adding.
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
 
@@ -479,15 +782,19 @@ export default function StaffView() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setShowAddModal(false)}
+              onClick={() => {
+                setShowAddModal(false);
+                setPhoneError('');
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="primary"
+              disabled={submittingAdd}
             >
-              Create Staff Account
+              {submittingAdd ? 'Creating Staff Account...' : 'Create Staff Account'}
             </Button>
           </div>
         </form>
@@ -496,7 +803,10 @@ export default function StaffView() {
       {/* EDIT STAFF MODAL */}
       <Modal
         isOpen={showEditModal && Boolean(editingStaff)}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditPhoneError('');
+        }}
         title="Edit Staff Member"
         subtitle={`Update account profile or permissions for ${editingStaff?.name}`}
       >
@@ -520,10 +830,14 @@ export default function StaffView() {
           </div>
 
           <Input
+            id="edit-staff-phone"
             label="Phone Number"
-            placeholder="+91 9876543210"
+            placeholder="e.g. 9876543210"
             value={editForm.phone}
-            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+            onChange={handleEditPhoneChange}
+            maxLength={10}
+            error={editPhoneError}
+            helperText={!editPhoneError ? '10-digit local mobile number' : undefined}
             icon={Phone}
           />
 
@@ -534,10 +848,28 @@ export default function StaffView() {
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
               className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
             >
-              <option value="WAITER">Waiter</option>
-              <option value="KITCHEN_ADMIN">Kitchen Admin</option>
-              <option value="RECEPTIONIST">Receptionist</option>
+              <option value="WAITER">Waiter {getEditRoleSlotsLabel('WAITER')}</option>
+              <option value="KITCHEN_ADMIN">Kitchen Admin {getEditRoleSlotsLabel('KITCHEN_ADMIN')}</option>
+              <option value="RECEPTIONIST">Receptionist {getEditRoleSlotsLabel('RECEPTIONIST')}</option>
             </select>
+            {editForm.role !== editingStaff?.role && (() => {
+              const targetRole = editForm.role;
+              const count = staff.filter((u) => u.role === targetRole && u.id !== editingStaff?.id).length;
+              let max = 10;
+              let roleLabel = 'Waiter';
+              if (targetRole === 'WAITER') { max = maxWaiters; roleLabel = 'Waiter'; }
+              else if (targetRole === 'KITCHEN_ADMIN') { max = maxChefs; roleLabel = 'Kitchen Admin'; }
+              else if (targetRole === 'RECEPTIONIST') { max = maxReceptionists; roleLabel = 'Receptionist'; }
+
+              if (count >= max) {
+                return (
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
+                    ⚠️ {roleLabel} capacity reached ({count}/{max}). Upgrade subscription or free an existing seat before reassigning.
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           <Input
@@ -554,15 +886,19 @@ export default function StaffView() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setShowEditModal(false)}
+              onClick={() => {
+                setShowEditModal(false);
+                setEditPhoneError('');
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="primary"
+              disabled={submittingEdit}
             >
-              Save Changes
+              {submittingEdit ? 'Saving Changes...' : 'Save Changes'}
             </Button>
           </div>
         </form>

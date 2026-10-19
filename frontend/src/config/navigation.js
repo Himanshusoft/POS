@@ -129,7 +129,7 @@ export const ROLE_CONFIG = {
     color: 'bg-emerald-600/10 text-emerald-800 border-emerald-600/25 dark:bg-emerald-600/20 dark:text-emerald-300 dark:border-emerald-600/30',
     defaultTab: 'dashboard',
     defaultPath: '/receptionist-dashboard',
-    allowedTabs: ['dashboard', 'billing', 'floor', 'pos', 'settings'],
+    allowedTabs: ['dashboard', 'billing', 'floor', 'settings'],
   },
 };
 

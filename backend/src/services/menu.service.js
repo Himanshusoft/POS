@@ -149,6 +149,9 @@ export const createMenuItem = async (restaurantId, data) => {
     }
   }
 
+  const rawPrep = data.preparationTime !== undefined ? data.preparationTime : data.prepTime;
+  const prepTimeVal = rawPrep !== undefined && rawPrep !== null && rawPrep !== '' ? Number(rawPrep) : null;
+
   const result = await prisma.menuItem.create({
     data: {
       restaurantId,
@@ -159,6 +162,13 @@ export const createMenuItem = async (restaurantId, data) => {
       imageUrl: data.imageUrl || null,
       isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
       dietary: data.dietary || null,
+      ...(prepTimeVal !== null ? {
+        recipe: {
+          create: {
+            prepTime: prepTimeVal,
+          },
+        },
+      } : {}),
     },
     include: {
       category: true,
@@ -172,7 +182,11 @@ export const createMenuItem = async (restaurantId, data) => {
     },
   });
   await invalidateMenuCache(restaurantId);
-  return result;
+  return {
+    ...result,
+    preparationTime: result.recipe?.prepTime ?? prepTimeVal ?? null,
+    prepTime: result.recipe?.prepTime ?? prepTimeVal ?? null,
+  };
 };
 
 export const getMenuItems = async (restaurantId, filters = {}) => {
@@ -201,6 +215,8 @@ export const getMenuItems = async (restaurantId, filters = {}) => {
       const availability = evaluateMenuItemAvailability(item, 1);
       return {
         ...item,
+        preparationTime: item.recipe?.prepTime ?? null,
+        prepTime: item.recipe?.prepTime ?? null,
         inventoryAvailability: availability,
         isOrderable: availability.isOrderable,
         maxOrderableQuantity: availability.maxOrderableQuantity,
@@ -234,6 +250,8 @@ export const getMenuItemById = async (restaurantId, id) => {
   const availability = evaluateMenuItemAvailability(item, 1);
   return {
     ...item,
+    preparationTime: item.recipe?.prepTime ?? null,
+    prepTime: item.recipe?.prepTime ?? null,
     inventoryAvailability: availability,
     isOrderable: availability.isOrderable,
     maxOrderableQuantity: availability.maxOrderableQuantity,
@@ -268,7 +286,10 @@ export const updateMenuItem = async (restaurantId, id, data) => {
     }
   }
 
-  return await prisma.menuItem.update({
+  const rawPrep = data.preparationTime !== undefined ? data.preparationTime : data.prepTime;
+  const prepTimeVal = rawPrep !== undefined && rawPrep !== null && rawPrep !== '' ? Number(rawPrep) : (rawPrep === null ? null : undefined);
+
+  const result = await prisma.menuItem.update({
     where: { id },
     data: {
       name: data.name ? data.name.trim() : undefined,
@@ -278,14 +299,36 @@ export const updateMenuItem = async (restaurantId, id, data) => {
       imageUrl: targetImageUrl,
       isAvailable: data.isAvailable !== undefined ? data.isAvailable : undefined,
       dietary: data.dietary !== undefined ? (data.dietary || null) : undefined,
+      ...(prepTimeVal !== undefined ? {
+        recipe: {
+          upsert: {
+            create: {
+              prepTime: prepTimeVal,
+            },
+            update: {
+              prepTime: prepTimeVal,
+            },
+          },
+        },
+      } : {}),
     },
     include: {
       category: true,
-      recipe: true,
+      recipe: {
+        include: {
+          ingredients: {
+            include: { inventoryItem: true },
+          },
+        },
+      },
     },
   });
   await invalidateMenuCache(restaurantId);
-  return result;
+  return {
+    ...result,
+    preparationTime: result.recipe?.prepTime ?? (prepTimeVal !== undefined ? prepTimeVal : null),
+    prepTime: result.recipe?.prepTime ?? (prepTimeVal !== undefined ? prepTimeVal : null),
+  };
 };
 
 export const updateMenuItemAvailability = async (restaurantId, id, isAvailable) => {

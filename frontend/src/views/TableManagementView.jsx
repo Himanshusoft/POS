@@ -14,13 +14,18 @@ import {
   ShoppingBag,
   Receipt,
   X,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Clock
 } from 'lucide-react';
 
 import { useTables, usePosMutations } from '../hooks/usePosQueries';
 
 export default function TableManagementView({ onSelectTableForOrder, onNavigateToBilling }) {
   const { restaurant, role, addToast } = useAuth();
+  const isReadOnly = role === 'RESTAURANT_OWNER';
+  const currency = restaurant?.currency || '₹';
+
   const {
     data: tables = [],
     isLoading: loading,
@@ -35,6 +40,8 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
+  const [viewingOrder, setViewingOrder] = useState(null);
+  const [viewingTable, setViewingTable] = useState(null);
 
   // Form states
   const [addForm, setAddForm] = useState({ tableNumber: '', capacity: 4, status: 'AVAILABLE' });
@@ -185,14 +192,16 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             Refresh
           </Button>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setShowAddModal(true)}
-            icon={Plus}
-          >
-            Add Table
-          </Button>
+          {!isReadOnly && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setShowAddModal(true)}
+              icon={Plus}
+            >
+              Add Table
+            </Button>
+          )}
         </div>
       </div>
 
@@ -403,77 +412,151 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                   </div>
                 </div>
 
-                {/* Workflow Actions */}
+                {/* Workflow Actions / Read-Only View */}
                 <div className="space-y-2 pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
-                  {/* Order Workflow Buttons */}
-                  {table.status === 'AVAILABLE' ? (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                      className="w-full"
-                      icon={ShoppingBag}
-                    >
-                      Take Order
-                    </Button>
-                  ) : table.status === 'OCCUPIED' ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                        icon={ShoppingBag}
-                        title="Add items to existing order"
-                      >
-                        Add Items
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
-                        icon={Receipt}
-                        title="Go to billing & payment"
-                      >
-                        Checkout
-                      </Button>
-                    </div>
-                  ) : null}
+                  {isReadOnly ? (
+                    <>
+                      {/* Read-Only Status & Active Order Info */}
+                      {table.status === 'AVAILABLE' ? (
+                        <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium font-sans">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            Available for Guests
+                          </span>
+                          <span className="text-[10px] text-emerald-700/70 dark:text-emerald-400/70 font-mono">Ready to seat</span>
+                        </div>
+                      ) : table.status === 'OCCUPIED' ? (
+                        <div className="space-y-2">
+                          <div className="bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 rounded-xl p-2.5 text-xs">
+                            <div className="flex items-center justify-between text-rose-800 dark:text-rose-300 font-semibold mb-1">
+                              <span className="font-mono">{activeOrder?.orderNumber || 'Active Order'}</span>
+                              <Badge variant={activeOrder?.status || 'OCCUPIED'} size="xs">
+                                {(activeOrder?.status || 'OCCUPIED').replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-[#657168] dark:text-[#9FB29E]">
+                              <span>{activeOrder?.waiter?.name ? `Server: ${activeOrder.waiter.name}` : `${activeOrder?.items?.length || 0} order items`}</span>
+                              <span className="font-mono font-bold text-[#17251F] dark:text-[#F7EFE4]">
+                                {currency}{Number(activeOrder?.totalAmount || activeOrder?.items?.reduce((s, it) => s + (Number(it.unitPrice || it.menuItem?.price || 0) * it.quantity), 0) || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                          {activeOrder && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setViewingOrder(activeOrder);
+                                setViewingTable(table);
+                              }}
+                              className="w-full text-xs font-semibold"
+                              icon={Eye}
+                            >
+                              View Order Details
+                            </Button>
+                          )}
+                        </div>
+                      ) : table.status === 'RESERVED' ? (
+                        <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 text-amber-900 dark:text-amber-300 text-xs font-medium font-sans">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            Reserved for Booking
+                          </span>
+                          <span className="text-[10px] text-amber-800/70 dark:text-amber-400/70 font-mono">Reserved</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/40 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium font-sans">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <AlertCircle className="w-3.5 h-3.5 text-neutral-500" />
+                            Out of Service
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-mono">Maintenance</span>
+                        </div>
+                      )}
 
-                  {/* Status Dropdown, Edit & Delete */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <select
-                      value={table.status}
-                      onChange={(e) => handleStatusChange(table.id, e.target.value)}
-                      aria-label={`Status for ${table.tableNumber}`}
-                      className="text-xs bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#173F36] cursor-pointer"
-                    >
-                      <option value="AVAILABLE">Available</option>
-                      <option value="OCCUPIED">Occupied</option>
-                      <option value="RESERVED">Reserved</option>
-                      <option value="OUT_OF_SERVICE">Out of Service</option>
-                    </select>
+                      {/* Read-Only Table Footer */}
+                      <div className="flex items-center justify-between pt-1 text-xs text-[#657168] dark:text-[#9FB29E]">
+                        <span className="text-[11px] font-sans font-medium text-[#657168] dark:text-[#9FB29E]">
+                          Dining Table
+                        </span>
+                        <span className="text-[11px] font-mono text-[#657168] dark:text-[#9FB29E]">
+                          Capacity: {table.capacity} Guests
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Order Workflow Buttons (Waiters / Other Roles) */}
+                      {table.status === 'AVAILABLE' ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
+                          className="w-full"
+                          icon={ShoppingBag}
+                        >
+                          Take Order
+                        </Button>
+                      ) : table.status === 'OCCUPIED' ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
+                            icon={ShoppingBag}
+                            title="Add items to existing order"
+                          >
+                            Add Items
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
+                            icon={Receipt}
+                            title="Go to billing & payment"
+                          >
+                            Checkout
+                          </Button>
+                        </div>
+                      ) : null}
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleEditTable(table)}
-                        aria-label={`Edit ${table.tableNumber}`}
-                        className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#101A18] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
-                        title="Edit Table"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTable(table.id, table.tableNumber)}
-                        aria-label={`Delete ${table.tableNumber}`}
-                        className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
-                        title="Delete Table"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                      {/* Status Dropdown, Edit & Delete */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <select
+                          value={table.status}
+                          onChange={(e) => handleStatusChange(table.id, e.target.value)}
+                          aria-label={`Status for ${table.tableNumber}`}
+                          className="text-xs bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#173F36] cursor-pointer"
+                        >
+                          <option value="AVAILABLE">Available</option>
+                          <option value="OCCUPIED">Occupied</option>
+                          <option value="RESERVED">Reserved</option>
+                          <option value="OUT_OF_SERVICE">Out of Service</option>
+                        </select>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleEditTable(table)}
+                            aria-label={`Edit ${table.tableNumber}`}
+                            className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#101A18] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
+                            title="Edit Table"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTable(table.id, table.tableNumber)}
+                            aria-label={`Delete ${table.tableNumber}`}
+                            className="p-1.5 rounded-lg text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
+                            title="Delete Table"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -598,6 +681,85 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* VIEW ORDER DETAILS MODAL (READ-ONLY FOR RESTAURANT ADMIN) */}
+      <Modal
+        isOpen={Boolean(viewingOrder)}
+        onClose={() => {
+          setViewingOrder(null);
+          setViewingTable(null);
+        }}
+        title={`Order ${viewingOrder?.orderNumber || ''} — ${viewingTable?.tableNumber ? (viewingTable.tableNumber.toLowerCase().startsWith('table') ? viewingTable.tableNumber : `Table ${viewingTable.tableNumber}`) : ''}`}
+        subtitle={`Server: ${viewingOrder?.waiter?.name || 'Assigned Waiter'} • Placed: ${viewingOrder?.createdAt ? new Date(viewingOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'}`}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4DCD0] dark:border-[#1E362E]">
+            <span className="text-xs font-semibold text-[#657168] dark:text-[#9FB29E]">Order Status</span>
+            <Badge
+              variant={viewingOrder?.status || 'PENDING'}
+              status={(viewingOrder?.status || 'PENDING').replace('_', ' ')}
+              size="sm"
+            />
+          </div>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <div className="text-xs font-bold uppercase tracking-wider text-[#657168] dark:text-[#9FB29E]">
+              Order Items ({viewingOrder?.items?.length || 0})
+            </div>
+            {(viewingOrder?.items || []).map((item, idx) => {
+              const itemName = item.menuItem?.name || item.name || 'Dish Item';
+              const itemPrice = Number(item.unitPrice || item.menuItem?.price || 0);
+              const subtotal = itemPrice * Number(item.quantity || 1);
+              return (
+                <div
+                  key={item.id || idx}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#F7EFE4]/50 dark:bg-[#101A18] border border-[#E4DCD0]/60 dark:border-[#1E362E] text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-[#173F36]/10 dark:bg-[#9FB29E]/10 font-mono font-bold text-[#173F36] dark:text-[#9FB29E] flex items-center justify-center text-xs">
+                      {item.quantity}x
+                    </span>
+                    <div>
+                      <div className="font-semibold text-[#17251F] dark:text-[#F7EFE4]">{itemName}</div>
+                      {item.notes && (
+                        <div className="text-[10px] text-amber-700 dark:text-amber-400 font-sans italic">{item.notes}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="font-mono font-bold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
+                    {currency}{subtotal.toFixed(2)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-between">
+            <span className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4]">Total Estimated Amount</span>
+            <span className="text-sm font-mono font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
+              {currency}
+              {Number(
+                viewingOrder?.totalAmount ||
+                viewingOrder?.items?.reduce((s, it) => s + (Number(it.unitPrice || it.menuItem?.price || 0) * it.quantity), 0) ||
+                0
+              ).toFixed(2)}
+            </span>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setViewingOrder(null);
+                setViewingTable(null);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

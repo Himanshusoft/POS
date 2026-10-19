@@ -30,6 +30,8 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
   const [newTable, setNewTable] = useState({ tableNumber: '', capacity: 4, floor: 'Ground Floor' });
   const [submitting, setSubmitting] = useState(false);
 
+  const isReceptionist = role === 'RECEPTIONIST' || role === 'CASHIER';
+
   const handleServeOrder = async (orderId) => {
     try {
       await posService.orders.updateStatus(orderId, 'SERVED');
@@ -319,71 +321,105 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
                   {table.orders?.some((o) => o.status === 'READY') && (
                     <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-2.5 flex items-center justify-between">
                       <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-bounce" />
-                        <span>Food Ready to Serve!</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Food Ready</span>
                       </div>
-                      <button
-                        onClick={() => {
-                          const readyOrd = table.orders.find((o) => o.status === 'READY');
-                          if (readyOrd) handleServeOrder(readyOrd.id);
-                        }}
-                        className="bg-[#173F36] hover:bg-[#12332C] text-white font-semibold text-[11px] px-3 py-1 rounded-lg transition-all shadow-editorial cursor-pointer"
-                      >
-                        Serve Food
-                      </button>
+                      {!isReceptionist && (
+                        <button
+                          onClick={() => {
+                            const readyOrd = table.orders.find((o) => o.status === 'READY');
+                            if (readyOrd) handleServeOrder(readyOrd.id);
+                          }}
+                          className="bg-[#173F36] hover:bg-[#12332C] text-white font-semibold text-[11px] px-3 py-1 rounded-lg transition-all shadow-editorial cursor-pointer"
+                        >
+                          Serve Food
+                        </button>
+                      )}
                     </div>
                   )}
 
                   {table.status === 'AVAILABLE' ? (
-                    <button
-                      onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                      className="w-full flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors shadow-editorial hover:shadow-editorial-md cursor-pointer"
-                    >
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>New Order</span>
-                    </button>
-                  ) : table.status === 'OCCUPIED' ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    isReceptionist ? (
+                      <div className="w-full py-2.5 px-3 rounded-xl bg-[#F7EFE4]/40 dark:bg-[#101A18]/40 border border-dashed border-[#E4DCD0] dark:border-[#1E362E] text-center text-xs text-[#657168] dark:text-[#9FB29E] font-medium font-sans">
+                        Table Available
+                      </div>
+                    ) : (
                       <button
                         onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
-                        className="flex items-center justify-center gap-1.5 bg-[#F7EFE4] dark:bg-[#1E362E] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] text-[#17251F] dark:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#254238] text-xs font-semibold py-2 px-2 rounded-xl transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-center gap-2 bg-[#173F36] hover:bg-[#12332C] text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors shadow-editorial hover:shadow-editorial-md cursor-pointer"
                       >
-                        <ShoppingBag className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
-                        <span>Add Items</span>
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>New Order</span>
                       </button>
-                      <button
-                        onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
-                        className="flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold py-2 px-2 rounded-xl transition-colors shadow-editorial cursor-pointer"
-                      >
-                        <Receipt className="w-3.5 h-3.5" />
-                        <span>Checkout</span>
-                      </button>
-                    </div>
+                    )
+                  ) : table.status === 'OCCUPIED' ? (
+                    isReceptionist ? (
+                      <div className="space-y-2">
+                        {table.orders?.[0] && (
+                          <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] flex items-center justify-between px-1">
+                            <span className="font-medium">
+                              Order #{table.orders[0].orderNumber || table.orders[0].id?.slice(0, 6)}
+                              {table.orders[0].items?.length ? ` • ${table.orders[0].items.length} items` : ''}
+                            </span>
+                            <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums">
+                              {restaurant?.currency || '₹'}
+                              {Number(table.orders[0].items?.reduce((s, it) => s + Number(it.subtotal || 0), 0) || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
+                          className="w-full flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition-all shadow-editorial cursor-pointer"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Checkout / Billing</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => onSelectTableForOrder && onSelectTableForOrder(table)}
+                          className="flex items-center justify-center gap-1.5 bg-[#F7EFE4] dark:bg-[#1E362E] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] text-[#17251F] dark:text-[#F7EFE4] border border-[#E4DCD0] dark:border-[#254238] text-xs font-semibold py-2 px-2 rounded-xl transition-colors cursor-pointer"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
+                          <span>Add Items</span>
+                        </button>
+                        <button
+                          onClick={() => onNavigateToBilling && onNavigateToBilling(table)}
+                          className="flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold py-2 px-2 rounded-xl transition-colors shadow-editorial cursor-pointer"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Checkout</span>
+                        </button>
+                      </div>
+                    )
                   ) : null}
 
-                  {/* Status Dropdown & Delete Option */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <select
-                      value={table.status}
-                      onChange={(e) => handleStatusChange(table.id, e.target.value)}
-                      className="text-[11px] bg-[#F7EFE4] dark:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#254238] text-[#17251F] dark:text-[#F7EFE4] rounded-lg px-2 py-1 focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
-                    >
-                      <option value="AVAILABLE">Mark Available</option>
-                      <option value="OCCUPIED">Mark Occupied</option>
-                      <option value="RESERVED">Mark Reserved</option>
-                      <option value="OUT_OF_SERVICE">Out of Service</option>
-                    </select>
-
-                    {role === 'RESTAURANT_OWNER' && (
-                      <button
-                        onClick={() => handleDeleteTable(table.id, table.tableNumber)}
-                        className="text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                        title="Delete Table"
+                  {/* Status Dropdown & Delete Option (Restricted from Receptionist) */}
+                  {!isReceptionist && (
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <select
+                        value={table.status}
+                        onChange={(e) => handleStatusChange(table.id, e.target.value)}
+                        className="text-[11px] bg-[#F7EFE4] dark:bg-[#1E362E] border border-[#E4DCD0] dark:border-[#254238] text-[#17251F] dark:text-[#F7EFE4] rounded-lg px-2 py-1 focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E]"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                        <option value="AVAILABLE">Mark Available</option>
+                        <option value="OCCUPIED">Mark Occupied</option>
+                        <option value="RESERVED">Mark Reserved</option>
+                        <option value="OUT_OF_SERVICE">Out of Service</option>
+                      </select>
+
+                      {role === 'RESTAURANT_OWNER' && (
+                        <button
+                          onClick={() => handleDeleteTable(table.id, table.tableNumber)}
+                          className="text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                          title="Delete Table"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

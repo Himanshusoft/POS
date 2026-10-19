@@ -23,6 +23,11 @@ export const validateCreateInventory = (data) => {
   if (costPerUnit !== undefined && costPerUnit !== null && costPerUnit !== '' && (!Number.isFinite(Number(costPerUnit)) || Number(costPerUnit) < 0)) {
     errors.push('costPerUnit cannot be negative');
   }
+  if (data?.sku !== undefined && data.sku !== null && data.sku !== '') {
+    if (typeof data.sku !== 'string' || data.sku.trim().length > 50) {
+      errors.push('sku must be a string of at most 50 characters');
+    }
+  }
   return { isValid: errors.length === 0, errors };
 };
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 /**
  * Standard Sandstone Input Component
@@ -7,6 +7,7 @@ import { AlertCircle } from 'lucide-react';
  * - Proper label pairing with htmlFor
  * - Inline error presentation with aria-invalid & aria-describedby
  * - Prefix icon support
+ * - Automatic show/hide password toggle for type="password"
  * - Refined warm Sandstone focus state in light & dark mode
  */
 export function Input({
@@ -29,6 +30,10 @@ export function Input({
   autoComplete,
   ...props
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+  const effectiveType = isPassword ? (showPassword ? 'text' : 'password') : type;
+
   const inputId = id || (name ? `input-${name}` : undefined);
   const errorId = inputId ? `${inputId}-error` : undefined;
   const helperId = inputId ? `${inputId}-helper` : undefined;
@@ -59,7 +64,7 @@ export function Input({
         <input
           id={inputId}
           name={name}
-          type={type}
+          type={effectiveType}
           value={safeValue}
           onChange={onChange}
           placeholder={placeholder}
@@ -74,7 +79,8 @@ export function Input({
           className={`
             w-full rounded-xl text-xs sm:text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#8D9890] dark:placeholder-[#657168] transition-all duration-150
             bg-[#FFFDF9] dark:bg-[#111D1A] border py-2.5 outline-none
-            ${Icon ? 'pl-10 pr-3.5' : 'px-3.5'}
+            ${Icon ? 'pl-10' : 'pl-3.5'}
+            ${isPassword ? 'pr-11' : 'pr-3.5'}
             ${error
               ? 'border-[#C53030] focus:border-[#C53030] focus:ring-1 focus:ring-[#C53030] bg-[#FDF0ED]/50'
               : 'border-[#E4DCD0] dark:border-[#233630] hover:border-[#173F36]/40 dark:hover:border-[#3B574E] focus:border-[#173F36] dark:focus:border-[#4EBA87] focus:ring-2 focus:ring-[#173F36]/15 dark:focus:ring-[#4EBA87]/20 focus:bg-[#FFFDF9] dark:focus:bg-[#14221E]'
@@ -83,6 +89,19 @@ export function Input({
           `}
           {...props}
         />
+
+        {isPassword && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0]/40 dark:hover:bg-[#1E362E]/50 p-1.5 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#173F36]/30 dark:focus:ring-[#4EBA87]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            title={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
       {error ? (
