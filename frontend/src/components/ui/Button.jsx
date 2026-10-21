@@ -22,7 +22,7 @@ export function Button({
   ...props
 }) {
   const baseStyles =
-    'inline-flex items-center justify-center font-bold tracking-wide transition-all duration-150 cursor-pointer select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] dark:focus-visible:ring-[#4EBA87] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none touch-manipulation';
+    'inline-flex items-center justify-center font-bold tracking-wide transition-all duration-150 cursor-pointer select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] dark:focus-visible:ring-[#4EBA87] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none touch-manipulation whitespace-nowrap';
 
   const sizeStyles = {
     sm: 'h-8 px-3 text-xs gap-1.5',
@@ -64,7 +64,7 @@ export function Button({
       ) : Icon ? (
         <Icon className="w-4 h-4 shrink-0" />
       ) : null}
-      <span>{children}</span>
+      <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap">{children}</span>
     </button>
   );
 }

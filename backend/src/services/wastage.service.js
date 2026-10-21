@@ -2,6 +2,68 @@ import { prisma } from '../config/env.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 
+const STANDARD_REASONS = ['SPOILAGE', 'EXPIRATION', 'PREPARATION_ERROR', 'SPILLAGE', 'OVERPRODUCTION'];
+
+export const formatWastage = (w) => {
+  if (!w) return w;
+
+  // If notes already exists as a distinct property on the record, keep it
+  if (w.notes !== undefined && w.notes !== null && String(w.notes).trim().length > 0) {
+    return {
+      ...w,
+      incidentNotes: w.notes,
+    };
+  }
+
+  const rawReason = (w.reason || '').trim();
+  let reason = rawReason;
+  let notes = null;
+
+  const colonSpaceIdx = rawReason.indexOf(': ');
+  const colonIdx = rawReason.indexOf(':');
+  const dashIdx = rawReason.indexOf(' — ');
+  const hyphenIdx = rawReason.indexOf(' - ');
+
+  if (colonSpaceIdx !== -1) {
+    const prefix = rawReason.slice(0, colonSpaceIdx).trim();
+    const rest = rawReason.slice(colonSpaceIdx + 2).trim();
+    if (STANDARD_REASONS.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+      reason = prefix;
+      notes = rest;
+    }
+  } else if (colonIdx !== -1) {
+    const prefix = rawReason.slice(0, colonIdx).trim();
+    const rest = rawReason.slice(colonIdx + 1).trim();
+    if (STANDARD_REASONS.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+      reason = prefix;
+      notes = rest;
+    }
+  } else if (dashIdx !== -1) {
+    const prefix = rawReason.slice(0, dashIdx).trim();
+    const rest = rawReason.slice(dashIdx + 3).trim();
+    if (STANDARD_REASONS.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+      reason = prefix;
+      notes = rest;
+    }
+  } else if (hyphenIdx !== -1) {
+    const prefix = rawReason.slice(0, hyphenIdx).trim();
+    const rest = rawReason.slice(hyphenIdx + 3).trim();
+    if (STANDARD_REASONS.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+      reason = prefix;
+      notes = rest;
+    }
+  } else if (!STANDARD_REASONS.includes(rawReason.toUpperCase()) && rawReason.length > 0) {
+    notes = rawReason;
+  }
+
+  return {
+    ...w,
+    reason,
+    notes: notes || null,
+    incidentNotes: notes || null,
+  };
+};
+
 export const recordWastage = async (restaurantId, userId, data) => {
   return await serializableTransaction(prisma, async (tx) => {
     const item = await tx.inventoryItem.findFirst({
@@ -47,13 +109,33 @@ export const recordWastage = async (restaurantId, userId, data) => {
       throw error;
     }
 
-    return await tx.wastage.create({
+    const rawReason = (data.reason || 'SPOILAGE').trim();
+    const rawNotes = (data.notes !== undefined && data.notes !== null)
+      ? String(data.notes).trim()
+      : (data.incidentNotes !== undefined && data.incidentNotes !== null
+        ? String(data.incidentNotes).trim()
+        : (data.incident_notes !== undefined && data.incident_notes !== null
+          ? String(data.incident_notes).trim()
+          : ''));
+
+    let combinedReason = rawReason;
+    if (rawNotes) {
+      const hasPrefixColon = rawReason.includes(': ');
+      if (!hasPrefixColon) {
+        combinedReason = `${rawReason}: ${rawNotes}`;
+      } else if (!rawReason.endsWith(rawNotes)) {
+        const prefix = rawReason.slice(0, rawReason.indexOf(': ')).trim();
+        combinedReason = `${prefix}: ${rawNotes}`;
+      }
+    }
+
+    const wastage = await tx.wastage.create({
       data: {
         restaurantId,
         inventoryItemId: item.id,
         quantity: wasteQuantity,
         unit: data.unit || item.unit,
-        reason: data.reason,
+        reason: combinedReason,
         cost,
         recordedById: userId,
       },
@@ -62,6 +144,8 @@ export const recordWastage = async (restaurantId, userId, data) => {
         recordedBy: { select: { id: true, name: true } },
       },
     });
+
+    return formatWastage(wastage);
   });
 };
 
@@ -72,7 +156,7 @@ export const getWastageList = async (restaurantId, filters = {}) => {
     if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
     if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
   }
-  return await findManyPaginated(prisma.wastage, {
+  const result = await findManyPaginated(prisma.wastage, {
     where,
     include: {
       inventoryItem: true,
@@ -80,6 +164,11 @@ export const getWastageList = async (restaurantId, filters = {}) => {
     },
     orderBy: { createdAt: 'desc' },
   }, filters);
+
+  return {
+    ...result,
+    items: (result.items || []).map(formatWastage),
+  };
 };
 
 export const getWastageById = async (restaurantId, id) => {
@@ -95,7 +184,7 @@ export const getWastageById = async (restaurantId, id) => {
     error.statusCode = 404;
     throw error;
   }
-  return wastage;
+  return formatWastage(wastage);
 };
 
 export const deleteWastage = async (restaurantId, id) => {
@@ -124,6 +213,7 @@ export const deleteWastage = async (restaurantId, id) => {
 };
 
 export default {
+  formatWastage,
   recordWastage,
   getWastageList,
   getWastageById,

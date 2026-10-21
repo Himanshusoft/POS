@@ -17,10 +17,26 @@ import {
   Receipt,
   Boxes,
   Server,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export default function SettingsView({ initialTab = 'profile', onTabChange }) {
   const { restaurant, setRestaurant, user, setUser, addToast, role } = useAuth();
+
+  const normalizeCurrencyToCode = (val) => {
+    if (!val) return 'INR';
+    const str = String(val).trim();
+    if (/^[A-Za-z]{3}$/.test(str)) return str.toUpperCase();
+    const match = str.match(/\b([A-Za-z]{3})\b/);
+    if (match) return match[1].toUpperCase();
+    if (str.includes('₹')) return 'INR';
+    if (str.includes('$')) return 'USD';
+    if (str.includes('€')) return 'EUR';
+    if (str.includes('£')) return 'GBP';
+    if (str.includes('د.إ') || str.includes('AED')) return 'AED';
+    return 'INR';
+  };
 
   // Active top-level settings tab
   const [activeTab, setActiveTab] = useState(initialTab || 'profile');
@@ -49,6 +65,10 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     newPassword: '',
     confirmPassword: '',
   });
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [restForm, setRestForm] = useState({
     name: '',
@@ -138,7 +158,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             address: st.restaurant.profile.address || '',
             phone: st.restaurant.profile.phone || '',
             email: st.restaurant.profile.email || '',
-            currency: st.restaurant.profile.currency || 'INR',
+            currency: normalizeCurrencyToCode(st.restaurant.profile.currency || 'INR'),
             taxRate: st.restaurant.profile.taxRate ?? 5,
           });
         }
@@ -176,7 +196,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         address: restaurant.address || prev.address,
         phone: restaurant.phone || prev.phone,
         email: restaurant.email || prev.email,
-        currency: restaurant.currency || prev.currency,
+        currency: normalizeCurrencyToCode(restaurant.currency || prev.currency),
         taxRate: restaurant.taxRate !== undefined ? Number(restaurant.taxRate) : prev.taxRate,
       }));
     }
@@ -239,6 +259,9 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
       if (res.success) {
         addToast('Password changed successfully!', 'success');
         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
       }
     } catch (err) {
       addToast(err.message || 'Failed to change password. Verify your current password.', 'error');
@@ -262,7 +285,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         address: restForm.address.trim() || undefined,
         phone: restForm.phone.trim() || undefined,
         email: restForm.email.trim() || undefined,
-        currency: restForm.currency.trim().toUpperCase() || 'INR',
+        currency: normalizeCurrencyToCode(restForm.currency),
         taxRate: Number(restForm.taxRate),
       };
 
@@ -335,9 +358,21 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
   // Handle Inventory Policy Save
   const handleSaveInventoryPolicy = async (e) => {
     e.preventDefault();
+    const threshold = Number(inventoryPolicyForm.lowStockThresholdDefault);
+    if (!Number.isFinite(threshold) || threshold < 1 || threshold > 1000) {
+      addToast('Default low-stock alert threshold must be between 1 and 1000', 'warning');
+      return;
+    }
+
     setSavingSection('inventory');
     try {
-      await posService.settings.update('RESTAURANT', 'restaurant_inventory', inventoryPolicyForm);
+      const payload = {
+        autoDeductOnPreparation: Boolean(inventoryPolicyForm.autoDeductOnPreparation),
+        lowStockThresholdDefault: threshold,
+        notifyLowStockOnLogin: Boolean(inventoryPolicyForm.notifyLowStockOnLogin),
+      };
+      await posService.settings.update('RESTAURANT', 'restaurant_inventory', payload);
+      await refetchSettings();
       addToast('Inventory tracking and deduction policies saved!', 'success');
     } catch (err) {
       addToast(err.message || 'Failed to save inventory policy', 'error');
@@ -603,40 +638,73 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
           <form onSubmit={handleSavePassword} className="space-y-4 max-w-xl">
             <div>
               <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Current Password *</label>
-              <input
-                type="password"
-                required
-                value={passwordForm.currentPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  required
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0]/40 dark:hover:bg-[#1E362E]/50 p-1.5 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#173F36]/30 dark:focus:ring-[#9FB29E]/30"
+                  aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                  title={showCurrentPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">New Password *</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                placeholder="At least 6 characters"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
+                  placeholder="At least 6 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0]/40 dark:hover:bg-[#1E362E]/50 p-1.5 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#173F36]/30 dark:focus:ring-[#9FB29E]/30"
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  title={showNewPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Confirm New Password *</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                placeholder="Repeat new password"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
+                  placeholder="Repeat new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0]/40 dark:hover:bg-[#1E362E]/50 p-1.5 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#173F36]/30 dark:focus:ring-[#9FB29E]/30"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -721,7 +789,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               <div>
                 <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Currency Code *</label>
                 <select
-                  value={restForm.currency}
+                  value={normalizeCurrencyToCode(restForm.currency)}
                   onChange={(e) => setRestForm({ ...restForm, currency: e.target.value })}
                   className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-mono transition-all"
                 >
@@ -994,12 +1062,12 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               <input
                 type="number"
                 min="1"
-                max="100"
+                max="1000"
                 value={inventoryPolicyForm.lowStockThresholdDefault}
                 onChange={(e) =>
                   setInventoryPolicyForm({
                     ...inventoryPolicyForm,
-                    lowStockThresholdDefault: Number(e.target.value),
+                    lowStockThresholdDefault: e.target.value === '' ? '' : Number(e.target.value),
                   })
                 }
                 className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
