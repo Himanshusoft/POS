@@ -537,6 +537,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                 centerLabel="Payments"
                 centerValue={paymentBreakdown.totalCount}
                 data={paymentBreakdown.items}
+                showLegend={false}
               />
 
               <div className="space-y-2.5 w-full sm:w-56 text-xs">

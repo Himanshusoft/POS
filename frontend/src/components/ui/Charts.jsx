@@ -1136,10 +1136,13 @@ export function DonutChart({
   centerValue,
   size = 180,
   strokeWidth = 24,
+  thickness,
   currency = '',
   formatValue,
   layout = 'auto', // 'auto' | 'col' | 'row'
+  showLegend = true,
 }) {
+  const effectiveStrokeWidth = thickness !== undefined ? thickness : strokeWidth;
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const total = data.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
@@ -1152,7 +1155,7 @@ export function DonutChart({
     );
   }
 
-  const radius = (size - strokeWidth) / 2;
+  const radius = (size - effectiveStrokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   let currentAngle = 0;
@@ -1186,7 +1189,7 @@ export function DonutChart({
   const isVertical = layout === 'vertical' || layout === 'col' || layout === 'stacked';
 
   return (
-    <div className={`flex ${layout === 'col' ? 'flex-col' : layout === 'row' ? 'flex-row' : 'flex-col sm:flex-row'} items-center justify-center gap-4 sm:gap-6 py-2 overflow-hidden`}>
+    <div className={`flex ${showLegend ? (layout === 'col' ? 'flex-col' : layout === 'row' ? 'flex-row' : 'flex-col sm:flex-row') : 'items-center justify-center'} items-center justify-center ${showLegend ? 'gap-4 sm:gap-6' : ''} py-2 shrink-0`}>
       {/* SVG Donut */}
       <div className="relative shrink-0 flex items-center justify-center" style={{ width: `${size}px`, height: `${size}px` }}>
         <svg
@@ -1203,7 +1206,7 @@ export function DonutChart({
             r={radius}
             fill="transparent"
             stroke="currentColor"
-            strokeWidth={strokeWidth}
+            strokeWidth={effectiveStrokeWidth}
             className="text-[#F7EFE4] dark:text-[#1E362E]"
           />
 
@@ -1216,7 +1219,7 @@ export function DonutChart({
               r={radius}
               fill="transparent"
               stroke={seg.color}
-              strokeWidth={hoveredIndex === seg.index ? strokeWidth + 3 : strokeWidth}
+              strokeWidth={hoveredIndex === seg.index ? effectiveStrokeWidth + 3 : effectiveStrokeWidth}
               strokeDasharray={seg.strokeDasharray}
               strokeDashoffset={seg.strokeDashoffset}
               strokeLinecap="round"
@@ -1244,7 +1247,8 @@ export function DonutChart({
       </div>
 
       {/* Legend List */}
-      <div className={`flex flex-col gap-1.5 w-full ${isVertical ? 'max-w-full' : 'max-w-xs'}`}>
+      {showLegend && (
+        <div className={`flex flex-col gap-1.5 w-full ${isVertical ? 'max-w-full' : 'max-w-xs'}`}>
         {segments.map((seg) => {
           const isHovered = hoveredIndex === seg.index;
           return (
@@ -1277,6 +1281,7 @@ export function DonutChart({
           );
         })}
       </div>
+      )}
     </div>
   );
 }

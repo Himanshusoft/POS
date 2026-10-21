@@ -427,6 +427,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
               thickness={24}
               centerLabel="Tables"
               centerValue={tableOverview.totalTables || 0}
+              showLegend={false}
               data={[
                 {
                   label: 'Available Tables',
