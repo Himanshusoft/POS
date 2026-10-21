@@ -26,7 +26,9 @@ import {
   Calendar,
   Edit3,
   Sliders,
-  DollarSign
+  DollarSign,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 import {
@@ -82,6 +84,10 @@ export default function RegistrationAdminDashboard() {
     newEmail: '',
     newPassword: '',
   });
+
+  // Password Visibility Toggle States
+  const [showOnboardPassword, setShowOnboardPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Create / Edit Plan Modal State
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -140,10 +146,26 @@ export default function RegistrationAdminDashboard() {
 
   const handleOpenSubModal = (rest) => {
     setSelectedRestForSub(rest);
+    let initialDuration = 30;
+    if (rest.subscription?.endDate) {
+      const end = new Date(rest.subscription.endDate);
+      const diffTime = end.getTime() - Date.now();
+      const remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (remainingDays > 0) {
+        initialDuration = remainingDays;
+      } else {
+        const plan = plans.find((p) => p.id === rest.subscription?.planId);
+        initialDuration = plan?.durationDays || 30;
+      }
+    } else {
+      const plan = plans.find((p) => p.id === (rest.subscription?.planId || plans[0]?.id));
+      initialDuration = plan?.durationDays || 30;
+    }
+
     setSubForm({
       planId: rest.subscription?.planId || (plans[0]?.id || ''),
       status: rest.subscription?.status || 'ACTIVE',
-      durationDays: 30,
+      durationDays: initialDuration,
     });
   };
 
@@ -151,17 +173,30 @@ export default function RegistrationAdminDashboard() {
     e.preventDefault();
     if (!selectedRestForSub) return;
 
+    if (subForm.durationDays === '' || subForm.durationDays === null || subForm.durationDays === undefined) {
+      addToast('Please enter a valid subscription duration in days', 'warning');
+      return;
+    }
+
+    const durationNum = Number(subForm.durationDays);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      addToast('Duration must be a positive number of days (at least 1)', 'warning');
+      return;
+    }
+
     setSubmittingSub(true);
     try {
       const res = await posService.superAdmin.updateSubscription(selectedRestForSub.id, {
         planId: subForm.planId,
         status: subForm.status,
-        durationDays: Number(subForm.durationDays) || undefined,
+        durationDays: durationNum,
       });
       if (res.success) {
         addToast(`Subscription updated for "${selectedRestForSub.name}"`, 'success');
         setSelectedRestForSub(null);
-        fetchData();
+        await fetchData();
+      } else {
+        addToast(res.message || 'Failed to update subscription', 'error');
       }
     } catch (err) {
       addToast(err.message || 'Failed to update subscription', 'error');
@@ -700,6 +735,18 @@ export default function RegistrationAdminDashboard() {
                                 <span>{plan.name}</span>
                               </span>
                             )}
+
+                            {sub?.endDate && (
+                              <span
+                                className="text-[10px] font-semibold bg-[#F7EFE4] text-[#173F36] dark:bg-[#1E2E2A] dark:text-[#9FB29E] border border-[#E4DCD0] dark:border-[#233630] px-2.5 py-0.5 rounded-full flex items-center gap-1"
+                                title={`Expires: ${new Date(sub.endDate).toLocaleDateString()}`}
+                              >
+                                <Calendar className="w-2.5 h-2.5 text-[#173F36] dark:text-[#9FB29E]" />
+                                <span>
+                                  {Math.max(0, Math.ceil((new Date(sub.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}d left
+                                </span>
+                              </span>
+                            )}
                           </div>
                           {rest.address && (
                             <p className="text-xs text-[#657168] dark:text-[#9FB29E] flex items-center gap-1.5 mt-1 font-medium">
@@ -1046,14 +1093,25 @@ export default function RegistrationAdminDashboard() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Initial Password *</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Min 6 characters"
-                      value={onboardForm.password}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, password: e.target.value })}
-                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showOnboardPassword ? 'text' : 'password'}
+                        required
+                        placeholder="Min 6 characters"
+                        value={onboardForm.password}
+                        onChange={(e) => setOnboardForm({ ...onboardForm, password: e.target.value })}
+                        className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl pl-3 pr-10 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOnboardPassword(!showOnboardPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] p-1 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#173F36]"
+                        aria-label={showOnboardPassword ? 'Hide password' : 'Show password'}
+                        title={showOnboardPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showOnboardPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1121,15 +1179,34 @@ export default function RegistrationAdminDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Extend Duration (Days from now)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="sub-duration-input" className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">
+                    Extend Duration (Days from now) *
+                  </label>
+                  {selectedRestForSub?.subscription?.endDate && (
+                    <span className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
+                      Current: {Math.max(0, Math.ceil((new Date(selectedRestForSub.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining
+                    </span>
+                  )}
+                </div>
                 <input
+                  id="sub-duration-input"
                   type="number"
                   min="1"
-                  max="365"
+                  required
                   value={subForm.durationDays}
                   onChange={(e) => setSubForm({ ...subForm, durationDays: e.target.value })}
                   className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-mono"
+                  placeholder="e.g. 30"
                 />
+                {Number(subForm.durationDays) > 0 && (
+                  <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
+                    <span>
+                      New expiry: {new Date(Date.now() + Number(subForm.durationDays) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
@@ -1179,13 +1256,24 @@ export default function RegistrationAdminDashboard() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">New Password (leave empty to keep current)</label>
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={resetForm.newPassword}
-                  onChange={(e) => setResetForm({ ...resetForm, newPassword: e.target.value })}
-                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
-                />
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    placeholder="Min 6 characters"
+                    value={resetForm.newPassword}
+                    onChange={(e) => setResetForm({ ...resetForm, newPassword: e.target.value })}
+                    className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl pl-3 pr-10 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] p-1 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#173F36]"
+                    aria-label={showResetPassword ? 'Hide password' : 'Show password'}
+                    title={showResetPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">

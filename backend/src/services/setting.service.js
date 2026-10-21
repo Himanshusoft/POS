@@ -1,5 +1,6 @@
 import { prisma } from '../config/env.js';
-import { cachedQuery, buildCacheKey, invalidateSettingsCache } from '../utils/cache.js';
+import { cachedQuery, buildCacheKey, invalidateSettingsCache, invalidateInventoryCache } from '../utils/cache.js';
+import { normalizeCurrencyCode } from '../validations/resource.validation.js';
 
 // Default configuration blueprints per scope and key
 export const DEFAULT_SETTINGS = {
@@ -213,7 +214,7 @@ export const updateSetting = async (user, { scope, key, value }) => {
       if (value.address !== undefined) profileData.address = value.address;
       if (value.phone !== undefined) profileData.phone = value.phone;
       if (value.email !== undefined) profileData.email = value.email;
-      if (value.currency) profileData.currency = value.currency.toUpperCase();
+      if (value.currency) profileData.currency = normalizeCurrencyCode(value.currency);
       if (value.taxRate !== undefined) profileData.taxRate = Number(value.taxRate);
 
       await prisma.restaurant.update({
@@ -251,11 +252,38 @@ export const updateSetting = async (user, { scope, key, value }) => {
   });
 
   await invalidateSettingsCache(restaurantId);
+  if (key === 'restaurant_inventory' && restaurantId) {
+    await invalidateInventoryCache(restaurantId);
+  }
   return updatedSetting;
+};
+
+export const getRestaurantInventoryPolicy = async (restaurantId) => {
+  if (!restaurantId) return DEFAULT_SETTINGS.RESTAURANT.restaurant_inventory;
+  const scopeKey = buildScopeKey('RESTAURANT', restaurantId, 'restaurant_inventory');
+  const setting = await prisma.setting.findUnique({ where: { scopeKey } });
+  return {
+    ...DEFAULT_SETTINGS.RESTAURANT.restaurant_inventory,
+    ...(setting?.value || {}),
+  };
+};
+
+export const getEffectiveThreshold = (item, defaultThreshold = 5) => {
+  const def = Number(defaultThreshold) > 0 ? Number(defaultThreshold) : 5;
+  const rawMin = item?.minStockThreshold !== undefined && item?.minStockThreshold !== null
+    ? Number(item.minStockThreshold)
+    : (item?.minSafeLevel !== undefined && item?.minSafeLevel !== null ? Number(item.minSafeLevel) : null);
+
+  if (rawMin === null || rawMin === undefined || rawMin === 5) {
+    return def;
+  }
+  return rawMin;
 };
 
 export default {
   DEFAULT_SETTINGS,
   getSettingsForUser,
   updateSetting,
+  getRestaurantInventoryPolicy,
+  getEffectiveThreshold,
 };

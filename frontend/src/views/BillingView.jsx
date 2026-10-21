@@ -17,6 +17,7 @@ import {
   DollarSign,
   Eye,
   Utensils,
+  Tag,
 } from 'lucide-react';
 
 import { usePendingBillingOrders, useBills, usePayments, usePosMutations } from '../hooks/usePosQueries';
@@ -53,6 +54,12 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   const [taxRate, setTaxRate] = useState(restaurant?.taxRate || 5);
   const [billNotes, setBillNotes] = useState('');
   const [generating, setGenerating] = useState(false);
+
+  // Bill Discount Modal State (for existing bills)
+  const [selectedBillForDiscount, setSelectedBillForDiscount] = useState(null);
+  const [editDiscountPercent, setEditDiscountPercent] = useState(0);
+  const [editDiscountAmount, setEditDiscountAmount] = useState(0);
+  const [updatingDiscount, setUpdatingDiscount] = useState(false);
 
   // Payment Settlement Modal State
   const [selectedBillForPayment, setSelectedBillForPayment] = useState(null);
@@ -101,6 +108,34 @@ export default function BillingView({ preSelectedTable, initialTab }) {
     await Promise.all([refetchPending(), refetchBills(), refetchPayments()]);
   };
 
+  const generateOrderSubtotal = selectedOrderForBill?.items?.reduce(
+    (sum, i) => sum + Number(i.subtotal || 0),
+    0
+  ) || 0;
+
+  const handleGenerateDiscountPercentChange = (val) => {
+    setDiscountPercent(val);
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+      setDiscountAmount(0);
+    } else {
+      const clamped = Math.min(100, Math.max(0, num));
+      setDiscountAmount(Number(((generateOrderSubtotal * clamped) / 100).toFixed(2)));
+    }
+  };
+
+  const handleGenerateDiscountAmountChange = (val) => {
+    setDiscountAmount(val);
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+      setDiscountPercent(0);
+    } else {
+      const clamped = Math.min(generateOrderSubtotal, Math.max(0, num));
+      const pct = generateOrderSubtotal > 0 ? Number(((clamped / generateOrderSubtotal) * 100).toFixed(2)) : 0;
+      setDiscountPercent(pct);
+    }
+  };
+
   const openGenerateModal = (order) => {
     if (!order || order.status !== 'SERVED') {
       addToast('Order is not eligible for billing. The order must be served first.', 'error');
@@ -131,7 +166,7 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       if (res.success) {
         addToast('Invoice / Bill generated successfully!', 'success');
         setSelectedOrderForBill(null);
-        loadData();
+        await loadData();
         if (res.data) {
           openPaymentModal(res.data);
         }
@@ -140,6 +175,69 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       addToast(err.message || 'Failed to generate bill. Order must be COMPLETED first.', 'error');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const openDiscountModal = (bill) => {
+    setSelectedBillForDiscount(bill);
+    const sub = Number(bill.subtotal || 0);
+    const discAmt = Number(bill.discountAmount || 0);
+    setEditDiscountAmount(discAmt);
+    const pct = sub > 0 ? Number(((discAmt / sub) * 100).toFixed(2)) : 0;
+    setEditDiscountPercent(pct);
+  };
+
+  const handleEditDiscountPercentChange = (val) => {
+    setEditDiscountPercent(val);
+    const sub = Number(selectedBillForDiscount?.subtotal || 0);
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+      setEditDiscountAmount(0);
+    } else {
+      const clamped = Math.min(100, Math.max(0, num));
+      setEditDiscountAmount(Number(((sub * clamped) / 100).toFixed(2)));
+    }
+  };
+
+  const handleEditDiscountAmountChange = (val) => {
+    setEditDiscountAmount(val);
+    const sub = Number(selectedBillForDiscount?.subtotal || 0);
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+      setEditDiscountPercent(0);
+    } else {
+      const clamped = Math.min(sub, Math.max(0, num));
+      const pct = sub > 0 ? Number(((clamped / sub) * 100).toFixed(2)) : 0;
+      setEditDiscountPercent(pct);
+    }
+  };
+
+  const handleSaveBillDiscount = async (e) => {
+    e.preventDefault();
+    if (!selectedBillForDiscount) return;
+    setUpdatingDiscount(true);
+    try {
+      const res = await posService.billing.updateBill(selectedBillForDiscount.id, {
+        discountAmount: Number(editDiscountAmount) || 0,
+        discountPercent: Number(editDiscountPercent) || 0,
+      });
+      if (res.success && res.data) {
+        addToast('Discount applied and bill updated successfully!', 'success');
+        const updatedBill = res.data;
+        setSelectedBillForDiscount(null);
+        await loadData();
+        if (selectedBillForPayment && selectedBillForPayment.id === updatedBill.id) {
+          setSelectedBillForPayment(updatedBill);
+          setAmountPaid(Number(updatedBill.totalAmount || updatedBill.grandTotal || 0));
+        }
+        if (selectedBillForItems && selectedBillForItems.id === updatedBill.id) {
+          setSelectedBillForItems(updatedBill);
+        }
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to update discount on bill', 'error');
+    } finally {
+      setUpdatingDiscount(false);
     }
   };
 
@@ -803,6 +901,17 @@ export default function BillingView({ preSelectedTable, initialTab }) {
 
                             {!info.isPaid && (
                               <button
+                                onClick={() => openDiscountModal(bill)}
+                                className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] active:scale-95 text-[#173F36] dark:text-[#9FB29E] px-3 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] text-[11px] font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
+                                title="Apply or Edit Bill Discount"
+                              >
+                                <Tag className="w-3.5 h-3.5" />
+                                <span>Discount</span>
+                              </button>
+                            )}
+
+                            {!info.isPaid && (
+                              <button
                                 onClick={() => openPaymentModal(bill)}
                                 className="inline-flex items-center gap-1.5 min-h-[36px] bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] px-3.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shadow-editorial hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36]"
                               >
@@ -1138,7 +1247,17 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+            <div className="flex justify-between items-center pt-3 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+              {selectedBillForItems.status !== 'PAID' ? (
+                <button
+                  type="button"
+                  onClick={() => openDiscountModal(selectedBillForItems)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] text-xs font-semibold text-[#173F36] dark:text-[#9FB29E] hover:bg-[#F7EFE4] dark:hover:bg-[#1E362E] transition-all cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>{Number(selectedBillForItems.discountAmount || 0) > 0 ? 'Edit Discount' : 'Apply Discount'}</span>
+                </button>
+              ) : <div />}
               <Button
                 variant="outline"
                 onClick={() => setSelectedBillForItems(null)}
@@ -1172,8 +1291,9 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                 type="number"
                 min="0"
                 max="100"
+                step="0.01"
                 value={discountPercent}
-                onChange={(e) => setDiscountPercent(e.target.value)}
+                onChange={(e) => handleGenerateDiscountPercentChange(e.target.value)}
                 className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
@@ -1182,8 +1302,9 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               <input
                 type="number"
                 min="0"
+                step="0.01"
                 value={discountAmount}
-                onChange={(e) => setDiscountAmount(e.target.value)}
+                onChange={(e) => handleGenerateDiscountAmountChange(e.target.value)}
                 className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
               />
             </div>
@@ -1211,6 +1332,48 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E]/60 focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
             />
           </div>
+
+          {/* Dynamic Billing Calculation Summary */}
+          {selectedOrderForBill && (
+            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-3.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] space-y-1.5 text-xs font-sans">
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
+                <span>Order Subtotal:</span>
+                <span className="font-mono font-semibold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
+                  {currency}{generateOrderSubtotal.toFixed(2)}
+                </span>
+              </div>
+              {Number(discountAmount || 0) > 0 && (
+                <div className="flex justify-between text-rose-700 dark:text-rose-400 font-semibold">
+                  <span>Discount ({Number(discountPercent || 0)}%):</span>
+                  <span className="font-mono tabular-nums">
+                    -{currency}{Number(discountAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
+                <span>Tax ({Number(taxRate || 0)}%):</span>
+                <span className="font-mono font-semibold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
+                  +{currency}{(Number(((generateOrderSubtotal * (Number(taxRate) || 0)) / 100).toFixed(2))).toFixed(2)}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between text-sm font-bold">
+                <span className="text-[#17251F] dark:text-[#F7EFE4] font-serif">Final Payable Total:</span>
+                <span className="text-[#173F36] dark:text-[#9FB29E] font-mono text-base font-extrabold tabular-nums">
+                  {currency}
+                  {Math.max(
+                    0,
+                    Number(
+                      (
+                        generateOrderSubtotal +
+                        Number(((generateOrderSubtotal * (Number(taxRate) || 0)) / 100).toFixed(2)) -
+                        Number(discountAmount || 0)
+                      ).toFixed(2)
+                    )
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
             <Button
@@ -1247,10 +1410,46 @@ export default function BillingView({ preSelectedTable, initialTab }) {
       >
         {selectedBillForPayment && (
           <>
-            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-4 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] mb-4 text-center">
-              <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-semibold font-sans">Total Payable Amount</span>
-              <div className="text-3xl font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono mt-1 tabular-nums">
-                {currency}{Number(selectedBillForPayment.totalAmount || selectedBillForPayment.grandTotal || 0).toFixed(2)}
+            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-4 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] mb-4">
+              <div className="space-y-1.5 text-xs text-[#657168] dark:text-[#9FB29E] pb-2 border-b border-[#E4DCD0] dark:border-[#1E362E]">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
+                    {currency}{Number(selectedBillForPayment.subtotal || 0).toFixed(2)}
+                  </span>
+                </div>
+                {Number(selectedBillForPayment.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between text-rose-700 dark:text-rose-400 font-semibold">
+                    <span>Discount Applied:</span>
+                    <span className="font-mono tabular-nums">
+                      -{currency}{Number(selectedBillForPayment.discountAmount).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Tax ({selectedBillForPayment.taxRate || 5}%):</span>
+                  <span className="font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
+                    +{currency}{Number(selectedBillForPayment.taxAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-center pt-2">
+                <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-semibold font-sans">Total Payable Amount</span>
+                <div className="text-3xl font-extrabold text-[#173F36] dark:text-[#9FB29E] font-mono mt-0.5 tabular-nums">
+                  {currency}{Number(selectedBillForPayment.totalAmount || selectedBillForPayment.grandTotal || 0).toFixed(2)}
+                </div>
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => openDiscountModal(selectedBillForPayment)}
+                  className="inline-flex items-center gap-1.5 text-xs text-[#173F36] dark:text-[#9FB29E] hover:underline font-bold cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>{Number(selectedBillForPayment.discountAmount || 0) > 0 ? 'Modify Discount' : 'Apply Discount'}</span>
+                </button>
               </div>
             </div>
 
@@ -1349,6 +1548,106 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               </div>
             </form>
           </>
+        )}
+      </Modal>
+
+      {/* EDIT BILL DISCOUNT MODAL */}
+      <Modal
+        isOpen={Boolean(selectedBillForDiscount)}
+        onClose={() => setSelectedBillForDiscount(null)}
+        title="Apply / Update Bill Discount"
+        subtitle={
+          selectedBillForDiscount ? (
+            <span>
+              Invoice #{selectedBillForDiscount.billNumber || selectedBillForDiscount.id.slice(0, 8)} (Table #{selectedBillForDiscount.order?.table?.tableNumber || selectedBillForDiscount.tableNumber || 'N/A'})
+            </span>
+          ) : undefined
+        }
+        maxWidth="max-w-md"
+      >
+        {selectedBillForDiscount && (
+          <form onSubmit={handleSaveBillDiscount} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Discount (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={editDiscountPercent}
+                  onChange={(e) => handleEditDiscountPercentChange(e.target.value)}
+                  className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5 font-sans">Fixed Disc ({currency})</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editDiscountAmount}
+                  onChange={(e) => handleEditDiscountAmountChange(e.target.value)}
+                  className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-sm text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] focus:ring-1 focus:ring-[#173F36]"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic Summary */}
+            <div className="bg-[#F7EFE4]/60 dark:bg-[#101A18] p-3.5 rounded-xl border border-[#E4DCD0] dark:border-[#1E362E] space-y-1.5 text-xs font-sans">
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
+                <span>Bill Subtotal:</span>
+                <span className="font-mono font-semibold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
+                  {currency}{Number(selectedBillForDiscount.subtotal || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-rose-700 dark:text-rose-400 font-semibold">
+                <span>Discount Applied ({Number(editDiscountPercent || 0)}%):</span>
+                <span className="font-mono tabular-nums">
+                  -{currency}{Number(editDiscountAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#657168] dark:text-[#9FB29E]">
+                <span>Tax ({Number(selectedBillForDiscount.taxRate || 5)}%):</span>
+                <span className="font-mono font-semibold text-[#17251F] dark:text-[#F7EFE4] tabular-nums">
+                  +{currency}{Number(selectedBillForDiscount.taxAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between text-sm font-bold">
+                <span className="text-[#17251F] dark:text-[#F7EFE4] font-serif">Updated Payable Amount:</span>
+                <span className="text-[#173F36] dark:text-[#9FB29E] font-mono text-base font-extrabold tabular-nums">
+                  {currency}
+                  {Math.max(
+                    0,
+                    Number(
+                      (
+                        Number(selectedBillForDiscount.subtotal || 0) +
+                        Number(selectedBillForDiscount.taxAmount || 0) -
+                        Number(editDiscountAmount || 0)
+                      ).toFixed(2)
+                    )
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E]">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedBillForDiscount(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={updatingDiscount}
+              >
+                {updatingDiscount ? 'Saving...' : 'Save & Update Bill'}
+              </Button>
+            </div>
+          </form>
         )}
       </Modal>
 

@@ -45,6 +45,140 @@ export default function InventoryView() {
   const [selectedItemForAdjust, setSelectedItemForAdjust] = useState(null);
   const [selectedItemForEdit, setSelectedItemForEdit] = useState(null);
 
+  // Policy Settings
+  const [inventoryPolicy, setInventoryPolicy] = useState({
+    lowStockThresholdDefault: 5,
+    notifyLowStockOnLogin: true,
+  });
+
+  const loadPolicy = async () => {
+    try {
+      const res = await posService.settings.getAll();
+      if (res.success && res.data?.settings?.restaurant?.inventory) {
+        setInventoryPolicy({
+          lowStockThresholdDefault: Number(res.data.settings.restaurant.inventory.lowStockThresholdDefault) || 5,
+          notifyLowStockOnLogin: res.data.settings.restaurant.inventory.notifyLowStockOnLogin !== false,
+        });
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    loadPolicy();
+  }, [restaurant?.id]);
+
+  const defaultThreshold = Number(inventoryPolicy.lowStockThresholdDefault) || 5;
+
+  const getItemThreshold = (it) => {
+    if (it.effectiveMinStockThreshold !== undefined && it.effectiveMinStockThreshold !== null) {
+      return Number(it.effectiveMinStockThreshold);
+    }
+    const raw = it.minStockThreshold !== undefined && it.minStockThreshold !== null
+      ? Number(it.minStockThreshold)
+      : (it.minSafeLevel !== undefined && it.minSafeLevel !== null ? Number(it.minSafeLevel) : null);
+    if (raw === null || raw === undefined || raw === 5) {
+      return defaultThreshold;
+    }
+    return raw;
+  };
+
+  const getWastageNote = (wst) => {
+    if (!wst) return '';
+    if (wst.notes !== undefined && wst.notes !== null && String(wst.notes).trim().length > 0) {
+      return String(wst.notes).trim();
+    }
+    if (wst.incidentNotes !== undefined && wst.incidentNotes !== null && String(wst.incidentNotes).trim().length > 0) {
+      return String(wst.incidentNotes).trim();
+    }
+    if (wst.incident_notes !== undefined && wst.incident_notes !== null && String(wst.incident_notes).trim().length > 0) {
+      return String(wst.incident_notes).trim();
+    }
+
+    const rawReason = (wst.reason || '').trim();
+    if (!rawReason) return '';
+
+    const standardReasons = ['SPOILAGE', 'EXPIRATION', 'PREPARATION_ERROR', 'SPILLAGE', 'OVERPRODUCTION'];
+
+    const colonSpaceIdx = rawReason.indexOf(': ');
+    if (colonSpaceIdx !== -1) {
+      const prefix = rawReason.slice(0, colonSpaceIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return rawReason.slice(colonSpaceIdx + 2).trim();
+      }
+    }
+
+    const colonIdx = rawReason.indexOf(':');
+    if (colonIdx !== -1) {
+      const prefix = rawReason.slice(0, colonIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase())) {
+        return rawReason.slice(colonIdx + 1).trim();
+      }
+    }
+
+    const dashIdx = rawReason.indexOf(' — ');
+    if (dashIdx !== -1) {
+      const prefix = rawReason.slice(0, dashIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return rawReason.slice(dashIdx + 3).trim();
+      }
+    }
+
+    const hyphenIdx = rawReason.indexOf(' - ');
+    if (hyphenIdx !== -1) {
+      const prefix = rawReason.slice(0, hyphenIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return rawReason.slice(hyphenIdx + 3).trim();
+      }
+    }
+
+    if (!standardReasons.includes(rawReason.toUpperCase())) {
+      return rawReason;
+    }
+    return '';
+  };
+
+  const getWastageReason = (wst) => {
+    if (!wst) return '';
+    const rawReason = (wst.reason || '').trim();
+    if (!rawReason) return '';
+
+    const standardReasons = ['SPOILAGE', 'EXPIRATION', 'PREPARATION_ERROR', 'SPILLAGE', 'OVERPRODUCTION'];
+
+    const colonSpaceIdx = rawReason.indexOf(': ');
+    if (colonSpaceIdx !== -1) {
+      const prefix = rawReason.slice(0, colonSpaceIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return prefix;
+      }
+    }
+
+    const colonIdx = rawReason.indexOf(':');
+    if (colonIdx !== -1) {
+      const prefix = rawReason.slice(0, colonIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase())) {
+        return prefix;
+      }
+    }
+
+    const dashIdx = rawReason.indexOf(' — ');
+    if (dashIdx !== -1) {
+      const prefix = rawReason.slice(0, dashIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return prefix;
+      }
+    }
+
+    const hyphenIdx = rawReason.indexOf(' - ');
+    if (hyphenIdx !== -1) {
+      const prefix = rawReason.slice(0, hyphenIdx).trim();
+      if (standardReasons.includes(prefix.toUpperCase()) || prefix.length <= 30) {
+        return prefix;
+      }
+    }
+
+    return rawReason;
+  };
+
   // Forms
   const [itemForm, setItemForm] = useState({
     name: '',
@@ -84,7 +218,8 @@ export default function InventoryView() {
     setLoadingExtra(true);
     try {
       const res = await posService.wastage.getAll();
-      if (res.success) setWastages(res.data || []);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      if (res.success) setWastages(list);
     } catch (err) {
       addToast(err.message || 'Failed to load wastage records', 'error');
     } finally {
@@ -122,7 +257,7 @@ export default function InventoryView() {
 
   // Lazy-load sub-tab data only when that tab is actually viewed
   useEffect(() => {
-    if (activeTab === 'wastage' && wastages.length === 0) {
+    if (activeTab === 'wastage') {
       loadWastages();
     } else if (activeTab === 'consumption' && consumptions.length === 0) {
       loadConsumptions();
@@ -134,7 +269,7 @@ export default function InventoryView() {
   const loadData = async (force = true) => {
     try {
       if (force) invalidateInventory();
-      await refetchInventory();
+      await Promise.all([refetchInventory(), loadPolicy()]);
       if (activeTab === 'wastage') await loadWastages();
       if (activeTab === 'consumption') await loadConsumptions();
       if (activeTab === 'audit') await loadAudit();
@@ -177,10 +312,21 @@ export default function InventoryView() {
       return;
     }
 
+    const sku = itemForm.sku.trim();
+    if (sku) {
+      const isDuplicate = items.some(
+        (it) => it.sku && it.sku.trim().toLowerCase() === sku.toLowerCase()
+      );
+      if (isDuplicate) {
+        addToast('This SKU/code already exists. Please use a unique code.', 'warning');
+        return;
+      }
+    }
+
     try {
       const payload = {
         name,
-        sku: itemForm.sku.trim() || undefined,
+        sku: sku || undefined,
         unit: itemForm.unit,
         currentStock,
         minStockThreshold,
@@ -228,10 +374,21 @@ export default function InventoryView() {
       return;
     }
 
+    const sku = editForm.sku.trim();
+    if (sku) {
+      const isDuplicate = items.some(
+        (it) => it.id !== selectedItemForEdit.id && it.sku && it.sku.trim().toLowerCase() === sku.toLowerCase()
+      );
+      if (isDuplicate) {
+        addToast('This SKU/code already exists. Please use a unique code.', 'warning');
+        return;
+      }
+    }
+
     try {
       const payload = {
         name,
-        sku: editForm.sku.trim() || undefined,
+        sku: sku || undefined,
         unit: editForm.unit,
         currentStock: Number(editForm.currentStock) || 0,
         minStockThreshold: Number(editForm.minStockThreshold) || 0,
@@ -245,6 +402,50 @@ export default function InventoryView() {
     } catch (err) {
       addToast(err.message || 'Failed to update inventory item', 'error');
     }
+  };
+
+  const handleAutoGenerateSku = () => {
+    const raw = (itemForm.name || 'INV').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const prefix = (raw.slice(0, 3) || 'INV').padEnd(3, 'X');
+    let maxNum = 0;
+    for (const it of items) {
+      if (it.sku) {
+        const m = it.sku.match(new RegExp(`^${prefix}-(\\d+)`, 'i'));
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      }
+    }
+    let nextNum = maxNum + 1;
+    let candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    while (items.some((it) => it.sku && it.sku.toLowerCase() === candidate.toLowerCase())) {
+      nextNum += 1;
+      candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    }
+    setItemForm((prev) => ({ ...prev, sku: candidate }));
+  };
+
+  const handleAutoGenerateEditSku = () => {
+    const raw = (editForm.name || 'INV').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const prefix = (raw.slice(0, 3) || 'INV').padEnd(3, 'X');
+    let maxNum = 0;
+    for (const it of items) {
+      if (it.sku && it.id !== selectedItemForEdit?.id) {
+        const m = it.sku.match(new RegExp(`^${prefix}-(\\d+)`, 'i'));
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      }
+    }
+    let nextNum = maxNum + 1;
+    let candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    while (items.some((it) => it.id !== selectedItemForEdit?.id && it.sku && it.sku.toLowerCase() === candidate.toLowerCase())) {
+      nextNum += 1;
+      candidate = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    }
+    setEditForm((prev) => ({ ...prev, sku: candidate }));
   };
 
   const handleDeleteItem = async (it) => {
@@ -308,23 +509,38 @@ export default function InventoryView() {
       addToast('Please select an ingredient', 'warning');
       return;
     }
+    const noteText = (wastageForm.notes || '').trim();
+    const reasonValue = wastageForm.reason || 'SPOILAGE';
+    const combinedReason = noteText ? `${reasonValue}: ${noteText}` : reasonValue;
     try {
       await posService.wastage.log({
         inventoryItemId: wastageForm.inventoryItemId,
         quantity: Number(wastageForm.quantity),
-        reason: wastageForm.reason,
-        notes: wastageForm.notes.trim() || undefined,
+        reason: combinedReason,
+        notes: noteText || undefined,
+        incidentNotes: noteText || undefined,
       });
       addToast('Wastage logged & inventory reduced', 'success');
       setShowWastageModal(false);
-      loadData();
+      setWastageForm({
+        inventoryItemId: items[0]?.id || '',
+        quantity: 1,
+        reason: 'SPOILAGE',
+        notes: '',
+      });
+      invalidateInventory();
+      await Promise.all([
+        refetchInventory(),
+        loadWastages(),
+        loadPolicy(),
+      ]);
     } catch (err) {
       addToast(err.message || 'Failed to log wastage', 'error');
     }
   };
 
   const lowStockItems = items.filter((it) => {
-    const threshold = Number(it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minStockLevel !== undefined ? it.minStockLevel : 5));
+    const threshold = getItemThreshold(it);
     return Number(it.currentStock ?? 0) <= threshold;
   });
 
@@ -372,7 +588,18 @@ export default function InventoryView() {
           </Button>
           <Button
             variant="primary"
-            onClick={() => setShowItemModal(true)}
+            onClick={() => {
+              setItemForm({
+                name: '',
+                sku: '',
+                unit: 'KG',
+                currentStock: 0,
+                minStockThreshold: defaultThreshold,
+                costPerUnit: 0,
+                storageLocation: 'Kitchen Storage',
+              });
+              setShowItemModal(true);
+            }}
           >
             <Plus className="w-4 h-4 mr-1.5" />
             <span>Add Stock Item</span>
@@ -381,7 +608,7 @@ export default function InventoryView() {
       </div>
 
       {/* Low Stock Warning Banner */}
-      {lowStockItems.length > 0 && (
+      {lowStockItems.length > 0 && inventoryPolicy.notifyLowStockOnLogin !== false && (
         <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-editorial animate-fade-in" role="alert">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800/50">
@@ -510,7 +737,7 @@ export default function InventoryView() {
                 </thead>
                 <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
                   {filteredItems.map((it) => {
-                    const minSafe = Number(it.minStockThreshold !== undefined ? it.minStockThreshold : (it.minStockLevel !== undefined ? it.minStockLevel : 5));
+                    const minSafe = getItemThreshold(it);
                     const currentStock = Number(it.currentStock ?? 0);
                     const isLow = currentStock <= minSafe;
                     const cost = Number(it.costPerUnit !== undefined ? it.costPerUnit : (it.costPrice !== undefined ? it.costPrice : 0));
@@ -633,30 +860,43 @@ export default function InventoryView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4DCD0]/60 dark:divide-[#1E362E]">
-                  {wastages.map((wst) => (
-                    <tr key={wst.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
-                      <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
-                        {wst.inventoryItem?.name || 'Raw Ingredient'}
-                      </td>
-                      <td className="px-5 py-4 font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
-                        {wst.quantity} {wst.inventoryItem?.unit || 'units'}
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge variant="danger" size="sm">
-                          {wst.reason}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
-                        {currency}{Number(wst.totalCost || wst.cost || 0).toFixed(2)}
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums whitespace-nowrap">
-                        {new Date(wst.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] italic">
-                        {wst.notes || '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {wastages.map((wst) => {
+                    const noteText = getWastageNote(wst);
+                    const reasonText = getWastageReason(wst);
+                    return (
+                      <tr key={wst.id} className="hover:bg-[#F7EFE4]/40 dark:hover:bg-[#1E362E]/40 transition-colors">
+                        <td className="px-5 py-4 font-serif font-bold text-[#17251F] dark:text-[#F7EFE4]">
+                          {wst.inventoryItem?.name || 'Raw Ingredient'}
+                        </td>
+                        <td className="px-5 py-4 font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                          {wst.quantity} {wst.inventoryItem?.unit || 'units'}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge variant="danger" size="sm">
+                            {reasonText}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[#17251F] dark:text-[#F7EFE4] font-semibold tabular-nums">
+                          {currency}{Number(wst.totalCost || wst.cost || 0).toFixed(2)}
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums whitespace-nowrap">
+                          {new Date(wst.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-4 text-[#657168] dark:text-[#9FB29E] max-w-xs sm:max-w-sm">
+                          {noteText ? (
+                            <span
+                              className="line-clamp-2 hover:line-clamp-none break-words cursor-default"
+                              title={noteText}
+                            >
+                              {noteText}
+                            </span>
+                          ) : (
+                            <span className="text-[#657168]/60 dark:text-[#9FB29E]/60 italic">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -860,10 +1100,20 @@ export default function InventoryView() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">SKU / Code</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">SKU / Code</label>
+                <button
+                  type="button"
+                  onClick={handleAutoGenerateSku}
+                  className="text-[10px] text-[#173F36] dark:text-[#4EBA87] font-semibold hover:underline cursor-pointer"
+                  title="Generate unique SKU"
+                >
+                  Auto Generate
+                </button>
+              </div>
               <input
                 type="text"
-                placeholder="ING-COF-01"
+                placeholder="Auto-generated if empty"
                 value={itemForm.sku}
                 onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
                 className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36]"
@@ -961,7 +1211,17 @@ export default function InventoryView() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">SKU / Code</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">SKU / Code</label>
+                <button
+                  type="button"
+                  onClick={handleAutoGenerateEditSku}
+                  className="text-[10px] text-[#173F36] dark:text-[#4EBA87] font-semibold hover:underline cursor-pointer"
+                  title="Generate unique SKU"
+                >
+                  Auto Generate
+                </button>
+              </div>
               <input
                 type="text"
                 value={editForm.sku}

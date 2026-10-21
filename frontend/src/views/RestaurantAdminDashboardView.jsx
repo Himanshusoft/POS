@@ -370,7 +370,15 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 </div>
                 <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>Dining & table orders</span>
-                  <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxWaiters || 10) - (data?.staff?.waiters || 0))} open</span>
+                  {(data?.staff?.waiters || 0) > (data?.staff?.planLimits?.maxWaiters || 10) ? (
+                    <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                      Over limit by {(data?.staff?.waiters || 0) - (data?.staff?.planLimits?.maxWaiters || 10)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold tabular-nums">
+                      {Math.max(0, (data?.staff?.planLimits?.maxWaiters || 10) - (data?.staff?.waiters || 0))} open
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -399,7 +407,15 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 </div>
                 <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>KDS & recipe depletion</span>
-                  <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxKitchenAdmins || 2) - (data?.staff?.kitchenAdmins || 0))} open</span>
+                  {(data?.staff?.kitchenAdmins || 0) > (data?.staff?.planLimits?.maxKitchenAdmins || 2) ? (
+                    <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                      Over limit by {(data?.staff?.kitchenAdmins || 0) - (data?.staff?.planLimits?.maxKitchenAdmins || 2)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold tabular-nums">
+                      {Math.max(0, (data?.staff?.planLimits?.maxKitchenAdmins || 2) - (data?.staff?.kitchenAdmins || 0))} open
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -428,7 +444,15 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 </div>
                 <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-2 flex justify-between font-medium">
                   <span>Billing & cashier</span>
-                  <span className="font-semibold tabular-nums">{Math.max(0, (data?.staff?.planLimits?.maxReceptionists || 2) - (data?.staff?.receptionists || 0))} open</span>
+                  {(data?.staff?.receptionists || 0) > (data?.staff?.planLimits?.maxReceptionists || 2) ? (
+                    <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                      Over limit by {(data?.staff?.receptionists || 0) - (data?.staff?.planLimits?.maxReceptionists || 2)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold tabular-nums">
+                      {Math.max(0, (data?.staff?.planLimits?.maxReceptionists || 2) - (data?.staff?.receptionists || 0))} open
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

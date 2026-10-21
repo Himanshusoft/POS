@@ -1,5 +1,7 @@
 import { prisma } from '../config/env.js';
 import { cachedQuery, buildCacheKey } from '../utils/cache.js';
+import { getRestaurantInventoryPolicy, getEffectiveThreshold } from './setting.service.js';
+import { formatWastage } from './wastage.service.js';
 
 export const getSalesReport = async (restaurantId, filters = {}) => {
   const cacheKey = buildCacheKey(restaurantId, 'reports:sales', filters);
@@ -116,17 +118,24 @@ export const getPaymentsReport = async (restaurantId, filters = {}) => {
 };
 
 export const getInventoryReport = async (restaurantId) => {
-  const items = await prisma.inventoryItem.findMany({
-    where: { restaurantId },
-    orderBy: { name: 'asc' },
-  });
+  const [items, policy] = await Promise.all([
+    prisma.inventoryItem.findMany({
+      where: { restaurantId },
+      orderBy: { name: 'asc' },
+    }),
+    getRestaurantInventoryPolicy(restaurantId),
+  ]);
 
+  const defaultThreshold = Number(policy?.lowStockThresholdDefault) || 5;
   const totalItems = items.length;
   const totalValuation = items.reduce(
     (acc, i) => acc + Number(i.currentStock) * Number(i.costPerUnit || 0),
     0
   );
-  const lowStockItems = items.filter((i) => Number(i.currentStock) <= Number(i.minStockThreshold));
+  const lowStockItems = items.filter((i) => {
+    const threshold = getEffectiveThreshold(i, defaultThreshold);
+    return Number(i.currentStock) <= threshold;
+  });
 
   return {
     totalItems,
@@ -144,12 +153,13 @@ export const getWastageReport = async (restaurantId, filters = {}) => {
     if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
   }
 
-  const wastages = await prisma.wastage.findMany({
+  const rawWastages = await prisma.wastage.findMany({
     where,
     include: { inventoryItem: true },
     orderBy: { createdAt: 'desc' },
   });
 
+  const wastages = rawWastages.map(formatWastage);
   const totalWastageCost = wastages.reduce((acc, w) => acc + Number(w.cost || 0), 0);
 
   return {
@@ -287,6 +297,7 @@ export const getFinancialReport = async (restaurantId, filters = {}) => {
   }
 
   for (const wst of wastages) {
+    const formatted = formatWastage(wst);
     ledger.push({
       id: `WST-${wst.id}`,
       date: wst.createdAt,
@@ -294,8 +305,8 @@ export const getFinancialReport = async (restaurantId, filters = {}) => {
       category: 'WASTAGE',
       method: 'LOSS',
       amount: -Number(Number(wst.cost || 0).toFixed(2)),
-      description: `Spoilage/Waste: ${wst.quantity} ${wst.inventoryItem?.unit || ''} ${wst.inventoryItem?.name || 'Stock'} (${wst.reason})`,
-      ref: wst.notes || null,
+      description: `Spoilage/Waste: ${wst.quantity} ${wst.inventoryItem?.unit || ''} ${wst.inventoryItem?.name || 'Stock'} (${formatted.reason})`,
+      ref: formatted.notes || null,
     });
   }
 
@@ -339,6 +350,7 @@ export const getAdminDashboardSummary = async (restaurantId) => {
     users,
     subscription,
     popularOrderItems,
+    inventoryPolicy,
   ] = await Promise.all([
     prisma.bill.findMany({
       where: { restaurantId, status: 'PAID' },
@@ -383,6 +395,7 @@ export const getAdminDashboardSummary = async (restaurantId) => {
         menuItem: { select: { id: true, name: true, price: true, category: { select: { name: true } } } },
       },
     }),
+    getRestaurantInventoryPolicy(restaurantId),
   ]);
 
   const totalRevenue = billsAll.reduce((acc, b) => acc + Number(b.totalAmount), 0);
@@ -443,8 +456,9 @@ export const getAdminDashboardSummary = async (restaurantId) => {
       revenueGenerated: Number(d.revenueGenerated.toFixed(2)),
     }));
 
+  const defaultThreshold = Number(inventoryPolicy?.lowStockThresholdDefault) || 5;
   const lowStockItems = inventoryItems.filter(
-    (item) => Number(item.currentStock) <= Number(item.minStockThreshold)
+    (item) => Number(item.currentStock) <= getEffectiveThreshold(item, defaultThreshold)
   );
 
   const staffMembers = users.filter((u) => u.role !== 'RESTAURANT_OWNER');

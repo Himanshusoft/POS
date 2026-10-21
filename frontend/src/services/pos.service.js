@@ -123,6 +123,7 @@ export const posService = {
     },
     getBillById: (id) => api.get(`/billing/bills/${id}`),
     generateBill: (data) => api.post('/billing/generate', data),
+    updateBill: (id, data) => api.patch(`/billing/bills/${id}`, data),
   },
 
   // Payments

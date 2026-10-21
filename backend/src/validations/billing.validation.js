@@ -8,6 +8,12 @@ export const validateGenerateBill = (data) => {
   if (data?.discountAmount !== undefined && (isNaN(Number(data.discountAmount)) || Number(data.discountAmount) < 0)) {
     errors.push('discountAmount cannot be negative');
   }
+  if (data?.discountPercent !== undefined && (isNaN(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100)) {
+    errors.push('discountPercent must be between 0 and 100');
+  }
+  if (data?.taxRate !== undefined && (isNaN(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) {
+    errors.push('taxRate must be between 0 and 100');
+  }
   return { isValid: errors.length === 0, errors };
 };
 

@@ -62,6 +62,12 @@ export const createMenuItem = async (req, res, next) => {
     if (req.body.categoryId === '' || req.body.categoryId === 'null') {
       req.body.categoryId = null;
     }
+    if (req.body.preparationTime !== undefined && req.body.preparationTime !== null && req.body.preparationTime !== '') {
+      req.body.preparationTime = Number(req.body.preparationTime);
+    }
+    if (req.body.prepTime !== undefined && req.body.prepTime !== null && req.body.prepTime !== '') {
+      req.body.prepTime = Number(req.body.prepTime);
+    }
     const item = await menuService.createMenuItem(req.user.restaurantId, req.body);
     return sendSuccess(res, 201, 'Menu item created successfully', item);
   } catch (error) {
@@ -118,6 +124,12 @@ export const updateMenuItem = async (req, res, next) => {
     }
     if (req.body.removeImage === 'true' || req.body.removeImage === true) {
       req.body.imageUrl = null;
+    }
+    if (req.body.preparationTime !== undefined && req.body.preparationTime !== null && req.body.preparationTime !== '') {
+      req.body.preparationTime = Number(req.body.preparationTime);
+    }
+    if (req.body.prepTime !== undefined && req.body.prepTime !== null && req.body.prepTime !== '') {
+      req.body.prepTime = Number(req.body.prepTime);
     }
     const item = await menuService.updateMenuItem(req.user.restaurantId, req.params.id, req.body);
     return sendSuccess(res, 200, 'Menu item updated successfully', item);

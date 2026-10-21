@@ -9,6 +9,7 @@ import {
   invalidateInventoryCache,
   invalidateTableCache,
 } from '../utils/cache.js';
+import { getRestaurantInventoryPolicy, getEffectiveThreshold } from './setting.service.js';
 
 /**
  * Returns analytical and operational dashboard metrics for Kitchen Admin.
@@ -29,6 +30,7 @@ export const getKitchenDashboard = async (restaurantId) => {
     completedTodayWithPrepTime,
     activeOrders,
     recentTransactions,
+    inventoryPolicy,
   ] = await Promise.all([
     prisma.order.count({
       where: { restaurantId, status: 'PENDING' },
@@ -101,10 +103,12 @@ export const getKitchenDashboard = async (restaurantId) => {
       orderBy: { createdAt: 'desc' },
       take: 10,
     }),
+    getRestaurantInventoryPolicy(restaurantId),
   ]);
 
+  const defaultThreshold = Number(inventoryPolicy?.lowStockThresholdDefault) || 5;
   const lowStockItems = allInventoryItems.filter(
-    (i) => Number(i.currentStock) <= Number(i.minStockThreshold) && Number(i.currentStock) > 0
+    (i) => Number(i.currentStock) <= getEffectiveThreshold(i, defaultThreshold) && Number(i.currentStock) > 0
   );
   const outOfStockItems = allInventoryItems.filter((i) => Number(i.currentStock) <= 0);
 
@@ -509,23 +513,25 @@ export const markOrderReady = async (restaurantId, orderId) => {
 
     const itemsToDeduct = order.inventoryDeducted ? unreadyItems : order.items;
 
-    // 1. Recipe validation: Check every menu item has a recipe configured
-    for (const orderItem of itemsToDeduct) {
-      const menuItem = orderItem.menuItem;
-      const recipe = menuItem?.recipe;
-      if (!recipe || !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
-        const error = new Error(
-          `Recipe is not configured for menu item '${menuItem?.name || 'Unknown'}'. Please configure recipe before completing preparation.`
-        );
-        error.statusCode = 400;
-        throw error;
+    const policy = await getRestaurantInventoryPolicy(restaurantId);
+    if (policy?.autoDeductOnPreparation !== false) {
+      // 1. Recipe validation: Check every menu item has a recipe configured
+      for (const orderItem of order.items) {
+        const menuItem = orderItem.menuItem;
+        const recipe = menuItem?.recipe;
+        if (!recipe || !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
+          const error = new Error(
+            `Recipe is not configured for menu item '${menuItem?.name || 'Unknown'}'. Please configure recipe before completing preparation.`
+          );
+          error.statusCode = 400;
+          throw error;
+        }
       }
-    }
 
-    // 2. Multi-ingredient consumption calculation with unit conversion
-    const deductions = new Map();
+      // 2. Multi-ingredient consumption calculation with unit conversion
+      const deductions = new Map();
 
-    for (const orderItem of itemsToDeduct) {
+    for (const orderItem of order.items) {
       const recipe = orderItem.menuItem.recipe;
       const dishDesc = `${orderItem.quantity}x ${orderItem.menuItem.name}`;
       for (const ingredient of recipe.ingredients) {
@@ -538,83 +544,84 @@ export const markOrderReady = async (restaurantId, orderId) => {
           throw error;
         }
 
-        const requiredInRecipeUnit = Number(ingredient.quantityRequired) * orderItem.quantity;
-        const requiredInInvUnit = convertQuantity(requiredInRecipeUnit, ingredient.unit, invItem.unit);
+          const requiredInRecipeUnit = Number(ingredient.quantityRequired) * orderItem.quantity;
+          const requiredInInvUnit = convertQuantity(requiredInRecipeUnit, ingredient.unit, invItem.unit);
 
-        const existing = deductions.get(invItem.id) || {
-          inventoryItem: invItem,
-          quantityToDeduct: 0,
-          unit: invItem.unit,
-          dishes: [],
-        };
+          const existing = deductions.get(invItem.id) || {
+            inventoryItem: invItem,
+            quantityToDeduct: 0,
+            unit: invItem.unit,
+            dishes: [],
+          };
 
-        existing.quantityToDeduct = Number((existing.quantityToDeduct + requiredInInvUnit).toFixed(4));
-        existing.dishes.push(dishDesc);
-        deductions.set(invItem.id, existing);
-      }
-    }
-
-    // 3. Stock sufficiency pre-check
-    for (const [invId, entry] of deductions.entries()) {
-      const currentInv = await tx.inventoryItem.findFirst({
-        where: { id: invId, restaurantId },
-      });
-      if (!currentInv) {
-        const error = new Error(`Inventory item '${entry.inventoryItem.name}' not found`);
-        error.statusCode = 404;
-        throw error;
-      }
-      const available = Number(currentInv.currentStock);
-      const required = entry.quantityToDeduct;
-      if (available < required) {
-        const shortage = Number((required - available).toFixed(4));
-        const error = new Error(
-          `Insufficient inventory for ingredient '${currentInv.name}'. Required: ${required} ${currentInv.unit}, Available: ${available} ${currentInv.unit}, Shortage: ${shortage} ${currentInv.unit}`
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-      entry.currentStock = available;
-    }
-
-    // 4. Atomic deduction and InventoryTransaction logging
-    const dishSummary = order.items.map((i) => `${i.quantity}x ${i.menuItem.name}`).join(', ');
-
-    for (const [invId, entry] of deductions.entries()) {
-      const prevBalance = entry.currentStock;
-      const newBalance = Number((prevBalance - entry.quantityToDeduct).toFixed(4));
-
-      const updated = await tx.inventoryItem.updateMany({
-        where: {
-          id: invId,
-          restaurantId,
-          currentStock: { gte: entry.quantityToDeduct },
-        },
-        data: {
-          currentStock: { decrement: entry.quantityToDeduct },
-        },
-      });
-
-      if (updated.count !== 1) {
-        const error = new Error(`Insufficient inventory for ingredient '${entry.inventoryItem.name}'`);
-        error.statusCode = 400;
-        throw error;
+          existing.quantityToDeduct = Number((existing.quantityToDeduct + requiredInInvUnit).toFixed(4));
+          existing.dishes.push(dishDesc);
+          deductions.set(invItem.id, existing);
+        }
       }
 
-      await tx.inventoryTransaction.create({
-        data: {
-          restaurantId,
-          inventoryItemId: invId,
-          orderId: order.id,
-          type: 'CONSUMPTION',
-          quantity: -entry.quantityToDeduct,
-          unit: entry.unit,
-          previousBalance: prevBalance,
-          remainingBalance: newBalance,
-          reference: `Order #${order.orderNumber}`,
-          reason: dishSummary.length > 250 ? dishSummary.slice(0, 247) + '...' : dishSummary,
-        },
-      });
+      // 3. Stock sufficiency pre-check
+      for (const [invId, entry] of deductions.entries()) {
+        const currentInv = await tx.inventoryItem.findFirst({
+          where: { id: invId, restaurantId },
+        });
+        if (!currentInv) {
+          const error = new Error(`Inventory item '${entry.inventoryItem.name}' not found`);
+          error.statusCode = 404;
+          throw error;
+        }
+        const available = Number(currentInv.currentStock);
+        const required = entry.quantityToDeduct;
+        if (available < required) {
+          const shortage = Number((required - available).toFixed(4));
+          const error = new Error(
+            `Insufficient inventory for ingredient '${currentInv.name}'. Required: ${required} ${currentInv.unit}, Available: ${available} ${currentInv.unit}, Shortage: ${shortage} ${currentInv.unit}`
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+        entry.currentStock = available;
+      }
+
+      // 4. Atomic deduction and InventoryTransaction logging
+      const dishSummary = order.items.map((i) => `${i.quantity}x ${i.menuItem.name}`).join(', ');
+
+      for (const [invId, entry] of deductions.entries()) {
+        const prevBalance = entry.currentStock;
+        const newBalance = Number((prevBalance - entry.quantityToDeduct).toFixed(4));
+
+        const updated = await tx.inventoryItem.updateMany({
+          where: {
+            id: invId,
+            restaurantId,
+            currentStock: { gte: entry.quantityToDeduct },
+          },
+          data: {
+            currentStock: { decrement: entry.quantityToDeduct },
+          },
+        });
+
+        if (updated.count !== 1) {
+          const error = new Error(`Insufficient inventory for ingredient '${entry.inventoryItem.name}'`);
+          error.statusCode = 400;
+          throw error;
+        }
+
+        await tx.inventoryTransaction.create({
+          data: {
+            restaurantId,
+            inventoryItemId: invId,
+            orderId: order.id,
+            type: 'CONSUMPTION',
+            quantity: -entry.quantityToDeduct,
+            unit: entry.unit,
+            previousBalance: prevBalance,
+            remainingBalance: newBalance,
+            reference: `Order #${order.orderNumber}`,
+            reason: dishSummary.length > 250 ? dishSummary.slice(0, 247) + '...' : dishSummary,
+          },
+        });
+      }
     }
 
     // 5. Update unserved order items to READY
@@ -864,9 +871,12 @@ export const getKitchenInventory = async (restaurantId, filters = {}) => {
     orderBy: { name: 'asc' },
   });
 
+  const policy = await getRestaurantInventoryPolicy(restaurantId);
+  const defaultThreshold = Number(policy?.lowStockThresholdDefault) || 5;
+
   return items.map((item) => {
     const current = Number(item.currentStock);
-    const threshold = Number(item.minStockThreshold);
+    const threshold = getEffectiveThreshold(item, defaultThreshold);
     let stockStatus = 'IN_STOCK';
     if (current <= 0) stockStatus = 'OUT_OF_STOCK';
     else if (current <= threshold) stockStatus = 'LOW_STOCK';
@@ -874,6 +884,7 @@ export const getKitchenInventory = async (restaurantId, filters = {}) => {
     return {
       ...item,
       stockStatus,
+      effectiveMinStockThreshold: threshold,
       isLowStock: current <= threshold,
       isOutOfStock: current <= 0,
       usedInDishes: item.recipeIngredients.map((ri) => ri.recipe.menuItem.name),

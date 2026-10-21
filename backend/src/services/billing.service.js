@@ -10,7 +10,11 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       include: {
         items: true,
         restaurant: true,
-        bill: true,
+        bill: {
+          include: {
+            payments: true,
+          },
+        },
       },
     });
 
@@ -38,23 +42,70 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       throw error;
     }
 
-    if (order.billRequested) {
-      await tx.order.update({
-        where: { id: order.id },
-        data: { billRequested: false },
-      });
-    }
-
     // Calculate subtotal from order items
     let subtotal = 0;
     for (const item of order.items) {
       subtotal += Number(item.subtotal);
     }
 
-    const taxRate = order.restaurant.taxRate !== undefined ? Number(order.restaurant.taxRate) : 5.0;
+    const taxRate = data.taxRate !== undefined && !isNaN(Number(data.taxRate)) && Number(data.taxRate) >= 0
+      ? Number(data.taxRate)
+      : (order.restaurant.taxRate !== undefined ? Number(order.restaurant.taxRate) : 5.0);
     const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
-    const discountAmount = data.discountAmount !== undefined ? Number(Number(data.discountAmount).toFixed(2)) : 0;
+
+    let discountAmount = 0;
+    if (data.discountAmount !== undefined && !isNaN(Number(data.discountAmount)) && Number(data.discountAmount) > 0) {
+      discountAmount = Math.max(0, Number(Number(data.discountAmount).toFixed(2)));
+    } else if (data.discountPercent !== undefined && !isNaN(Number(data.discountPercent)) && Number(data.discountPercent) > 0) {
+      const pct = Math.min(100, Math.max(0, Number(data.discountPercent)));
+      discountAmount = Number(((subtotal * pct) / 100).toFixed(2));
+    }
+    discountAmount = Math.min(discountAmount, Number((subtotal + taxAmount).toFixed(2)));
     const totalAmount = Math.max(0, Number((subtotal + taxAmount - discountAmount).toFixed(2)));
+
+    if (order.bill && order.bill.status !== 'VOID') {
+      if (order.bill.status === 'PAID' || (order.bill.payments && order.bill.payments.length > 0)) {
+        return order.bill;
+      }
+
+      return await tx.bill.update({
+        where: { id: order.bill.id },
+        data: {
+          subtotal,
+          taxRate,
+          taxAmount,
+          discountAmount,
+          totalAmount,
+          receptionistId: receptionistId || order.bill.receptionistId,
+        },
+        include: {
+          order: { include: { items: { include: { menuItem: true } }, table: true } },
+          receptionist: { select: { id: true, name: true } },
+          payments: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+    }
+
+    // Ensure order is marked SERVED and all items are SERVED once bill is being created
+    if (order.status !== 'SERVED' && order.status !== 'COMPLETED') {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'SERVED',
+          servedAt: new Date(),
+          billRequested: false,
+        },
+      });
+      await tx.orderItem.updateMany({
+        where: { orderId: order.id, status: { not: 'SERVED' } },
+        data: { status: 'SERVED' },
+      });
+    } else if (order.billRequested) {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { billRequested: false },
+      });
+    }
 
     const billNumber = `BILL-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -74,6 +125,7 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       include: {
         order: { include: { items: { include: { menuItem: true } }, table: true } },
         receptionist: { select: { id: true, name: true } },
+        payments: { orderBy: { createdAt: 'desc' } },
       },
     });
   });
@@ -169,32 +221,45 @@ export const updateBill = async (restaurantId, id, data) => {
     error.statusCode = 400;
     throw error;
   }
-  if (bill.payments.length > 0) {
+  if (bill.payments && bill.payments.length > 0) {
     const error = new Error('A bill with recorded payments cannot be changed');
     error.statusCode = 409;
     throw error;
   }
 
   const subtotal = Number(bill.subtotal);
-  const taxRate = Number(bill.taxRate);
+  const taxRate = data.taxRate !== undefined && !isNaN(Number(data.taxRate)) && Number(data.taxRate) >= 0
+    ? Number(data.taxRate)
+    : Number(bill.taxRate);
   const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
-  const discountAmount = data.discountAmount !== undefined ? Number(data.discountAmount) : Number(bill.discountAmount);
+
+  let discountAmount = Number(bill.discountAmount);
+  if (data.discountAmount !== undefined && !isNaN(Number(data.discountAmount))) {
+    discountAmount = Math.max(0, Number(Number(data.discountAmount).toFixed(2)));
+  } else if (data.discountPercent !== undefined && !isNaN(Number(data.discountPercent))) {
+    const pct = Math.min(100, Math.max(0, Number(data.discountPercent)));
+    discountAmount = Number(((subtotal * pct) / 100).toFixed(2));
+  }
+  discountAmount = Math.min(discountAmount, Number((subtotal + taxAmount).toFixed(2)));
   const totalAmount = Math.max(0, Number((subtotal + taxAmount - discountAmount).toFixed(2)));
 
   const updated = await prisma.bill.update({
     where: { id },
     data: {
+      taxRate,
+      taxAmount,
       discountAmount,
       totalAmount,
     },
     include: {
-      order: true,
-      payments: true,
+      order: { include: { items: { include: { menuItem: true } }, table: true } },
+      payments: { orderBy: { createdAt: 'desc' } },
+      receptionist: { select: { id: true, name: true } },
     },
   });
 
   await invalidateBillingCache(restaurantId);
-  return updated;
+  return { ...updated, paymentStatus: updated.status };
 };
 
 export const getPendingBillingOrders = async (restaurantId, filters = {}) => {

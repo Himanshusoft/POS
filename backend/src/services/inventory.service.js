@@ -2,6 +2,58 @@ import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { serializableTransaction } from '../utils/transaction.js';
 import { invalidateInventoryCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
+import { getRestaurantInventoryPolicy, getEffectiveThreshold } from './setting.service.js';
+
+export const generateUniqueSku = async (txOrPrisma, restaurantId, itemName) => {
+  const cleanName = (itemName || 'INV').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const prefix = (cleanName.slice(0, 3) || 'INV').padEnd(3, 'X');
+
+  const itemsWithPrefix = await txOrPrisma.inventoryItem.findMany({
+    where: {
+      restaurantId,
+      sku: { startsWith: `${prefix}-`, mode: 'insensitive' },
+    },
+    select: { sku: true },
+  });
+
+  let maxNum = 0;
+  for (const item of itemsWithPrefix) {
+    if (item.sku) {
+      const match = item.sku.match(new RegExp(`^${prefix}-(\\d+)`, 'i'));
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+  }
+
+  let nextNum = maxNum + 1;
+  let candidateSku = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+
+  let exists = await txOrPrisma.inventoryItem.findFirst({
+    where: {
+      restaurantId,
+      sku: { equals: candidateSku, mode: 'insensitive' },
+    },
+    select: { id: true },
+  });
+
+  while (exists) {
+    nextNum += 1;
+    candidateSku = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    exists = await txOrPrisma.inventoryItem.findFirst({
+      where: {
+        restaurantId,
+        sku: { equals: candidateSku, mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+  }
+
+  return candidateSku;
+};
 
 export const createInventoryItem = async (restaurantId, data) => {
   const name = data.name.trim();
@@ -32,11 +84,29 @@ export const createInventoryItem = async (restaurantId, data) => {
   const cost = rawCost !== undefined && rawCost !== null && rawCost !== '' ? Number(rawCost) : 0;
 
   const item = await serializableTransaction(prisma, async (tx) => {
+    let finalSku = data.sku ? String(data.sku).trim() : null;
+    if (finalSku) {
+      const existingSku = await tx.inventoryItem.findFirst({
+        where: {
+          restaurantId,
+          sku: { equals: finalSku, mode: 'insensitive' },
+        },
+        select: { id: true },
+      });
+      if (existingSku) {
+        const error = new Error('This SKU/code already exists. Please use a unique code.');
+        error.statusCode = 409;
+        throw error;
+      }
+    } else {
+      finalSku = await generateUniqueSku(tx, restaurantId, name);
+    }
+
     const createdItem = await tx.inventoryItem.create({
       data: {
         restaurantId,
         name,
-        sku: data.sku ? String(data.sku).trim() : null,
+        sku: finalSku,
         currentStock: initialStock,
         minStockThreshold: minThreshold,
         unit: data.unit,
@@ -103,21 +173,47 @@ export const getInventoryItems = async (restaurantId, filters = {}) => {
         { sku: { contains: String(filters.search), mode: 'insensitive' } },
       ];
     }
-    return await findManyPaginated(prisma.inventoryItem, {
-      where,
-      orderBy: { name: 'asc' },
-    }, filters);
+    const [result, policy] = await Promise.all([
+      findManyPaginated(prisma.inventoryItem, {
+        where,
+        orderBy: { name: 'asc' },
+      }, filters),
+      getRestaurantInventoryPolicy(restaurantId),
+    ]);
+    const defaultThreshold = Number(policy?.lowStockThresholdDefault) || 5;
+    result.items = (result.items || []).map((it) => {
+      const effectiveThreshold = getEffectiveThreshold(it, defaultThreshold);
+      return {
+        ...it,
+        effectiveMinStockThreshold: effectiveThreshold,
+        isLowStock: Number(it.currentStock) <= effectiveThreshold,
+      };
+    });
+    return result;
   });
 };
 
 export const getLowStockItems = async (restaurantId) => {
   const cacheKey = buildCacheKey(restaurantId, 'inventory', { type: 'low-stock' });
   return await cachedQuery(cacheKey, 30, async () => {
-    const items = await prisma.inventoryItem.findMany({
-      where: { restaurantId },
-      orderBy: { currentStock: 'asc' },
-    });
-    return items.filter((i) => Number(i.currentStock) <= Number(i.minStockThreshold));
+    const [items, policy] = await Promise.all([
+      prisma.inventoryItem.findMany({
+        where: { restaurantId },
+        orderBy: { currentStock: 'asc' },
+      }),
+      getRestaurantInventoryPolicy(restaurantId),
+    ]);
+    const defaultThreshold = Number(policy?.lowStockThresholdDefault) || 5;
+    return items
+      .filter((i) => {
+        const threshold = getEffectiveThreshold(i, defaultThreshold);
+        return Number(i.currentStock) <= threshold;
+      })
+      .map((it) => ({
+        ...it,
+        effectiveMinStockThreshold: getEffectiveThreshold(it, defaultThreshold),
+        isLowStock: true,
+      }));
   });
 };
 
@@ -137,7 +233,47 @@ export const getInventoryItemById = async (restaurantId, id) => {
 };
 
 export const updateInventoryItem = async (restaurantId, id, data) => {
-  await getInventoryItemById(restaurantId, id);
+  const existingItem = await getInventoryItemById(restaurantId, id);
+
+  if (data.name) {
+    const trimmedName = data.name.trim();
+    if (trimmedName.toLowerCase() !== existingItem.name.toLowerCase()) {
+      const duplicateName = await prisma.inventoryItem.findFirst({
+        where: {
+          restaurantId,
+          id: { not: id },
+          name: { equals: trimmedName, mode: 'insensitive' },
+        },
+      });
+      if (duplicateName) {
+        const error = new Error(`Inventory item '${trimmedName}' already exists in this restaurant`);
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+  }
+
+  let finalSku = undefined;
+  if (data.sku !== undefined) {
+    const submittedSku = data.sku ? String(data.sku).trim() : null;
+    if (submittedSku) {
+      const duplicateSku = await prisma.inventoryItem.findFirst({
+        where: {
+          restaurantId,
+          id: { not: id },
+          sku: { equals: submittedSku, mode: 'insensitive' },
+        },
+      });
+      if (duplicateSku) {
+        const error = new Error('This SKU/code already exists. Please use a unique code.');
+        error.statusCode = 409;
+        throw error;
+      }
+      finalSku = submittedSku;
+    } else {
+      finalSku = null;
+    }
+  }
 
   const rawStock = data.currentStock !== undefined ? data.currentStock : data.openingStock;
   const rawMin = data.minStockThreshold !== undefined
@@ -151,7 +287,7 @@ export const updateInventoryItem = async (restaurantId, id, data) => {
     where: { id },
     data: {
       name: data.name ? data.name.trim() : undefined,
-      sku: data.sku !== undefined ? (data.sku ? String(data.sku).trim() : null) : undefined,
+      sku: finalSku,
       currentStock: rawStock !== undefined ? Number(rawStock) : undefined,
       minStockThreshold: rawMin !== undefined ? Number(rawMin) : undefined,
       unit: data.unit || undefined,

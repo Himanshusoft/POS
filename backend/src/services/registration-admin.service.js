@@ -239,13 +239,23 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
     }
   }
 
+  let parsedDays = undefined;
+  if (durationDays !== undefined && durationDays !== null && durationDays !== '') {
+    parsedDays = Number(durationDays);
+    if (isNaN(parsedDays) || parsedDays <= 0) {
+      const error = new Error('Duration must be a positive number of days');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   let updatedSubscription;
   if (restaurant.subscription) {
     const updateData = {};
     if (planId) updateData.planId = planId;
     if (status) updateData.status = status;
-    if (durationDays) {
-      updateData.endDate = new Date(Date.now() + Number(durationDays) * 24 * 60 * 60 * 1000);
+    if (parsedDays !== undefined) {
+      updateData.endDate = new Date(Date.now() + parsedDays * 24 * 60 * 60 * 1000);
     }
 
     updatedSubscription = await prisma.subscription.update({
@@ -253,15 +263,28 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
       data: updateData,
       include: { plan: true },
     });
-  } else if (planId) {
-    const days = durationDays || 30;
+  } else {
+    let targetPlanId = planId;
+    if (!targetPlanId) {
+      const defaultPlan = await prisma.plan.findFirst({
+        where: { isActive: true },
+        orderBy: { price: 'asc' },
+      });
+      targetPlanId = defaultPlan?.id;
+    }
+    if (!targetPlanId) {
+      const error = new Error('A valid subscription plan is required');
+      error.statusCode = 400;
+      throw error;
+    }
+    const days = parsedDays !== undefined ? parsedDays : 30;
     updatedSubscription = await prisma.subscription.create({
       data: {
         restaurantId,
-        planId,
+        planId: targetPlanId,
         status: status || 'ACTIVE',
         startDate: new Date(),
-        endDate: new Date(Date.now() + Number(days) * 24 * 60 * 60 * 1000),
+        endDate: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
       },
       include: { plan: true },
     });
