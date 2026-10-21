@@ -17,7 +17,7 @@ export function ChartCard({
     <div
       className={`
         bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl p-5 sm:p-6
-        shadow-editorial card-hover flex flex-col justify-between transition-all duration-200
+        shadow-editorial card-hover flex flex-col justify-between transition-all duration-200 overflow-hidden
         hover:border-[#173F36]/30 dark:hover:border-[#4EBA87]/40
         ${className}
       `}
@@ -1138,6 +1138,7 @@ export function DonutChart({
   strokeWidth = 24,
   currency = '',
   formatValue,
+  layout = 'auto', // 'auto' | 'col' | 'row'
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
@@ -1183,14 +1184,15 @@ export function DonutChart({
   const displayLbl = activeItem ? activeItem.label : centerLabel;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+    <div className={`flex ${layout === 'col' ? 'flex-col' : layout === 'row' ? 'flex-row' : 'flex-col sm:flex-row'} items-center justify-center gap-4 sm:gap-6 py-2 overflow-hidden`}>
       {/* SVG Donut */}
-      <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
+      <div className="relative shrink-0 flex items-center justify-center" style={{ width: `${size}px`, height: `${size}px` }}>
         <svg
           width={size}
           height={size}
           viewBox={`0 0 ${size} ${size}`}
           className="transform -rotate-90 origin-center"
+          style={{ width: `${size}px`, height: `${size}px`, maxWidth: '100%', maxHeight: '100%' }}
         >
           {/* Background circle track */}
           <circle
