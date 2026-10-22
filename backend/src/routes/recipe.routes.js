@@ -13,18 +13,20 @@ validateUuidParams(router);
 
 router.use(authenticate);
 router.use(validateQuery);
+router.use(authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN));
 
-// Recipe read endpoints - Accessible to both Restaurant Admin and Kitchen Admin
-router.get('/menu-item/:menuItemId', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipeByMenuItem);
-router.get('/:id', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipeById);
-router.get('/', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipes);
+// Read endpoints: accessible to both Restaurant Owner/Admin and Kitchen Admin
+router.get('/menu-item/:menuItemId', recipeController.getRecipeByMenuItem);
+router.get('/:id', recipeController.getRecipeById);
+router.get('/', recipeController.getRecipes);
 
-// Recipe mutation endpoints - Strictly restricted to Kitchen Admin (Restaurant Admin cannot modify recipe definitions or ingredients)
+// Recipe mutation endpoints: restricted to KITCHEN_ADMIN only (Restaurant Admin/Owner is read-only)
 router.post('/', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeSetup), recipeController.createRecipe);
 router.patch('/:id', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeUpdate), recipeController.updateRecipe);
+router.put('/:id', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeUpdate), recipeController.updateRecipe);
 router.delete('/:id', authorizeRoles(ROLES.KITCHEN_ADMIN), recipeController.deleteRecipe);
 
-// Recipe ingredients sub-resource - Strictly restricted to Kitchen Admin
+// Ingredients sub-resource mutations: restricted to KITCHEN_ADMIN only
 router.post('/:recipeId/ingredients', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
 router.post('/:id/ingredients', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
 router.patch('/:recipeId/ingredients/:ingredientId', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeIngredientUpdate), recipeController.updateRecipeIngredient);
