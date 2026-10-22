@@ -1,3 +1,5 @@
+const INDIAN_PHONE_REGEX = /^(\+91[\-\s]?)?[6-9]\d{9}$/;
+
 export const validateCreateStaff = (data) => {
   const errors = [];
   const validRoles = ['KITCHEN_ADMIN', 'WAITER', 'RECEPTIONIST'];
@@ -17,10 +19,8 @@ export const validateCreateStaff = (data) => {
   if (data?.email?.length > 254) errors.push('email must be at most 254 characters');
   if (data?.phone !== undefined && data?.phone !== null && data?.phone !== '') {
     const raw = String(data.phone).trim();
-    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-    const digits = cleaned.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      errors.push('Enter a valid 10-digit mobile number');
+    if (!INDIAN_PHONE_REGEX.test(raw)) {
+      errors.push('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
     }
   }
   return { isValid: errors.length === 0, errors };
@@ -39,10 +39,8 @@ export const validateUpdateStaff = (data) => {
   if (!Object.keys(data || {}).some((key) => ['name', 'role', 'phone', 'isActive', 'password'].includes(key))) errors.push('At least one supported field is required');
   if (data?.phone !== undefined && data?.phone !== null && data?.phone !== '') {
     const raw = String(data.phone).trim();
-    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-    const digits = cleaned.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      errors.push('Enter a valid 10-digit mobile number');
+    if (!INDIAN_PHONE_REGEX.test(raw)) {
+      errors.push('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
     }
   }
   return { isValid: errors.length === 0, errors };

@@ -233,7 +233,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
               </span>
               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/20 text-[#173F36] dark:text-[#4EBA87] border border-[#173F36]/20 dark:border-[#4EBA87]/30 flex items-center gap-1 shadow-2xs">
                 <Sparkles className="w-3 h-3 text-[#173F36] dark:text-[#4EBA87]" />
-                <span>Standard Annual Plan</span>
+                <span>{restaurant?.subscription?.plan?.name || 'Basic Plan'}</span>
               </span>
             </div>
             <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
@@ -331,7 +331,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
                 <div>
                   <h3 className="font-serif text-base sm:text-lg font-bold text-[#173F36] dark:text-[#F7EFE4]">Staff Roster & Subscription Role Limits</h3>
                   <p className="text-xs text-[#657168] dark:text-[#9FB29E] font-medium">
-                    Enforced capacities under Standard Annual Plan (₹5,000/year)
+                    Enforced capacities under {restaurant?.subscription?.plan?.name || 'Basic Plan'} (₹5,000/year)
                   </p>
                 </div>
               </div>

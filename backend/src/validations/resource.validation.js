@@ -2,13 +2,18 @@ const units = ['KG', 'GRAM', 'LITER', 'MILLILITER', 'PIECE', 'PACKET', 'CAN', 'B
 const tableStatuses = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE'];
 const result = (errors) => ({ isValid: errors.length === 0, errors });
 const validEmail = (value) => /^\S+@\S+\.\S+$/.test(value);
+const validIndianPhone = (value) => typeof value === 'string' && /^(\+91[\-\s]?)?[6-9]\d{9}$/.test(value.trim());
 export const isUuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 export const validateTable = (data, partial = false) => {
   const errors = [];
   if (!partial && (typeof data?.tableNumber !== 'string' || !data.tableNumber.trim())) errors.push('tableNumber is required');
   if (data?.tableNumber !== undefined && (typeof data.tableNumber !== 'string' || !data.tableNumber.trim() || data.tableNumber.length > 30)) errors.push('tableNumber must be a non-empty string of at most 30 characters');
-  if (data?.capacity !== undefined && (!Number.isInteger(Number(data.capacity)) || Number(data.capacity) < 1 || Number(data.capacity) > 1000)) errors.push('capacity must be a positive integer');
+  if (data?.capacity !== undefined) {
+    if ((typeof data.capacity === 'string' && /[eE]/.test(data.capacity)) || !Number.isInteger(Number(data.capacity)) || Number(data.capacity) < 1 || Number(data.capacity) > 1000) {
+      errors.push('capacity must be a positive integer between 1 and 1000');
+    }
+  }
   if (data?.status !== undefined && !tableStatuses.includes(data.status)) errors.push(`status must be one of ${tableStatuses.join(', ')}`);
   if (partial && !Object.keys(data || {}).some((key) => ['tableNumber', 'capacity', 'status'].includes(key))) errors.push('At least one supported field is required');
   return result(errors);
@@ -21,6 +26,9 @@ export const validateSupplier = (data, partial = false) => {
   if (!partial && (typeof data?.name !== 'string' || !data.name.trim())) errors.push('name is required');
   for (const field of ['name', 'contactPerson', 'phone', 'address']) {
     if (data?.[field] !== undefined && (typeof data[field] !== 'string' || data[field].length > 200 || (field === 'name' && !data[field].trim()))) errors.push(`${field} must be a string of at most 200 characters`);
+  }
+  if (data?.phone !== undefined && data.phone !== null && data.phone !== '') {
+    if (!validIndianPhone(data.phone)) errors.push('phone must be a valid 10-digit Indian mobile number (e.g. 9876543210 or +91 9876543210)');
   }
   if (data?.email !== undefined && data.email !== null && (typeof data.email !== 'string' || !validEmail(data.email))) errors.push('email must be valid');
   if (partial && !Object.keys(data || {}).some((key) => ['name', 'contactPerson', 'phone', 'email', 'address'].includes(key))) errors.push('At least one supported field is required');
@@ -35,8 +43,8 @@ export const validatePurchase = (data, partial = false) => {
     if (!Array.isArray(data.items) || !data.items.length) errors.push('items must contain at least one purchase item');
     else data.items.forEach((item, i) => {
       if (!isUuid(item?.inventoryItemId)) errors.push(`items[${i}].inventoryItemId must be a UUID`);
-      if (!Number.isFinite(Number(item?.quantity)) || Number(item.quantity) <= 0) errors.push(`items[${i}].quantity must be positive`);
-      if (!Number.isFinite(Number(item?.costPerUnit)) || Number(item.costPerUnit) < 0) errors.push(`items[${i}].costPerUnit must be non-negative`);
+      if ((typeof item?.quantity === 'string' && /[eE]/.test(item.quantity)) || !Number.isFinite(Number(item?.quantity)) || Number(item.quantity) <= 0) errors.push(`items[${i}].quantity must be positive`);
+      if ((typeof item?.costPerUnit === 'string' && /[eE]/.test(item.costPerUnit)) || !Number.isFinite(Number(item?.costPerUnit)) || Number(item.costPerUnit) < 0) errors.push(`items[${i}].costPerUnit must be non-negative`);
     });
   } else if (!partial) errors.push('items is required');
   if (data?.invoiceNumber !== undefined && data.invoiceNumber !== null && (typeof data.invoiceNumber !== 'string' || data.invoiceNumber.length > 100)) errors.push('invoiceNumber must be at most 100 characters');
@@ -46,7 +54,7 @@ export const validatePurchase = (data, partial = false) => {
 
 export const validateWastage = (data) => result([
   ...(!isUuid(data?.inventoryItemId) ? ['inventoryItemId must be a UUID'] : []),
-  ...(!Number.isFinite(Number(data?.quantity)) || Number(data.quantity) <= 0 ? ['quantity must be positive'] : []),
+  ...((typeof data?.quantity === 'string' && /[eE]/.test(data.quantity)) || !Number.isFinite(Number(data?.quantity)) || Number(data.quantity) <= 0 ? ['quantity must be a positive number'] : []),
   ...(data?.unit !== undefined && !units.includes(data.unit) ? [`unit must be one of ${units.join(', ')}`] : []),
   ...(typeof data?.reason !== 'string' || !data.reason.trim() || data.reason.length > 500 ? ['reason is required and must be at most 500 characters'] : []),
   ...(data?.notes !== undefined && data.notes !== null && (typeof data.notes !== 'string' || data.notes.length > 2000) ? ['notes must be a string of at most 2000 characters'] : []),
@@ -61,7 +69,11 @@ export const validateInventoryUpdate = (data) => {
   if (!Object.keys(data || {}).some((key) => supported.includes(key))) errors.push('At least one supported field is required');
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 120)) errors.push('name must be a non-empty string of at most 120 characters');
   for (const field of ['currentStock', 'openingStock', 'minStockThreshold', 'minSafeLevel', 'minStockLevel', 'costPerUnit', 'costPrice', 'cost']) {
-    if (data?.[field] !== undefined && (!Number.isFinite(Number(data[field])) || Number(data[field]) < 0)) errors.push(`${field} must be non-negative`);
+    if (data?.[field] !== undefined) {
+      if ((typeof data[field] === 'string' && /[eE]/.test(data[field])) || !Number.isFinite(Number(data[field])) || Number(data[field]) < 0) {
+        errors.push(`${field} must be non-negative and not in scientific notation`);
+      }
+    }
   }
   if (data?.unit !== undefined && !units.includes(data.unit)) errors.push(`unit must be one of ${units.join(', ')}`);
   if (data?.sku !== undefined && data.sku !== null && data.sku !== '') {
@@ -90,7 +102,14 @@ export const validateRestaurantProfile = (data, partial = false) => {
   if (!partial && (typeof data?.name !== 'string' || !data.name.trim())) errors.push('name is required');
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 150)) errors.push('name must be a non-empty string of at most 150 characters');
   if (data?.email !== undefined && data.email !== null && (typeof data.email !== 'string' || !validEmail(data.email))) errors.push('email must be valid');
-  if (data?.taxRate !== undefined && (!Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) errors.push('taxRate must be between 0 and 100');
+  if (data?.phone !== undefined && data.phone !== null && data.phone !== '') {
+    if (!validIndianPhone(data.phone)) errors.push('phone must be a valid 10-digit Indian mobile number (e.g. 9876543210 or +91 9876543210)');
+  }
+  if (data?.taxRate !== undefined) {
+    if ((typeof data.taxRate === 'string' && /[eE]/.test(data.taxRate)) || !Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100) {
+      errors.push('taxRate must be a number between 0 and 100');
+    }
+  }
   if (data?.currency !== undefined && typeof data.currency === 'string') {
     data.currency = normalizeCurrencyCode(data.currency);
   }
@@ -101,12 +120,12 @@ export const validateRestaurantProfile = (data, partial = false) => {
 
 export const validateRecipeUpdate = (data) => result([
   ...(data?.instructions !== undefined && data.instructions !== null && (typeof data.instructions !== 'string' || data.instructions.length > 5000) ? ['instructions must be a string of at most 5000 characters'] : []),
-  ...(data?.prepTime !== undefined && data.prepTime !== null && (!Number.isInteger(Number(data.prepTime)) || Number(data.prepTime) < 0) ? ['prepTime must be a non-negative integer'] : []),
+  ...(data?.prepTime !== undefined && data.prepTime !== null && ((typeof data.prepTime === 'string' && /[eE]/.test(data.prepTime)) || !Number.isInteger(Number(data.prepTime)) || Number(data.prepTime) < 0) ? ['prepTime must be a non-negative integer'] : []),
   ...(!Object.keys(data || {}).some((key) => ['instructions', 'prepTime'].includes(key)) ? ['At least one supported field is required'] : []),
 ]);
 
 export const validateRecipeIngredientUpdate = (data) => result([
-  ...(data?.quantityRequired !== undefined && (!Number.isFinite(Number(data.quantityRequired)) || Number(data.quantityRequired) <= 0) ? ['quantityRequired must be positive'] : []),
+  ...(data?.quantityRequired !== undefined && ((typeof data.quantityRequired === 'string' && /[eE]/.test(data.quantityRequired)) || !Number.isFinite(Number(data.quantityRequired)) || Number(data.quantityRequired) <= 0) ? ['quantityRequired must be positive'] : []),
   ...(data?.unit !== undefined && !units.includes(data.unit) ? [`unit must be one of ${units.join(', ')}`] : []),
   ...(!Object.keys(data || {}).some((key) => ['quantityRequired', 'unit'].includes(key)) ? ['At least one supported field is required'] : []),
 ]);
@@ -117,14 +136,20 @@ export const validateBillUpdate = (data) => {
   if (!hasField) {
     errors.push('At least one of discountAmount, discountPercent, taxRate, or notes is required');
   }
-  if (data?.discountAmount !== undefined && (!Number.isFinite(Number(data.discountAmount)) || Number(data.discountAmount) < 0)) {
-    errors.push('discountAmount must be non-negative');
+  if (data?.discountAmount !== undefined) {
+    if ((typeof data.discountAmount === 'string' && /[eE]/.test(data.discountAmount)) || !Number.isFinite(Number(data.discountAmount)) || Number(data.discountAmount) < 0) {
+      errors.push('discountAmount must be non-negative');
+    }
   }
-  if (data?.discountPercent !== undefined && (!Number.isFinite(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100)) {
-    errors.push('discountPercent must be between 0 and 100');
+  if (data?.discountPercent !== undefined) {
+    if ((typeof data.discountPercent === 'string' && /[eE]/.test(data.discountPercent)) || !Number.isFinite(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100) {
+      errors.push('discountPercent must be between 0 and 100');
+    }
   }
-  if (data?.taxRate !== undefined && (!Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) {
-    errors.push('taxRate must be between 0 and 100');
+  if (data?.taxRate !== undefined) {
+    if ((typeof data.taxRate === 'string' && /[eE]/.test(data.taxRate)) || !Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100) {
+      errors.push('taxRate must be between 0 and 100');
+    }
   }
   return result(errors);
 };
@@ -147,4 +172,23 @@ export const validateUuidParams = (router, names = ['id', 'menuItemId', 'orderId
       next();
     });
   }
+};
+
+export default {
+  validateTable,
+  validateTableStatus,
+  validateSupplier,
+  validatePurchase,
+  validateWastage,
+  validateAvailability,
+  validateInventoryUpdate,
+  validateRestaurantProfile,
+  validateRecipeUpdate,
+  validateRecipeIngredientUpdate,
+  validateBillUpdate,
+  validateOrderUpdate,
+  validateOrderItemStatus,
+  validateUuidParams,
+  normalizeCurrencyCode,
+  isUuid,
 };

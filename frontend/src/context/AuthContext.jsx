@@ -41,12 +41,22 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await posService.auth.me();
         if (res.success && res.data) {
-          const userData = res.data.user || res.data;
-          const restData = res.data.restaurant || userData.restaurant || (userData.restaurantId ? { id: userData.restaurantId } : null);
-          setUser(userData);
-          setRestaurant(restData);
-          setActiveUser(userData);
-          setActiveRestaurant(restData);
+          const rawUser = res.data.user || res.data;
+          const orgId = rawUser.organizationId || rawUser.restaurantId || null;
+          const normalizedUserData = {
+            ...rawUser,
+            organizationId: orgId,
+            restaurantId: orgId,
+          };
+          const rawRest = res.data.restaurant || rawUser.restaurant || (orgId ? { id: orgId, organizationId: orgId } : null);
+          const normalizedRestData = rawRest
+            ? { ...rawRest, id: rawRest.id || orgId, organizationId: rawRest.organizationId || rawRest.id || orgId }
+            : null;
+
+          setUser(normalizedUserData);
+          setRestaurant(normalizedRestData);
+          setActiveUser(normalizedUserData);
+          setActiveRestaurant(normalizedRestData);
         }
       } catch (err) {
         console.error('Session expired or invalid:', err.message);
@@ -69,6 +79,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      // Immediately wipe existing cached queries before setting new session credentials
+      clearUserQueryCache();
+
       const res = await posService.auth.login({ email, password });
       if (res.success && res.data) {
         const { token: receivedToken, user: loggedUser, restaurant: loggedRestaurant } = res.data;
@@ -78,8 +91,16 @@ export const AuthProvider = ({ children }) => {
         setAuthToken(receivedToken);
         setTokenState(receivedToken);
 
-        let finalUser = loggedUser;
-        let finalRest = loggedRestaurant || loggedUser?.restaurant || (loggedUser?.restaurantId ? { id: loggedUser.restaurantId } : null);
+        const orgId = loggedUser.organizationId || loggedUser.restaurantId || null;
+        let finalUser = {
+          ...loggedUser,
+          organizationId: orgId,
+          restaurantId: orgId,
+        };
+        let finalRest = loggedRestaurant || loggedUser?.restaurant || (orgId ? { id: orgId, organizationId: orgId } : null);
+        if (finalRest) {
+          finalRest = { ...finalRest, id: finalRest.id || orgId, organizationId: finalRest.organizationId || finalRest.id || orgId };
+        }
 
         // Immediately fetch authenticated profile to get full restaurant and user details
         try {
@@ -87,8 +108,22 @@ export const AuthProvider = ({ children }) => {
           if (meRes?.success && meRes?.data) {
             const meUser = meRes.data.user || meRes.data;
             const meRest = meRes.data.restaurant || meUser?.restaurant || null;
-            if (meUser) finalUser = meUser;
-            if (meRest) finalRest = meRest;
+            if (meUser) {
+              const profileOrgId = meUser.organizationId || meUser.restaurantId || orgId;
+              finalUser = {
+                ...meUser,
+                organizationId: profileOrgId,
+                restaurantId: profileOrgId,
+              };
+            }
+            if (meRest) {
+              const resolvedRestId = meRest.id || finalUser.restaurantId || orgId;
+              finalRest = {
+                ...meRest,
+                id: resolvedRestId,
+                organizationId: resolvedRestId,
+              };
+            }
           }
         } catch {
           // Keep basic login details if /me encounters a transient issue
@@ -115,6 +150,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (payload) => {
     try {
+      clearUserQueryCache();
       const res = await posService.auth.register(payload);
       if (res.success && res.data) {
         const { token: receivedToken, user: registeredUser, restaurant: regRestaurant } = res.data;
@@ -123,15 +159,24 @@ export const AuthProvider = ({ children }) => {
 
         setAuthToken(receivedToken);
         setTokenState(receivedToken);
-        setUser(registeredUser);
-        setActiveUser(registeredUser);
-        const activeRest = regRestaurant || registeredUser?.restaurant || (registeredUser?.restaurantId ? { id: registeredUser.restaurantId } : null);
-        setRestaurant(activeRest);
-        setActiveRestaurant(activeRest);
+
+        const orgId = registeredUser.organizationId || registeredUser.restaurantId || regRestaurant?.id || null;
+        const finalUser = {
+          ...registeredUser,
+          organizationId: orgId,
+          restaurantId: orgId,
+        };
+        const activeRest = regRestaurant || registeredUser?.restaurant || (orgId ? { id: orgId, organizationId: orgId } : null);
+        const finalRest = activeRest ? { ...activeRest, id: activeRest.id || orgId, organizationId: activeRest.organizationId || orgId } : null;
+
+        setUser(finalUser);
+        setActiveUser(finalUser);
+        setRestaurant(finalRest);
+        setActiveRestaurant(finalRest);
         addToast('Restaurant & Owner account registered successfully!', 'success');
         return {
           success: true,
-          user: registeredUser,
+          user: finalUser,
           role: normalizedRole,
           defaultPath,
         };
@@ -182,6 +227,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const normalizedRole = normalizeRole(user?.role);
+  const resolvedOrgId = restaurant?.id || restaurant?.organizationId || user?.organizationId || user?.restaurantId || null;
 
   return (
     <AuthContext.Provider
@@ -189,7 +235,8 @@ export const AuthProvider = ({ children }) => {
         user,
         role: normalizedRole,
         restaurant,
-        restaurantId: restaurant?.id || user?.restaurantId || null,
+        restaurantId: resolvedOrgId,
+        organizationId: resolvedOrgId,
         token,
         loading,
         loggingOut,

@@ -5,14 +5,20 @@ export const validateGenerateBill = (data) => {
   if (!isUuid(data?.orderId)) {
     errors.push('orderId must be a UUID');
   }
-  if (data?.discountAmount !== undefined && (isNaN(Number(data.discountAmount)) || Number(data.discountAmount) < 0)) {
-    errors.push('discountAmount cannot be negative');
+  if (data?.discountAmount !== undefined) {
+    if ((typeof data.discountAmount === 'string' && /[eE]/.test(data.discountAmount)) || isNaN(Number(data.discountAmount)) || Number(data.discountAmount) < 0) {
+      errors.push('discountAmount cannot be negative or use scientific notation');
+    }
   }
-  if (data?.discountPercent !== undefined && (isNaN(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100)) {
-    errors.push('discountPercent must be between 0 and 100');
+  if (data?.discountPercent !== undefined) {
+    if ((typeof data.discountPercent === 'string' && /[eE]/.test(data.discountPercent)) || isNaN(Number(data.discountPercent)) || Number(data.discountPercent) < 0 || Number(data.discountPercent) > 100) {
+      errors.push('discountPercent must be a valid number between 0 and 100');
+    }
   }
-  if (data?.taxRate !== undefined && (isNaN(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100)) {
-    errors.push('taxRate must be between 0 and 100');
+  if (data?.taxRate !== undefined) {
+    if ((typeof data.taxRate === 'string' && /[eE]/.test(data.taxRate)) || isNaN(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100) {
+      errors.push('taxRate must be a valid number between 0 and 100');
+    }
   }
   return { isValid: errors.length === 0, errors };
 };
@@ -24,7 +30,7 @@ export const validatePayment = (data) => {
     errors.push('billId must be a UUID');
   }
   const rawAmount = data?.amount !== undefined ? data.amount : data?.amountPaid;
-  if (rawAmount === undefined || isNaN(Number(rawAmount)) || Number(rawAmount) <= 0) {
+  if (rawAmount === undefined || (typeof rawAmount === 'string' && /[eE]/.test(rawAmount)) || isNaN(Number(rawAmount)) || Number(rawAmount) <= 0) {
     errors.push('Payment amount must be greater than 0');
   }
   const rawMethod = data?.method !== undefined ? data.method : data?.paymentMethod;

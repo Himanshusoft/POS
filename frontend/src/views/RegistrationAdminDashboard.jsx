@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import posService from '../services/pos.service';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { StatCard, ChartCard, LineChart, DonutChart } from '../components/ui';
 import PlatformPerformanceAnalytics from '../components/PlatformPerformanceAnalytics';
+import SubscriptionLicenseModal from '../components/SubscriptionLicenseModal';
 import {
   Building2,
   Plus,
@@ -24,6 +26,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Calendar,
+  Clock,
+  ArrowRight,
   Edit3,
   Sliders,
   DollarSign,
@@ -35,10 +39,11 @@ import {
   useSuperAdminOverview,
   useSuperAdminRestaurants,
   useSuperAdminPlans,
+  useSuperAdminSubscriptionsOverview,
   usePosMutations
 } from '../hooks/usePosQueries';
 
-export default function RegistrationAdminDashboard() {
+export default function RegistrationAdminDashboard({ setActiveTab: setParentTab }) {
   const { addToast } = useAuth();
   const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'plans'
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +52,7 @@ export default function RegistrationAdminDashboard() {
   const { data: overview = null, isLoading: loadingOverview, refetch: refetchOverview } = useSuperAdminOverview();
   const { data: restData = [], isLoading: loadingRest, refetch: refetchRestaurants } = useSuperAdminRestaurants();
   const { data: plansData = [], isLoading: loadingPlans, refetch: refetchPlans } = useSuperAdminPlans();
+  const { data: subOverview = null } = useSuperAdminSubscriptionsOverview();
   const { invalidateSuperAdmin } = usePosMutations();
 
   const restaurants = Array.isArray(restData) ? restData : (restData.items || []);
@@ -146,53 +152,21 @@ export default function RegistrationAdminDashboard() {
 
   const handleOpenSubModal = (rest) => {
     setSelectedRestForSub(rest);
-    let initialDuration = 30;
-    if (rest.subscription?.endDate) {
-      const end = new Date(rest.subscription.endDate);
-      const diffTime = end.getTime() - Date.now();
-      const remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (remainingDays > 0) {
-        initialDuration = remainingDays;
-      } else {
-        const plan = plans.find((p) => p.id === rest.subscription?.planId);
-        initialDuration = plan?.durationDays || 30;
-      }
-    } else {
-      const plan = plans.find((p) => p.id === (rest.subscription?.planId || plans[0]?.id));
-      initialDuration = plan?.durationDays || 30;
-    }
-
-    setSubForm({
-      planId: rest.subscription?.planId || (plans[0]?.id || ''),
-      status: rest.subscription?.status || 'ACTIVE',
-      durationDays: initialDuration,
-    });
   };
 
-  const handleUpdateSubscription = async (e) => {
-    e.preventDefault();
+  const handleUpdateSubscription = async (licensePayload) => {
     if (!selectedRestForSub) return;
-
-    if (subForm.durationDays === '' || subForm.durationDays === null || subForm.durationDays === undefined) {
-      addToast('Please enter a valid subscription duration in days', 'warning');
-      return;
-    }
-
-    const durationNum = Number(subForm.durationDays);
-    if (isNaN(durationNum) || durationNum <= 0) {
-      addToast('Duration must be a positive number of days (at least 1)', 'warning');
-      return;
-    }
 
     setSubmittingSub(true);
     try {
       const res = await posService.superAdmin.updateSubscription(selectedRestForSub.id, {
-        planId: subForm.planId,
-        status: subForm.status,
-        durationDays: durationNum,
+        planId: licensePayload.planId,
+        status: licensePayload.status,
+        durationYears: licensePayload.durationYears,
+        durationDays: licensePayload.durationDays,
       });
       if (res.success) {
-        addToast(`Subscription updated for "${selectedRestForSub.name}"`, 'success');
+        addToast(`Subscription license updated for "${selectedRestForSub.name}"`, 'success');
         setSelectedRestForSub(null);
         await fetchData();
       } else {
@@ -253,6 +227,14 @@ export default function RegistrationAdminDashboard() {
     if (onboardForm.password.length < 6) {
       addToast('Password must be at least 6 characters', 'warning');
       return;
+    }
+
+    if (onboardForm.phone && onboardForm.phone.trim()) {
+      const err = validatePhoneInput(onboardForm.phone);
+      if (err) {
+        addToast(err, 'warning');
+        return;
+      }
     }
 
     setSubmittingOnboard(true);
@@ -617,6 +599,136 @@ export default function RegistrationAdminDashboard() {
             />
           </div>
         </ChartCard>
+      </div>
+
+      {/* SUBSCRIPTION OVERVIEW & HOTELS NEAR EXPIRY (Section 17 Requirement) */}
+      <div className="bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl p-5 shadow-editorial">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E4DCD0] dark:border-[#233630]">
+          <div>
+            <h3 className="font-serif text-base sm:text-lg font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
+              <CreditCard className="w-4.5 h-4.5 text-[#173F36] dark:text-[#4EBA87]" />
+              <span>Subscription Health & Expiry Overview</span>
+            </h3>
+            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5 font-medium">
+              Real-time tenant license quotas, active subscriptions, and renewal tracking
+            </p>
+          </div>
+          {setParentTab && (
+            <button
+              onClick={() => setParentTab('subscriptions')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#173F36] dark:text-[#4EBA87] hover:underline cursor-pointer"
+            >
+              <span>Manage Subscriptions</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* 4 Mini Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 pb-4">
+          <div className="p-3 rounded-xl bg-[#FBF8F3] dark:bg-[#121E1B] border border-[#E4DCD0] dark:border-[#233630]">
+            <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] uppercase font-bold tracking-wider">
+              Total Hotels
+            </span>
+            <div className="text-lg font-bold font-mono text-[#17251F] dark:text-[#F7EFE4] mt-0.5">
+              {subOverview?.totalOrganizations ?? totalTenants}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#E8F3ED] dark:bg-[#1B382B] border border-[#C8E0D2] dark:border-[#2D6A4F]">
+            <span className="text-[10px] text-[#2D6A4F] dark:text-[#52B788] uppercase font-bold tracking-wider">
+              Active Plans
+            </span>
+            <div className="text-lg font-bold font-mono text-[#2D6A4F] dark:text-[#52B788] mt-0.5">
+              {subOverview?.activeSubscriptions ?? activeSubscriptions}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FEF3C7] dark:bg-[#3D2E14] border border-[#FCD34D] dark:border-[#785418]">
+            <span className="text-[10px] text-[#92551A] dark:text-[#FBBF24] uppercase font-bold tracking-wider">
+              Expiring Soon
+            </span>
+            <div className="text-lg font-bold font-mono text-[#92551A] dark:text-[#FBBF24] mt-0.5">
+              {subOverview?.expiringSoon ?? 0}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FDF0ED] dark:bg-[#381B1D] border border-[#F5C6CB] dark:border-[#7A2E33]">
+            <span className="text-[10px] text-[#C53030] dark:text-[#E57373] uppercase font-bold tracking-wider">
+              Expired
+            </span>
+            <div className="text-lg font-bold font-mono text-[#C53030] dark:text-[#E57373] mt-0.5">
+              {subOverview?.expired ?? 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Hotels Near Expiry List */}
+        <div className="pt-2 border-t border-[#E4DCD0]/60 dark:border-[#233630]/60">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#D97706]" />
+              <span>Hotels Near Expiry (Next 7 Days)</span>
+            </span>
+            {subOverview?.nearExpiryList?.length > 0 && (
+              <span className="text-[10px] text-[#D97706] font-bold bg-[#FEF3C7] px-2 py-0.5 rounded-full border border-[#FCD34D]">
+                Action Required
+              </span>
+            )}
+          </div>
+
+          {(!subOverview?.nearExpiryList || subOverview.nearExpiryList.length === 0) ? (
+            <div className="py-3 px-4 rounded-xl bg-[#FBF8F3] dark:bg-[#121E1B] border border-[#E4DCD0] dark:border-[#233630] flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-[#2D6A4F] dark:text-[#52B788]">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>All active restaurant subscriptions are healthy. No renewals pending in the immediate 7-day window.</span>
+              </div>
+              {setParentTab && (
+                <button
+                  onClick={() => setParentTab('subscriptions')}
+                  className="font-bold text-[#173F36] dark:text-[#4EBA87] hover:underline"
+                >
+                  View All &rarr;
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-[#E4DCD0]/60 dark:divide-[#233630]/60 border border-[#E4DCD0] dark:border-[#233630] rounded-xl overflow-hidden text-xs">
+              {subOverview.nearExpiryList.map((item) => (
+                <div key={item.organizationId} className="p-3 bg-[#FFFDF9] dark:bg-[#152320] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-[#D97706]/15 text-[#D97706] flex items-center justify-center font-bold text-xs">
+                      !
+                    </div>
+                    <div>
+                      <span className="font-bold text-[#17251F] dark:text-[#F7EFE4] block">{item.organizationName}</span>
+                      <span className="text-[10px] text-[#657168] dark:text-[#9FB29E]">{item.ownerName} • {item.ownerEmail}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#173F36]/10 text-[#173F36] dark:text-[#4EBA87]">
+                      {item.planName}
+                    </span>
+                    <span className="text-xs font-bold font-mono text-[#D97706] bg-[#FEF3C7] px-2.5 py-0.5 rounded-full border border-[#FCD34D]">
+                      {item.daysRemaining} days left
+                    </span>
+                    <button
+                      onClick={() => handleOpenSubModal({
+                        id: item.organizationId,
+                        name: item.organizationName,
+                        subscription: { endDate: item.endDate, status: item.status },
+                      })}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#173F36] text-white hover:bg-[#12332C] transition cursor-pointer"
+                    >
+                      Renew
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs Switcher */}
@@ -1076,7 +1188,7 @@ export default function RegistrationAdminDashboard() {
                       type="text"
                       placeholder="e.g. +91 9876543210"
                       value={onboardForm.phone}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, phone: e.target.value })}
+                      onChange={(e) => setOnboardForm({ ...onboardForm, phone: sanitizePhoneInput(e.target.value) })}
                       className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E]"
                     />
                   </div>
@@ -1141,97 +1253,14 @@ export default function RegistrationAdminDashboard() {
       )}
 
       {/* MANAGE SUBSCRIPTION MODAL */}
-      {selectedRestForSub && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl w-full max-w-md p-6 shadow-editorial relative text-[#17251F] dark:text-[#F7EFE4]">
-            <h3 className="font-serif text-xl font-bold text-[#173F36] dark:text-[#F7EFE4] flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
-              <span>Manage Plan & Subscription</span>
-            </h3>
-            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1 font-medium">
-              Configure subscription tier for <span className="text-[#17251F] dark:text-[#F7EFE4] font-semibold">{selectedRestForSub.name}</span>
-            </p>
-
-            <form onSubmit={handleUpdateSubscription} className="space-y-4 mt-5">
-              <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Select Plan</label>
-                <select
-                  value={subForm.planId}
-                  onChange={(e) => setSubForm({ ...subForm, planId: e.target.value })}
-                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36]"
-                >
-                  {plans.map((p) => (
-                    <option key={p.id} value={p.id} className="dark:bg-[#152320] dark:text-[#F7EFE4]">
-                      {p.name} — ₹{Number(p.price).toLocaleString()} / year ({p.maxWaiters ?? 10} Waiters, {p.maxKitchenAdmins ?? 2} Kitchen Admins, {p.maxReceptionists ?? 2} Receptionists)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Subscription Status</label>
-                <select
-                  value={subForm.status}
-                  onChange={(e) => setSubForm({ ...subForm, status: e.target.value })}
-                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36]"
-                >
-                  <option value="ACTIVE" className="dark:bg-[#152320] dark:text-[#F7EFE4]">ACTIVE (Normal Operations)</option>
-                  <option value="SUSPENDED" className="dark:bg-[#152320] dark:text-[#F7EFE4]">SUSPENDED (Temporarily Blocked)</option>
-                  <option value="EXPIRED" className="dark:bg-[#152320] dark:text-[#F7EFE4]">EXPIRED (Renewal Required)</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="sub-duration-input" className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">
-                    Extend Duration (Days from now) *
-                  </label>
-                  {selectedRestForSub?.subscription?.endDate && (
-                    <span className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
-                      Current: {Math.max(0, Math.ceil((new Date(selectedRestForSub.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining
-                    </span>
-                  )}
-                </div>
-                <input
-                  id="sub-duration-input"
-                  type="number"
-                  min="1"
-                  required
-                  value={subForm.durationDays}
-                  onChange={(e) => setSubForm({ ...subForm, durationDays: e.target.value })}
-                  className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] font-mono"
-                  placeholder="e.g. 30"
-                />
-                {Number(subForm.durationDays) > 0 && (
-                  <p className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-[#173F36] dark:text-[#9FB29E]" />
-                    <span>
-                      New expiry: {new Date(Date.now() + Number(subForm.durationDays) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#E4DCD0] dark:border-[#233630]">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRestForSub(null)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#F7EFE4] dark:hover:bg-[#1E2E2A] transition-colors cursor-pointer border border-[#E4DCD0] dark:border-[#233630]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingSub}
-                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#173F36] hover:bg-[#12332C] text-[#FFFDF9] transition-all shadow-editorial cursor-pointer"
-                >
-                  {submittingSub ? 'Updating...' : 'Save Subscription'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <SubscriptionLicenseModal
+        restaurant={selectedRestForSub}
+        plans={plans}
+        isOpen={Boolean(selectedRestForSub)}
+        onClose={() => setSelectedRestForSub(null)}
+        onSubmit={handleUpdateSubscription}
+        isSubmitting={submittingSub}
+      />
 
       {/* RESET OWNER CREDENTIALS MODAL */}
       {selectedRestForReset && (

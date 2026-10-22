@@ -55,9 +55,10 @@ export const registerOwner = async (data) => {
       userId: user.id,
       role: user.role,
       restaurantId: restaurant.id,
+      organizationId: restaurant.id,
     });
 
-    return { user, restaurant, token };
+    return { user: { ...user, organizationId: restaurant.id }, restaurant, token };
   });
 };
 
@@ -74,6 +75,12 @@ export const login = async ({ email, password }) => {
 
   if (!user.isActive) {
     const error = new Error('User account has been deactivated. Please contact your restaurant owner.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (user.role !== 'RESTAURANT_REGISTRATION_ADMIN' && !user.restaurantId) {
+    const error = new Error('Staff account is not assigned to any organization or restaurant');
     error.statusCode = 403;
     throw error;
   }
@@ -100,6 +107,7 @@ export const login = async ({ email, password }) => {
     userId: user.id,
     role: user.role,
     restaurantId: user.restaurantId,
+    organizationId: user.restaurantId,
   });
 
   const userWithoutPassword = {
@@ -108,6 +116,7 @@ export const login = async ({ email, password }) => {
     email: user.email,
     role: user.role,
     restaurantId: user.restaurantId,
+    organizationId: user.restaurantId,
   };
 
   return {
@@ -142,13 +151,25 @@ export const getProfile = async (userId) => {
     error.statusCode = 404;
     throw error;
   }
-  return user;
+  return { ...user, organizationId: user.restaurantId };
 };
 
 export const updateProfile = async (userId, data) => {
   const updateData = {};
   if (data.name) updateData.name = data.name.trim();
-  if (data.phone !== undefined) updateData.phone = data.phone?.trim() || null;
+  if (data.phone !== undefined) {
+    if (data.phone === null || data.phone === '') {
+      updateData.phone = null;
+    } else {
+      const raw = String(data.phone).trim();
+      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
+        const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9');
+        error.statusCode = 400;
+        throw error;
+      }
+      updateData.phone = raw;
+    }
+  }
   if (data.email) {
     const nextEmail = data.email.trim().toLowerCase();
     const existing = await prisma.user.findFirst({

@@ -202,6 +202,7 @@ export default function InventoryView() {
 
   const [adjustQuantity, setAdjustQuantity] = useState('');
   const [adjustReason, setAdjustReason] = useState('Purchase Inward Receipt');
+  const [customReason, setCustomReason] = useState('');
   const [adjustNotes, setAdjustNotes] = useState('');
   const [adjustLoading, setAdjustLoading] = useState(false);
 
@@ -468,6 +469,12 @@ export default function InventoryView() {
       return;
     }
 
+    const rawAdjStr = String(adjustQuantity).trim();
+    if (/[eE]/.test(rawAdjStr)) {
+      addToast('Scientific notation is not allowed for quantity adjustment', 'warning');
+      return;
+    }
+
     const numAdj = Number(adjustQuantity);
     if (!Number.isFinite(numAdj)) {
       addToast('Quantity adjustment must be a valid number', 'warning');
@@ -484,16 +491,32 @@ export default function InventoryView() {
       return;
     }
 
+    let finalReason = adjustReason.trim();
+    if (adjustReason === 'Other') {
+      const trimmedCustom = customReason.trim();
+      if (!trimmedCustom) {
+        addToast('Please specify a custom reason for the adjustment', 'warning');
+        return;
+      }
+      if (trimmedCustom.length > 255) {
+        addToast('Custom reason must not exceed 255 characters', 'warning');
+        return;
+      }
+      finalReason = trimmedCustom;
+    }
+
     setAdjustLoading(true);
     try {
       await posService.inventory.adjustStock(selectedItemForAdjust.id, {
         quantityAdjustment: numAdj,
-        reason: adjustReason.trim(),
+        reason: finalReason,
         auditNotes: adjustNotes.trim() || undefined,
       });
       addToast('Stock adjusted successfully', 'success');
       setShowAdjustModal(false);
       setAdjustQuantity('');
+      setAdjustReason('Purchase Inward Receipt');
+      setCustomReason('');
       setAdjustNotes('');
       await loadData();
     } catch (err) {
@@ -509,13 +532,23 @@ export default function InventoryView() {
       addToast('Please select an ingredient', 'warning');
       return;
     }
+    const rawWasteQty = String(wastageForm.quantity).trim();
+    if (/[eE]/.test(rawWasteQty)) {
+      addToast('Scientific notation is not allowed for wastage quantity', 'warning');
+      return;
+    }
+    const wasteNum = Number(wastageForm.quantity);
+    if (!Number.isFinite(wasteNum) || wasteNum <= 0) {
+      addToast('Wastage quantity must be a positive number greater than 0', 'warning');
+      return;
+    }
     const noteText = (wastageForm.notes || '').trim();
     const reasonValue = wastageForm.reason || 'SPOILAGE';
     const combinedReason = noteText ? `${reasonValue}: ${noteText}` : reasonValue;
     try {
       await posService.wastage.log({
         inventoryItemId: wastageForm.inventoryItemId,
-        quantity: Number(wastageForm.quantity),
+        quantity: wasteNum,
         reason: combinedReason,
         notes: noteText || undefined,
         incidentNotes: noteText || undefined,
@@ -624,15 +657,6 @@ export default function InventoryView() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setActiveTab('stock');
-              setSearchQuery('');
-            }}
-            className="text-xs font-semibold text-amber-800 dark:text-amber-300 underline hover:text-amber-900 dark:hover:text-amber-200 shrink-0 px-2 py-1 cursor-pointer"
-          >
-            Review Items
-          </button>
         </div>
       )}
 
@@ -782,6 +806,7 @@ export default function InventoryView() {
                                 setSelectedItemForAdjust(it);
                                 setAdjustQuantity('');
                                 setAdjustReason('Purchase Inward Receipt');
+                                setCustomReason('');
                                 setAdjustNotes('');
                                 setShowAdjustModal(true);
                               }}
@@ -1336,7 +1361,12 @@ export default function InventoryView() {
             <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Reason *</label>
             <select
               value={adjustReason}
-              onChange={(e) => setAdjustReason(e.target.value)}
+              onChange={(e) => {
+                setAdjustReason(e.target.value);
+                if (e.target.value !== 'Other') {
+                  setCustomReason('');
+                }
+              }}
               disabled={adjustLoading}
               className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] disabled:opacity-50"
             >
@@ -1345,8 +1375,27 @@ export default function InventoryView() {
               <option value="Damaged / Broken">Damaged / Broken</option>
               <option value="Expired Shelf Life">Expired Shelf Life</option>
               <option value="Manual Correction">Manual Correction</option>
+              <option value="Other">Other</option>
             </select>
           </div>
+
+          {adjustReason === 'Other' && (
+            <div>
+              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
+                Specify Reason *
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={255}
+                placeholder="Enter custom reason for adjustment"
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                disabled={adjustLoading}
+                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] disabled:opacity-50"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Audit Notes</label>

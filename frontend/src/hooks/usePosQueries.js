@@ -381,6 +381,30 @@ export function useSuperAdminPlans(options = {}) {
 // 12. STAFF / USERS HOOKS
 // ==========================================
 
+export function useSuperAdminSubscriptions(params = {}, options = {}) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.subscriptions(params),
+    queryFn: async () => {
+      const res = await posService.superAdmin.getSubscriptions(params);
+      return res.success && res.data ? res.data : [];
+    },
+    staleTime: 15 * 1000,
+    ...options,
+  });
+}
+
+export function useSuperAdminSubscriptionsOverview(options = {}) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.subscriptionsOverview(),
+    queryFn: async () => {
+      const res = await posService.superAdmin.getSubscriptionsOverview();
+      return res.success && res.data ? res.data : null;
+    },
+    staleTime: 15 * 1000,
+    ...options,
+  });
+}
+
 export function useUsers(restaurantId, options = {}) {
   return useQuery({
     queryKey: queryKeys.users.all(restaurantId),

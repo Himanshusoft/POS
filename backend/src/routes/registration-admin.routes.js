@@ -21,6 +21,11 @@ router.get('/plans/:id', planController.getPlanById);
 router.put('/plans/:id', planController.updatePlan);
 router.patch('/plans/:id/status', planController.updatePlanStatus);
 
+// Centralized Subscription Management
+router.get('/subscriptions', adminController.getSubscriptions);
+router.get('/subscriptions/overview', adminController.getSubscriptionsOverview);
+router.get('/subscriptions/:restaurantId', adminController.getSubscriptionById);
+
 // Tenant Restaurants & Governance
 router.post('/restaurants', adminController.onboardRestaurant);
 router.get('/restaurants', adminController.getRestaurants);

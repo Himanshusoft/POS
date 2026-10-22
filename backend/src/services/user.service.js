@@ -4,19 +4,23 @@ import { findManyPaginated } from '../utils/pagination.js';
 import { cachedQuery, buildCacheKey, invalidateUserCache } from '../utils/cache.js';
 
 export const createStaff = async (restaurantId, data) => {
+  if (!restaurantId) {
+    const error = new Error('Organization context is required to create staff');
+    error.statusCode = 400;
+    throw error;
+  }
   const email = data.email.trim().toLowerCase();
 
   let phoneValue = null;
   if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
     const raw = String(data.phone).trim();
-    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-    const digits = cleaned.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      const error = new Error('Enter a valid 10-digit mobile number');
+    if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
+      const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
       error.statusCode = 400;
       throw error;
     }
-    phoneValue = digits;
+    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+    phoneValue = cleaned.replace(/\D/g, '');
   }
 
   const hashedPassword = await hashPassword(data.password);
@@ -96,7 +100,7 @@ export const createStaff = async (restaurantId, data) => {
   });
 
   await invalidateUserCache(restaurantId);
-  return newUser;
+  return { ...newUser, organizationId: newUser.restaurantId };
 };
 
 export const getStaffList = async (restaurantId, filters = {}) => {
@@ -152,14 +156,13 @@ export const updateStaff = async (restaurantId, id, data) => {
       updateData.phone = null;
     } else {
       const raw = String(data.phone).trim();
-      const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-      const digits = cleaned.replace(/\D/g, '');
-      if (digits.length !== 10) {
-        const error = new Error('Enter a valid 10-digit mobile number');
+      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
+        const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
         error.statusCode = 400;
         throw error;
       }
-      updateData.phone = digits;
+      const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
+      updateData.phone = cleaned.replace(/\D/g, '');
     }
   }
   if (data.isActive !== undefined) updateData.isActive = data.isActive;

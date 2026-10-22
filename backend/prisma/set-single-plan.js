@@ -1,48 +1,80 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function setSingleAnnualPlan() {
-  console.log('Configuring single 5000/yr plan in database...');
+  console.log('Configuring single Basic Plan (₹5,000/yr) in database...');
 
-  // 1. Create or upsert the single Annual Plan
-  const singlePlan = await prisma.plan.upsert({
+  // 1. Create or upsert the single Basic Plan
+  const existingLegacy = await prisma.plan.findUnique({
     where: { name: 'Standard Annual Plan' },
-    update: {
-      description: 'Annual restaurant subscription: 10 Waiters, 2 Kitchen Admins, 2 Receptionists',
-      price: 5000.00,
-      durationDays: 365,
-      maxStaff: 14,
-      maxWaiters: 10,
-      maxKitchenAdmins: 2,
-      maxReceptionists: 2,
-      features: [
-        '10 Service Waiters (POS & Floor Map)',
-        '2 Kitchen Admins (Live KDS & Recipes)',
-        '2 Receptionists (Billing & Cashier)',
-        'Complete Restaurant Operations & Reports',
-        'Valid for 1 Full Year'
-      ],
-      isActive: true,
-    },
-    create: {
-      name: 'Standard Annual Plan',
-      description: 'Annual restaurant subscription: 10 Waiters, 2 Kitchen Admins, 2 Receptionists',
-      price: 5000.00,
-      durationDays: 365,
-      maxStaff: 14,
-      maxWaiters: 10,
-      maxKitchenAdmins: 2,
-      maxReceptionists: 2,
-      features: [
-        '10 Service Waiters (POS & Floor Map)',
-        '2 Kitchen Admins (Live KDS & Recipes)',
-        '2 Receptionists (Billing & Cashier)',
-        'Complete Restaurant Operations & Reports',
-        'Valid for 1 Full Year'
-      ],
-      isActive: true,
-    },
   });
+
+  let singlePlan;
+  if (existingLegacy) {
+    singlePlan = await prisma.plan.update({
+      where: { id: existingLegacy.id },
+      data: {
+        name: 'Basic Plan',
+        description: 'Perfect for small restaurants and cafes.',
+        price: 5000.00,
+        durationDays: 365,
+        maxStaff: 14,
+        maxWaiters: 10,
+        maxKitchenAdmins: 2,
+        maxReceptionists: 2,
+        features: [
+          '10 Service Waiters (POS & Floor Map)',
+          '2 Kitchen Admins (Live KDS & Recipes)',
+          '2 Receptionists (Billing & Cashier)',
+          'Role-based user access control',
+          'Complete Restaurant Operations & Reports',
+          'Menu & Dining Table Management',
+        ],
+        isActive: true,
+      },
+    });
+  } else {
+    singlePlan = await prisma.plan.upsert({
+      where: { name: 'Basic Plan' },
+      update: {
+        description: 'Perfect for small restaurants and cafes.',
+        price: 5000.00,
+        durationDays: 365,
+        maxStaff: 14,
+        maxWaiters: 10,
+        maxKitchenAdmins: 2,
+        maxReceptionists: 2,
+        features: [
+          '10 Service Waiters (POS & Floor Map)',
+          '2 Kitchen Admins (Live KDS & Recipes)',
+          '2 Receptionists (Billing & Cashier)',
+          'Role-based user access control',
+          'Complete Restaurant Operations & Reports',
+          'Menu & Dining Table Management',
+        ],
+        isActive: true,
+      },
+      create: {
+        name: 'Basic Plan',
+        description: 'Perfect for small restaurants and cafes.',
+        price: 5000.00,
+        durationDays: 365,
+        maxStaff: 14,
+        maxWaiters: 10,
+        maxKitchenAdmins: 2,
+        maxReceptionists: 2,
+        features: [
+          '10 Service Waiters (POS & Floor Map)',
+          '2 Kitchen Admins (Live KDS & Recipes)',
+          '2 Receptionists (Billing & Cashier)',
+          'Role-based user access control',
+          'Complete Restaurant Operations & Reports',
+          'Menu & Dining Table Management',
+        ],
+        isActive: true,
+      },
+    });
+  }
 
   console.log(`Single Plan active: ${singlePlan.name} (ID: ${singlePlan.id}) - Price: ${singlePlan.price}/year`);
 
@@ -53,7 +85,7 @@ async function setSingleAnnualPlan() {
       status: 'ACTIVE',
     },
   });
-  console.log(`Re-pointed ${updatedSubs.count} restaurant subscriptions to the single annual plan.`);
+  console.log(`Re-pointed ${updatedSubs.count} restaurant subscriptions to the single Basic Plan.`);
 
   // 3. Delete or deactivate any old plans so only this one plan exists
   const otherPlans = await prisma.plan.findMany({

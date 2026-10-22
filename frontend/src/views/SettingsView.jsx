@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { useSettings, usePosMutations } from '../hooks/usePosQueries';
 import { Button, Badge } from '../components/ui';
@@ -214,6 +215,14 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
       return;
     }
 
+    if (profileForm.phone && profileForm.phone.trim()) {
+      const err = validatePhoneInput(profileForm.phone);
+      if (err) {
+        addToast(err, 'warning');
+        return;
+      }
+    }
+
     setSavingSection('profile');
     try {
       const res = await posService.auth.updateProfile({
@@ -275,6 +284,19 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     e.preventDefault();
     if (!restForm.name.trim()) {
       addToast('Restaurant name is required', 'warning');
+      return;
+    }
+
+    if (restForm.phone && restForm.phone.trim()) {
+      const err = validatePhoneInput(restForm.phone);
+      if (err) {
+        addToast(err, 'warning');
+        return;
+      }
+    }
+    const taxNum = Number(restForm.taxRate);
+    if (isNaN(taxNum) || taxNum < 0 || taxNum > 100 || isScientificNotation(String(restForm.taxRate))) {
+      addToast('Tax rate must be a valid number between 0 and 100', 'warning');
       return;
     }
 
@@ -598,7 +620,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               <input
                 type="text"
                 value={profileForm.phone}
-                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: sanitizePhoneInput(e.target.value) })}
                 className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                 placeholder="+91 9876543210"
               />
@@ -767,7 +789,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="text"
                   value={restForm.phone}
-                  onChange={(e) => setRestForm({ ...restForm, phone: e.target.value })}
+                  onChange={(e) => setRestForm({ ...restForm, phone: sanitizePhoneInput(e.target.value) })}
                   className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
                   placeholder="+91 80 12345678"
                 />

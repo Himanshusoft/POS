@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   Building2,
+  CreditCard,
   LayoutDashboard,
   LayoutGrid,
   ReceiptText,

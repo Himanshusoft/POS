@@ -84,7 +84,7 @@ export const ROLE_CONFIG = {
     color: 'bg-[#173F36]/10 text-[#173F36] border-[#173F36]/25 dark:bg-[#173F36]/30 dark:text-[#9FB29E] dark:border-[#173F36]/40',
     defaultTab: 'registration',
     defaultPath: '/super-admin-dashboard',
-    allowedTabs: ['registration', 'dashboard', 'settings'],
+    allowedTabs: ['registration', 'dashboard', 'subscriptions', 'settings'],
   },
   [ROLES.RESTAURANT_OWNER]: {
     name: 'Restaurant Admin',
@@ -146,6 +146,8 @@ const ROUTE_MAP = {
   '/receptionist-dashboard': { tab: 'dashboard', role: ROLES.RECEPTIONIST },
   '/reception': { tab: 'dashboard', role: ROLES.RECEPTIONIST },
   '/super-admin-dashboard': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
+  '/subscriptions': { tab: 'subscriptions', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
+  '/super-admin-subscriptions': { tab: 'subscriptions', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
   '/governance': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
   '/admin': { tab: 'registration', role: ROLES.RESTAURANT_REGISTRATION_ADMIN },
 

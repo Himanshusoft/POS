@@ -248,6 +248,12 @@ export const posService = {
     createPlan: (data) => api.post('/super-admin/plans', data),
     updatePlan: (id, data) => api.put(`/super-admin/plans/${id}`, data),
     updatePlanStatus: (id, isActive) => api.patch(`/super-admin/plans/${id}/status`, { isActive }),
+    getSubscriptions: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return api.get(`/super-admin/subscriptions${q ? `?${q}` : ''}`);
+    },
+    getSubscriptionsOverview: () => api.get('/super-admin/subscriptions/overview'),
+    getSubscriptionById: (restaurantId) => api.get(`/super-admin/subscriptions/${restaurantId}`),
   },
 };
 

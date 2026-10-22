@@ -1,6 +1,8 @@
 import { prisma } from '../config/env.js';
 import { hashPassword } from '../utils/password.js';
 import { cachedQuery, buildCacheKey, invalidateSuperAdminCache } from '../utils/cache.js';
+import { LICENSE_OPTIONS, getLicenseOptionByYears, calculateLicenseExpiry } from '../config/license.config.js';
+import { calculateSubscriptionLifecycle, formatSubscriptionDTO } from '../utils/subscription-lifecycle.js';
 
 export const onboardRestaurant = async (data) => {
   const ownerEmail = (data.ownerEmail || data.email).trim().toLowerCase();
@@ -228,7 +230,7 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
     throw error;
   }
 
-  const { planId, status, durationDays } = data;
+  const { planId, status, durationDays, durationYears } = data;
 
   if (planId) {
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
@@ -239,13 +241,62 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
     }
   }
 
-  let parsedDays = undefined;
-  if (durationDays !== undefined && durationDays !== null && durationDays !== '') {
-    parsedDays = Number(durationDays);
+  if (status && !['ACTIVE', 'EXPIRED', 'SUSPENDED', 'PENDING'].includes(status)) {
+    const error = new Error('Invalid subscription status');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let newEndDate = undefined;
+  let newStartDate = undefined;
+
+  if (durationYears !== undefined && durationYears !== null && durationYears !== '') {
+    const parsedYears = Number(durationYears);
+    const validOption = getLicenseOptionByYears(parsedYears);
+    if (!validOption) {
+      const error = new Error('Invalid license duration. Allowed durations are 1, 2, 3, or 5 years');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const now = new Date();
+    const currentSub = restaurant.subscription;
+    const isCurrentlyActive = Boolean(
+      currentSub &&
+      currentSub.status === 'ACTIVE' &&
+      currentSub.endDate &&
+      new Date(currentSub.endDate).getTime() > now.getTime()
+    );
+
+    // If currently active, extend from existing expiry date; otherwise start new license from now
+    const baseDate = isCurrentlyActive ? new Date(currentSub.endDate) : now;
+    newEndDate = calculateLicenseExpiry(baseDate, parsedYears);
+
+    if (!isCurrentlyActive) {
+      newStartDate = now;
+    }
+  } else if (durationDays !== undefined && durationDays !== null && durationDays !== '') {
+    const parsedDays = Number(durationDays);
     if (isNaN(parsedDays) || parsedDays <= 0) {
       const error = new Error('Duration must be a positive number of days');
       error.statusCode = 400;
       throw error;
+    }
+
+    const now = new Date();
+    const currentSub = restaurant.subscription;
+    const isCurrentlyActive = Boolean(
+      currentSub &&
+      currentSub.status === 'ACTIVE' &&
+      currentSub.endDate &&
+      new Date(currentSub.endDate).getTime() > now.getTime()
+    );
+
+    const baseDate = isCurrentlyActive ? new Date(currentSub.endDate) : now;
+    newEndDate = new Date(baseDate.getTime() + parsedDays * 24 * 60 * 60 * 1000);
+
+    if (!isCurrentlyActive) {
+      newStartDate = now;
     }
   }
 
@@ -254,9 +305,8 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
     const updateData = {};
     if (planId) updateData.planId = planId;
     if (status) updateData.status = status;
-    if (parsedDays !== undefined) {
-      updateData.endDate = new Date(Date.now() + parsedDays * 24 * 60 * 60 * 1000);
-    }
+    if (newEndDate !== undefined) updateData.endDate = newEndDate;
+    if (newStartDate !== undefined) updateData.startDate = newStartDate;
 
     updatedSubscription = await prisma.subscription.update({
       where: { id: restaurant.subscription.id },
@@ -277,14 +327,16 @@ export const updateRestaurantSubscription = async (restaurantId, data) => {
       error.statusCode = 400;
       throw error;
     }
-    const days = parsedDays !== undefined ? parsedDays : 30;
+
+    const now = new Date();
+    const defaultEnd = calculateLicenseExpiry(now, 1);
     updatedSubscription = await prisma.subscription.create({
       data: {
         restaurantId,
         planId: targetPlanId,
         status: status || 'ACTIVE',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+        startDate: newStartDate || now,
+        endDate: newEndDate || defaultEnd,
       },
       include: { plan: true },
     });
@@ -548,6 +600,152 @@ export const getPlatformAnalytics = async (range = '30D') => {
   };
 };
 
+
+export const getSubscriptions = async (filters = {}) => {
+  const cacheKey = buildCacheKey('global', 'superadmin:subscriptions', filters);
+  return await cachedQuery(cacheKey, 15, async () => {
+    const restaurants = await prisma.restaurant.findMany({
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, phone: true, isActive: true, role: true },
+        },
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let dtos = restaurants.map(formatSubscriptionDTO);
+
+    // Search filter
+    if (filters.search) {
+      const q = filters.search.trim().toLowerCase();
+      dtos = dtos.filter(
+        (s) =>
+          s.organizationName.toLowerCase().includes(q) ||
+          s.ownerName.toLowerCase().includes(q) ||
+          s.ownerEmail.toLowerCase().includes(q) ||
+          (s.planName && s.planName.toLowerCase().includes(q))
+      );
+    }
+
+    // Plan filter
+    if (filters.plan && filters.plan !== 'ALL') {
+      const p = filters.plan.trim().toLowerCase();
+      dtos = dtos.filter((s) => s.planName.toLowerCase() === p || s.planId === filters.plan);
+    }
+
+    // Status filter
+    if (filters.status && filters.status !== 'ALL') {
+      const st = filters.status.trim().toUpperCase();
+      dtos = dtos.filter((s) => s.status === st);
+    }
+
+    // Sorting
+    const sortBy = filters.sortBy || 'createdAt';
+    const sortOrder = filters.sortOrder === 'asc' ? 1 : -1;
+
+    dtos.sort((a, b) => {
+      if (sortBy === 'daysRemaining') {
+        return (a.daysRemaining - b.daysRemaining) * sortOrder;
+      }
+      if (sortBy === 'endDate') {
+        const timeA = a.endDate ? new Date(a.endDate).getTime() : 0;
+        const timeB = b.endDate ? new Date(b.endDate).getTime() : 0;
+        return (timeA - timeB) * sortOrder;
+      }
+      if (sortBy === 'organizationName') {
+        return a.organizationName.localeCompare(b.organizationName) * sortOrder;
+      }
+      if (sortBy === 'plan') {
+        return a.planName.localeCompare(b.planName) * sortOrder;
+      }
+      return 0;
+    });
+
+    return dtos;
+  });
+};
+
+export const getSubscriptionsOverview = async () => {
+  const cacheKey = buildCacheKey('global', 'superadmin:subscriptions:overview');
+  return await cachedQuery(cacheKey, 15, async () => {
+    const restaurants = await prisma.restaurant.findMany({
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, phone: true, isActive: true, role: true },
+        },
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
+      },
+    });
+
+    const dtos = restaurants.map(formatSubscriptionDTO);
+
+    const totalOrganizations = dtos.length;
+    const activeSubscriptions = dtos.filter((s) => s.status === 'ACTIVE' || s.status === 'EXPIRING_SOON').length;
+    const expiringSoon = dtos.filter((s) => s.status === 'EXPIRING_SOON').length;
+    const expired = dtos.filter((s) => s.status === 'EXPIRED').length;
+    const suspended = dtos.filter((s) => s.status === 'SUSPENDED').length;
+    const upcoming = dtos.filter((s) => s.status === 'UPCOMING').length;
+
+    const nearExpiryList = dtos
+      .filter((s) => s.isExpiringSoon || (s.daysRemaining > 0 && s.daysRemaining <= 7))
+      .sort((a, b) => a.daysRemaining - b.daysRemaining)
+      .slice(0, 5)
+      .map((s) => ({
+        organizationId: s.organizationId,
+        organizationName: s.organizationName,
+        ownerName: s.ownerName,
+        ownerEmail: s.ownerEmail,
+        planName: s.planName,
+        daysRemaining: s.daysRemaining,
+        endDate: s.endDate,
+        status: s.status,
+      }));
+
+    return {
+      totalOrganizations,
+      activeSubscriptions,
+      expiringSoon,
+      expired,
+      suspended,
+      upcoming,
+      nearExpiryList,
+    };
+  });
+};
+
+export const getSubscriptionByRestaurantId = async (restaurantId) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    include: {
+      users: {
+        select: { id: true, name: true, email: true, phone: true, isActive: true, role: true },
+      },
+      subscription: {
+        include: {
+          plan: true,
+        },
+      },
+    },
+  });
+
+  if (!restaurant) {
+    const error = new Error('Restaurant not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return formatSubscriptionDTO(restaurant);
+};
+
 export default {
   onboardRestaurant,
   getRestaurants,
@@ -557,4 +755,7 @@ export default {
   resetOwnerCredentials,
   getPlatformOverview,
   getPlatformAnalytics,
+  getSubscriptions,
+  getSubscriptionsOverview,
+  getSubscriptionByRestaurantId,
 };

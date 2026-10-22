@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import posService from '../services/pos.service';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases, useSuppliers, useInventory, usePosMutations } from '../hooks/usePosQueries';
 import { Modal, Button } from '../components/ui';
@@ -58,6 +59,13 @@ export default function PurchasesView() {
   const handleCreateSupplier = async (e) => {
     e.preventDefault();
     if (!supplierForm.name.trim()) return;
+    if (supplierForm.phone && supplierForm.phone.trim()) {
+      const err = validatePhoneInput(supplierForm.phone);
+      if (err) {
+        addToast(err, 'warning');
+        return;
+      }
+    }
     try {
       await posService.suppliers.create(supplierForm);
       addToast('Supplier added successfully', 'success');
@@ -354,7 +362,7 @@ export default function PurchasesView() {
                 type="text"
                 placeholder="+91 98765 00000"
                 value={supplierForm.phone}
-                onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                onChange={(e) => setSupplierForm({ ...supplierForm, phone: sanitizePhoneInput(e.target.value) })}
                 className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
               />
             </div>

@@ -13,13 +13,25 @@ export const onboardRestaurant = async (req, res, next) => {
       return sendError(res, 400, 'Missing required fields: restaurantName, ownerName, ownerEmail, password');
     }
 
+    const candidatePhone = req.body.ownerPhone || ownerObj.phone || req.body.phone;
+    if (candidatePhone !== undefined && candidatePhone !== null && String(candidatePhone).trim() !== '') {
+      const rawPhone = String(candidatePhone).trim();
+      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(rawPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: ['Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)'],
+        });
+      }
+    }
+
     const normalizedData = {
       ...req.body,
       restaurantName: rName,
       ownerName: oName,
       ownerEmail: oEmail,
       password: oPass,
-      ownerPhone: req.body.ownerPhone || ownerObj.phone || req.body.phone,
+      ownerPhone: candidatePhone ? String(candidatePhone).trim() : undefined,
       planId: req.body.planId,
     };
 
@@ -98,6 +110,34 @@ export const getPlatformAnalytics = async (req, res, next) => {
   }
 };
 
+
+export const getSubscriptions = async (req, res, next) => {
+  try {
+    const subscriptions = await adminService.getSubscriptions(req.query);
+    return sendSuccess(res, 200, 'All organization subscriptions retrieved successfully', subscriptions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSubscriptionsOverview = async (req, res, next) => {
+  try {
+    const overview = await adminService.getSubscriptionsOverview();
+    return sendSuccess(res, 200, 'Subscriptions overview statistics retrieved successfully', overview);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSubscriptionById = async (req, res, next) => {
+  try {
+    const subscription = await adminService.getSubscriptionByRestaurantId(req.params.restaurantId);
+    return sendSuccess(res, 200, 'Subscription details retrieved successfully', subscription);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   onboardRestaurant,
   getRestaurants,
@@ -107,4 +147,7 @@ export default {
   resetOwnerCredentials,
   getPlatformOverview,
   getPlatformAnalytics,
+  getSubscriptions,
+  getSubscriptionsOverview,
+  getSubscriptionById,
 };

@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 
 import { useMenuCategories, useMenuItems, useInventory, usePosMutations } from '../hooks/usePosQueries';
+import { getItemAvailability } from '../utils/inventoryValidation';
+import { isScientificNotation } from '../utils/validation';
 
 function DishThumbnail({ image, name }) {
   const [imgError, setImgError] = useState(false);
@@ -44,6 +46,18 @@ function DishThumbnail({ image, name }) {
 
 export default function MenuView() {
   const { restaurant, addToast, role } = useAuth();
+  const canManageRecipes = role === 'KITCHEN_ADMIN';
+
+  const checkItemAvailability = (itm) => {
+    if (!itm.isAvailable) return false;
+    if (itm.recipe && Array.isArray(itm.recipe.ingredients) && itm.recipe.ingredients.length > 0) {
+      if (itm.inventoryAvailability && itm.inventoryAvailability.reasonCode !== 'NO_RECIPE') {
+        return itm.inventoryAvailability.isOrderable;
+      }
+      return getItemAvailability(itm, 1).isOrderable;
+    }
+    return true;
+  };
   const { invalidateMenu } = usePosMutations(restaurant?.id);
 
   const {
@@ -111,7 +125,7 @@ export default function MenuView() {
     try {
       const nextState = !item.isAvailable;
       await posService.menu.toggleAvailability(item.id, nextState);
-      addToast(`${item.name} is now ${nextState ? 'Available' : 'Marked 86 (Out of Stock)'}`, 'info');
+      addToast(`${item.name} is now ${nextState ? 'In Stock' : 'Out of Stock'}`, 'info');
       refetchItems();
       invalidateMenu();
     } catch (err) {
@@ -272,6 +286,10 @@ export default function MenuView() {
   };
 
   const handleAddRecipeRow = () => {
+    if (!canManageRecipes) {
+      addToast('Only Kitchen Admin can modify recipe ingredients', 'warning');
+      return;
+    }
     if (inventoryItems.length === 0) {
       addToast('No inventory ingredients found. Add inventory items first.', 'warning');
       return;
@@ -452,7 +470,7 @@ export default function MenuView() {
                   <th className="px-5 py-3.5">Dietary</th>
                   <th className="px-5 py-3.5">Price</th>
                   <th className="px-5 py-3.5">Prep Time</th>
-                  <th className="px-5 py-3.5">86 Availability</th>
+                  <th className="px-5 py-3.5">Availability</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -533,28 +551,34 @@ export default function MenuView() {
                         {itm.preparationTime ?? itm.recipe?.prepTime ?? 15} mins
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAvailability(itm)}
-                          aria-label={`Toggle availability for ${itm.name}`}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
-                            itm.isAvailable
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
-                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40 hover:bg-rose-100 dark:hover:bg-rose-950/60'
-                          }`}
-                        >
-                          {itm.isAvailable ? (
-                            <>
-                              <ToggleRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                              <span>In Stock</span>
-                            </>
-                          ) : (
-                            <>
-                              <ToggleLeft className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                              <span>86 Out</span>
-                            </>
-                          )}
-                        </button>
+                        {(() => {
+                          const isInStock = checkItemAvailability(itm);
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAvailability(itm)}
+                              aria-label={`Toggle availability for ${itm.name}`}
+                              title={`Status: ${isInStock ? 'In Stock' : 'Out of Stock'} (Click to toggle)`}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
+                                isInStock
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40 hover:bg-rose-100 dark:hover:bg-rose-950/60'
+                              }`}
+                            >
+                              {isInStock ? (
+                                <>
+                                  <ToggleRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                  <span>IN STOCK</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                                  <span>OUT OF STOCK</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="px-5 py-4 text-right space-x-1.5 whitespace-nowrap">
                         <button

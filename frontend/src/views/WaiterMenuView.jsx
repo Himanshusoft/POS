@@ -68,11 +68,13 @@ export default function WaiterMenuView() {
   const loading = (loadingCategories && categories.length === 0) || (loadingMenuItems && menuItems.length === 0);
   const currency = restaurant?.currency || '₹';
 
-  const filteredItems = menuItems.filter((item) => {
+  const filteredItems = (menuItems || []).filter((item) => {
+    if (!item) return false;
     const matchCat = selectedCategory === 'ALL' || item.categoryId === selectedCategory;
-    const matchSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const q = (searchQuery || '').toLowerCase();
+    const name = String(item.name || '').toLowerCase();
+    const desc = String(item.description || '').toLowerCase();
+    const matchSearch = name.includes(q) || desc.includes(q);
     return matchCat && matchSearch;
   });
 

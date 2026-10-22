@@ -136,6 +136,9 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
   const orderActivityTrend = useMemo(() => {
     const orders = [];
     (tableOrders || []).forEach((t) => {
+      if (t.currentOrder && t.currentOrder.createdAt) {
+        orders.push(t.currentOrder);
+      }
       (t.orders || []).forEach((o) => {
         if (o.createdAt) orders.push(o);
       });
@@ -735,7 +738,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setActiveTab && setActiveTab('bills')}
+                          onClick={() => setActiveTab && setActiveTab('orders')}
                           className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone flex items-center justify-center gap-1 transition-all cursor-pointer"
                         >
                           <Receipt className="w-3.5 h-3.5 text-[#92400E]" />

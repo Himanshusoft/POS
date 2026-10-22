@@ -21,39 +21,18 @@ import {
 } from 'lucide-react';
 
 import { useUsers, usePosMutations } from '../hooks/usePosQueries';
+import { sanitizePhoneInput, validatePhoneInput } from '../utils/validation';
 
-const sanitizePhoneInput = (val) => {
-  if (!val) return '';
-  let str = String(val).trim();
-  if (str.startsWith('+91')) {
-    str = str.slice(3);
-  }
-  let digits = str.replace(/\D/g, '');
-  if (digits.length === 12 && digits.startsWith('91')) {
-    digits = digits.slice(2);
-  } else if (digits.length === 11 && digits.startsWith('0')) {
-    digits = digits.slice(1);
-  }
-  return digits.slice(0, 10);
-};
-
-const validatePhoneInput = (val) => {
-  if (!val || !val.trim()) {
-    return '';
-  }
-  const digits = val.replace(/\D/g, '');
-  if (digits.length !== 10) {
-    return 'Enter a valid 10-digit mobile number';
-  }
-  return '';
-};
+// Using centralized sanitizePhoneInput and validatePhoneInput from ../utils/validation
 
 export default function StaffView() {
-  const { restaurant, addToast } = useAuth();
-  const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(restaurant?.id);
-  const { invalidateUsers } = usePosMutations(restaurant?.id);
+  const { restaurant, user, addToast } = useAuth();
+  const currentOrgId = restaurant?.id || restaurant?.organizationId || user?.organizationId || user?.restaurantId;
+  const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(currentOrgId);
+  const { invalidateUsers } = usePosMutations(currentOrgId);
 
-  const staff = Array.isArray(staffData) ? staffData : (staffData.items || []);
+  const rawStaff = Array.isArray(staffData) ? staffData : (staffData.items || []);
+  const staff = rawStaff.filter((u) => !currentOrgId || u.restaurantId === currentOrgId || u.organizationId === currentOrgId);
   const loading = isLoading && staff.length === 0;
 
   // Modals

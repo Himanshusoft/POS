@@ -13,21 +13,23 @@ validateUuidParams(router);
 
 router.use(authenticate);
 router.use(validateQuery);
-router.use(authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN));
 
-router.get('/menu-item/:menuItemId', recipeController.getRecipeByMenuItem);
-router.get('/:id', recipeController.getRecipeById);
-router.get('/', recipeController.getRecipes);
-router.post('/', validateRequest(validateRecipeSetup), recipeController.createRecipe);
-router.patch('/:id', validateRequest(validateRecipeUpdate), recipeController.updateRecipe);
-router.delete('/:id', recipeController.deleteRecipe);
+// Recipe read endpoints - Accessible to both Restaurant Admin and Kitchen Admin
+router.get('/menu-item/:menuItemId', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipeByMenuItem);
+router.get('/:id', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipeById);
+router.get('/', authorizeRoles(ROLES.RESTAURANT_OWNER, ROLES.KITCHEN_ADMIN), recipeController.getRecipes);
 
-// Ingredients sub-resource
-router.post('/:recipeId/ingredients', validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
-router.post('/:id/ingredients', validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
-router.patch('/:recipeId/ingredients/:ingredientId', validateRequest(validateRecipeIngredientUpdate), recipeController.updateRecipeIngredient);
-router.patch('/ingredients/:ingredientId', validateRequest(validateRecipeIngredientUpdate), recipeController.updateRecipeIngredient);
-router.delete('/:recipeId/ingredients/:ingredientId', recipeController.removeRecipeIngredient);
-router.delete('/ingredients/:ingredientId', recipeController.removeRecipeIngredient);
+// Recipe mutation endpoints - Strictly restricted to Kitchen Admin (Restaurant Admin cannot modify recipe definitions or ingredients)
+router.post('/', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeSetup), recipeController.createRecipe);
+router.patch('/:id', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeUpdate), recipeController.updateRecipe);
+router.delete('/:id', authorizeRoles(ROLES.KITCHEN_ADMIN), recipeController.deleteRecipe);
+
+// Recipe ingredients sub-resource - Strictly restricted to Kitchen Admin
+router.post('/:recipeId/ingredients', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
+router.post('/:id/ingredients', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateAddIngredient), recipeController.addRecipeIngredient);
+router.patch('/:recipeId/ingredients/:ingredientId', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeIngredientUpdate), recipeController.updateRecipeIngredient);
+router.patch('/ingredients/:ingredientId', authorizeRoles(ROLES.KITCHEN_ADMIN), validateRequest(validateRecipeIngredientUpdate), recipeController.updateRecipeIngredient);
+router.delete('/:recipeId/ingredients/:ingredientId', authorizeRoles(ROLES.KITCHEN_ADMIN), recipeController.removeRecipeIngredient);
+router.delete('/ingredients/:ingredientId', authorizeRoles(ROLES.KITCHEN_ADMIN), recipeController.removeRecipeIngredient);
 
 export default router;

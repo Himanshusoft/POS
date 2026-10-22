@@ -66,6 +66,20 @@ export const authenticate = async (req, res, next) => {
       return sendError(res, 401, 'User account has been deactivated', { code: 'ACCOUNT_DEACTIVATED' });
     }
 
+    // Tenant isolation verification: if token has explicit organization/restaurant context, verify match
+    const tokenOrgId = decoded.organizationId || decoded.restaurantId;
+    if (tokenOrgId && user.restaurantId && tokenOrgId !== user.restaurantId) {
+      return sendError(res, 401, 'Token organization context mismatch', { code: 'ORGANIZATION_MISMATCH' });
+    }
+
+    if (user.role !== 'RESTAURANT_REGISTRATION_ADMIN') {
+      if (!user.restaurantId || !user.restaurant) {
+        return sendError(res, 403, 'User account is not linked to an active restaurant organisation.', {
+          code: 'RESTAURANT_NOT_FOUND',
+        });
+      }
+    }
+
     if (user.restaurant && user.role !== 'RESTAURANT_REGISTRATION_ADMIN') {
       if (user.restaurant.isActive === false) {
         return sendError(res, 403, 'Restaurant account has been deactivated. Please contact system administration.', {
@@ -86,7 +100,11 @@ export const authenticate = async (req, res, next) => {
       }
     }
 
+    const orgId = user.restaurantId;
+    user.organizationId = orgId;
     req.user = user;
+    req.organizationId = orgId;
+    req.restaurantId = orgId;
     next();
   } catch (error) {
     next(error);
