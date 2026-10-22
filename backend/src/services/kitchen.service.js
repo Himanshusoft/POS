@@ -398,8 +398,8 @@ export const acceptOrder = async (restaurantId, orderId) => {
       error.statusCode = 404;
       throw error;
     }
-    if (order.status !== 'PENDING') {
-      const error = new Error(`Order cannot be accepted from status '${order.status}'. Must be 'PENDING'.`);
+    if (!['PENDING', 'ACCEPTED'].includes(order.status)) {
+      const error = new Error(`Order cannot be accepted from status '${order.status}'. Must be 'PENDING' or 'ACCEPTED'.`);
       error.statusCode = 409;
       throw error;
     }
@@ -428,7 +428,7 @@ export const startPreparation = async (restaurantId, orderId) => {
       error.statusCode = 404;
       throw error;
     }
-    if (!['PENDING', 'ACCEPTED'].includes(order.status)) {
+    if (!['PENDING', 'ACCEPTED', 'IN_PREPARATION'].includes(order.status)) {
       const error = new Error(`Cannot start preparation from status '${order.status}'. Order must be 'ACCEPTED' or 'PENDING'.`);
       error.statusCode = 409;
       throw error;
@@ -490,8 +490,10 @@ export const markOrderReady = async (restaurantId, orderId) => {
       throw error;
     }
 
-    // Idempotency: If already READY or already inventoryDeducted, return order without deduction
-    if (order.status === 'READY' || order.inventoryDeducted) {
+    const unreadyItems = order.items.filter((i) => ['PENDING', 'COOKING'].includes(i.status));
+
+    // Idempotency: If already READY or already inventoryDeducted with no new unready items, return order without deduction
+    if (order.status === 'READY' || (order.inventoryDeducted && unreadyItems.length === 0)) {
       return order;
     }
 
@@ -508,6 +510,8 @@ export const markOrderReady = async (restaurantId, orderId) => {
       error.statusCode = 409;
       throw error;
     }
+
+    const itemsToDeduct = order.inventoryDeducted ? unreadyItems : order.items;
 
     const policy = await getRestaurantInventoryPolicy(restaurantId);
     if (policy?.autoDeductOnPreparation !== false) {
@@ -527,18 +531,18 @@ export const markOrderReady = async (restaurantId, orderId) => {
       // 2. Multi-ingredient consumption calculation with unit conversion
       const deductions = new Map();
 
-      for (const orderItem of order.items) {
-        const recipe = orderItem.menuItem.recipe;
-        const dishDesc = `${orderItem.quantity}x ${orderItem.menuItem.name}`;
-        for (const ingredient of recipe.ingredients) {
-          const invItem = ingredient.inventoryItem;
-          if (!invItem) {
-            const error = new Error(
-              `Inventory item for ingredient not found in recipe of '${orderItem.menuItem.name}'`
-            );
-            error.statusCode = 404;
-            throw error;
-          }
+    for (const orderItem of order.items) {
+      const recipe = orderItem.menuItem.recipe;
+      const dishDesc = `${orderItem.quantity}x ${orderItem.menuItem.name}`;
+      for (const ingredient of recipe.ingredients) {
+        const invItem = ingredient.inventoryItem;
+        if (!invItem) {
+          const error = new Error(
+            `Inventory item for ingredient not found in recipe of '${orderItem.menuItem.name}'`
+          );
+          error.statusCode = 404;
+          throw error;
+        }
 
           const requiredInRecipeUnit = Number(ingredient.quantityRequired) * orderItem.quantity;
           const requiredInInvUnit = convertQuantity(requiredInRecipeUnit, ingredient.unit, invItem.unit);
@@ -620,9 +624,9 @@ export const markOrderReady = async (restaurantId, orderId) => {
       }
     }
 
-    // 5. Update order items to READY
+    // 5. Update unserved order items to READY
     await tx.orderItem.updateMany({
-      where: { orderId: order.id },
+      where: { orderId: order.id, status: { in: ['PENDING', 'COOKING'] } },
       data: { status: 'READY' },
     });
 

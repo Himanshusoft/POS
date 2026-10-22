@@ -33,9 +33,9 @@ export const processPayment = async (restaurantId, data) => {
       throw error;
     }
 
-    if (!['SERVED', 'COMPLETED', 'READY'].includes(bill.order.status)) {
+    if (!['SERVED', 'COMPLETED'].includes(bill.order.status)) {
       const error = new Error('Order must be prepared and served before payment');
-      error.statusCode = 422;
+      error.statusCode = 400;
       throw error;
     }
 
@@ -234,9 +234,9 @@ export const createRazorpayOrder = async (restaurantId, billId) => {
     throw error;
   }
 
-  if (!['SERVED', 'COMPLETED', 'READY'].includes(bill.order.status)) {
+  if (!['SERVED', 'COMPLETED'].includes(bill.order.status)) {
     const error = new Error('Order must be prepared and served before payment');
-    error.statusCode = 422;
+    error.statusCode = 400;
     throw error;
   }
 
@@ -317,9 +317,9 @@ export const createRazorpayQrCode = async (restaurantId, billId) => {
     throw error;
   }
 
-  if (!['SERVED', 'COMPLETED', 'READY'].includes(bill.order.status)) {
+  if (!['SERVED', 'COMPLETED'].includes(bill.order.status)) {
     const error = new Error('Order must be prepared and served before payment');
-    error.statusCode = 422;
+    error.statusCode = 400;
     throw error;
   }
 

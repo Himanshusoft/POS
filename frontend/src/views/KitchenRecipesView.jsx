@@ -310,14 +310,14 @@ export default function KitchenRecipesView() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-4">
+                <div className="pt-4 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-auto">
                   <Button
                     variant="primary"
+                    icon={Edit2}
                     onClick={() => openRecipeEditor(item)}
-                    className="w-full min-h-[44px] text-xs font-bold"
+                    className="w-full min-h-[44px] text-xs font-bold inline-flex items-center justify-center gap-2"
                   >
-                    <Edit2 className="w-3.5 h-3.5 mr-2" />
-                    <span>{hasRecipe ? 'Edit Recipe (BOM)' : 'Configure Recipe'}</span>
+                    {hasRecipe ? 'Edit Recipe (BOM)' : 'Configure Recipe'}
                   </Button>
                 </div>
               </div>

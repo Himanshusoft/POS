@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation, guessCountryFromCurrency } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { useSettings, usePosMutations } from '../hooks/usePosQueries';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, PhoneInput } from '../components/ui';
 import {
   Settings,
   Building2,
@@ -115,6 +116,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     auditLogging: true,
   });
 
+  const [profilePhoneError, setProfilePhoneError] = useState('');
+  const [restPhoneError, setRestPhoneError] = useState('');
+  const [supportPhoneError, setSupportPhoneError] = useState('');
+  const defaultRestCountry = guessCountryFromCurrency(restForm.currency || restaurant?.currency || 'INR');
+
   const [userPrefForm, setUserPrefForm] = useState({
     theme: 'sandstone',
     soundAlerts: true,
@@ -214,6 +220,16 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
       return;
     }
 
+    if (profileForm.phone && profileForm.phone.trim()) {
+      const err = validatePhoneInput(profileForm.phone);
+      if (err) {
+        setProfilePhoneError(err);
+        addToast(err, 'warning');
+        return;
+      }
+    }
+    setProfilePhoneError('');
+
     setSavingSection('profile');
     try {
       const res = await posService.auth.updateProfile({
@@ -275,6 +291,21 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     e.preventDefault();
     if (!restForm.name.trim()) {
       addToast('Restaurant name is required', 'warning');
+      return;
+    }
+
+    if (restForm.phone && restForm.phone.trim()) {
+      const err = validatePhoneInput(restForm.phone);
+      if (err) {
+        setRestPhoneError(err);
+        addToast(err, 'warning');
+        return;
+      }
+    }
+    setRestPhoneError('');
+    const taxNum = Number(restForm.taxRate);
+    if (isNaN(taxNum) || taxNum < 0 || taxNum > 100 || isScientificNotation(String(restForm.taxRate))) {
+      addToast('Tax rate must be a valid number between 0 and 100', 'warning');
       return;
     }
 
@@ -384,6 +415,15 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
   // Handle Platform Governance Save (Super Admin)
   const handleSavePlatform = async (e) => {
     e.preventDefault();
+    if (platformForm.supportPhone && platformForm.supportPhone.trim()) {
+      const err = validatePhoneInput(platformForm.supportPhone);
+      if (err) {
+        setSupportPhoneError(err);
+        addToast(err, 'warning');
+        return;
+      }
+    }
+    setSupportPhoneError('');
     setSavingSection('platform');
     try {
       const generalPayload = {
@@ -593,16 +633,18 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Contact Phone</label>
-              <input
-                type="text"
-                value={profileForm.phone}
-                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#657168] dark:placeholder-[#9FB29E] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                placeholder="+91 9876543210"
-              />
-            </div>
+            <PhoneInput
+              id="profile-phone"
+              label="Contact Phone"
+              value={profileForm.phone}
+              defaultCountry={defaultRestCountry}
+              onChange={(val, meta) => {
+                setProfileForm({ ...profileForm, phone: val });
+                setProfilePhoneError(meta.error);
+              }}
+              error={profilePhoneError}
+              helperText={!profilePhoneError ? 'Your direct mobile or phone number' : undefined}
+            />
 
             <div className="pt-2">
               <Button
@@ -761,15 +803,19 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Official Phone</label>
-                <input
-                  type="text"
+                <PhoneInput
+                  id="restaurant-phone"
+                  label="Official Phone"
                   value={restForm.phone}
-                  onChange={(e) => setRestForm({ ...restForm, phone: e.target.value })}
-                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                  placeholder="+91 80 12345678"
+                  defaultCountry={defaultRestCountry}
+                  onChange={(val, meta) => {
+                    setRestForm({ ...restForm, phone: val });
+                    setRestPhoneError(meta.error);
+                  }}
+                  error={restPhoneError}
+                  helperText={!restPhoneError ? 'Official outlet contact number' : undefined}
                 />
               </div>
 
@@ -1159,7 +1205,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Support Desk Email</label>
                 <input
@@ -1171,12 +1217,17 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Support Hotline Phone</label>
-                <input
-                  type="text"
+                <PhoneInput
+                  id="support-phone"
+                  label="Support Hotline Phone"
                   value={platformForm.supportPhone}
-                  onChange={(e) => setPlatformForm({ ...platformForm, supportPhone: e.target.value })}
-                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
+                  defaultCountry="US"
+                  onChange={(val, meta) => {
+                    setPlatformForm({ ...platformForm, supportPhone: val });
+                    setSupportPhoneError(meta.error);
+                  }}
+                  error={supportPhoneError}
+                  helperText={!supportPhoneError ? 'Global tenant support hotline' : undefined}
                 />
               </div>
             </div>

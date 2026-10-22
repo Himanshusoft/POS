@@ -17,7 +17,7 @@ export function ChartCard({
     <div
       className={`
         bg-[#FFFDF9] dark:bg-[#14221E] border border-[#E4DCD0] dark:border-[#233630] rounded-2xl p-5 sm:p-6
-        shadow-editorial card-hover flex flex-col justify-between transition-all duration-200
+        shadow-editorial card-hover flex flex-col justify-between transition-all duration-200 overflow-hidden
         hover:border-[#173F36]/30 dark:hover:border-[#4EBA87]/40
         ${className}
       `}
@@ -1136,9 +1136,13 @@ export function DonutChart({
   centerValue,
   size = 180,
   strokeWidth = 24,
+  thickness,
   currency = '',
   formatValue,
+  layout = 'auto', // 'auto' | 'col' | 'row'
+  showLegend = true,
 }) {
+  const effectiveStrokeWidth = thickness !== undefined ? thickness : strokeWidth;
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const total = data.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
@@ -1151,7 +1155,7 @@ export function DonutChart({
     );
   }
 
-  const radius = (size - strokeWidth) / 2;
+  const radius = (size - effectiveStrokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   let currentAngle = 0;
@@ -1182,15 +1186,18 @@ export function DonutChart({
 
   const displayLbl = activeItem ? activeItem.label : centerLabel;
 
+  const isVertical = layout === 'vertical' || layout === 'col' || layout === 'stacked';
+
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+    <div className={`flex ${showLegend ? (layout === 'col' ? 'flex-col' : layout === 'row' ? 'flex-row' : 'flex-col sm:flex-row') : 'items-center justify-center'} items-center justify-center ${showLegend ? 'gap-4 sm:gap-6' : ''} py-2 shrink-0`}>
       {/* SVG Donut */}
-      <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
+      <div className="relative shrink-0 flex items-center justify-center" style={{ width: `${size}px`, height: `${size}px` }}>
         <svg
           width={size}
           height={size}
           viewBox={`0 0 ${size} ${size}`}
           className="transform -rotate-90 origin-center"
+          style={{ width: `${size}px`, height: `${size}px`, maxWidth: '100%', maxHeight: '100%' }}
         >
           {/* Background circle track */}
           <circle
@@ -1199,7 +1206,7 @@ export function DonutChart({
             r={radius}
             fill="transparent"
             stroke="currentColor"
-            strokeWidth={strokeWidth}
+            strokeWidth={effectiveStrokeWidth}
             className="text-[#F7EFE4] dark:text-[#1E362E]"
           />
 
@@ -1212,7 +1219,7 @@ export function DonutChart({
               r={radius}
               fill="transparent"
               stroke={seg.color}
-              strokeWidth={hoveredIndex === seg.index ? strokeWidth + 3 : strokeWidth}
+              strokeWidth={hoveredIndex === seg.index ? effectiveStrokeWidth + 3 : effectiveStrokeWidth}
               strokeDasharray={seg.strokeDasharray}
               strokeDashoffset={seg.strokeDashoffset}
               strokeLinecap="round"
@@ -1225,14 +1232,14 @@ export function DonutChart({
 
         {/* Center Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C] truncate max-w-[110px]">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#5B6470] dark:text-[#A89B8C] leading-tight text-center max-w-[120px] line-clamp-2">
             {displayLbl}
           </span>
-          <span className="text-base sm:text-lg font-black text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono truncate max-w-[120px]">
+          <span className="text-base sm:text-lg font-black text-[#1F2937] dark:text-[#F7F3EC] tabular-nums font-mono mt-0.5 truncate max-w-[120px]">
             {displayVal}
           </span>
           {activeItem && (
-            <span className="text-[10.5px] font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
+            <span className="text-[10px] sm:text-[10.5px] font-bold text-[#173F36] dark:text-[#9FB29E] tabular-nums">
               {activeItem.percentage}%
             </span>
           )}
@@ -1240,7 +1247,8 @@ export function DonutChart({
       </div>
 
       {/* Legend List */}
-      <div className="flex flex-col gap-2 w-full max-w-xs">
+      {showLegend && (
+        <div className={`flex flex-col gap-1.5 w-full ${isVertical ? 'max-w-full' : 'max-w-xs'}`}>
         {segments.map((seg) => {
           const isHovered = hoveredIndex === seg.index;
           return (
@@ -1273,6 +1281,7 @@ export function DonutChart({
           );
         })}
       </div>
+      )}
     </div>
   );
 }

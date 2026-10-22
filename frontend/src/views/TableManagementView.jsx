@@ -50,27 +50,41 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
 
   const handleCreateTable = async (e) => {
     e.preventDefault();
-    if (!addForm.tableNumber.trim()) {
+    const trimmedNumber = addForm.tableNumber.trim();
+    if (!trimmedNumber) {
       addToast('Table number is required', 'warning');
+      return;
+    }
+    const isDuplicate = tables.some(
+      (t) => t.tableNumber.trim().toLowerCase() === trimmedNumber.toLowerCase()
+    );
+    if (isDuplicate) {
+      addToast(`Table "${trimmedNumber}" already exists in this restaurant`, 'warning');
+      return;
+    }
+    const rawCap = String(addForm.capacity).trim();
+    if (/[eE]/.test(rawCap)) {
+      addToast('Scientific notation is not allowed for seating capacity', 'warning');
       return;
     }
     const cap = Number(addForm.capacity);
     if (!Number.isInteger(cap) || cap < 1) {
-      addToast('Capacity must be a positive integer', 'warning');
+      addToast('Capacity must be a positive integer (at least 1 guest)', 'warning');
       return;
     }
 
     setSubmitting(true);
     try {
       await posService.tables.create({
-        tableNumber: addForm.tableNumber.trim(),
+        tableNumber: trimmedNumber,
         capacity: cap,
         status: addForm.status || 'AVAILABLE',
       });
-      addToast(`Table ${addForm.tableNumber} created successfully`, 'success');
+      addToast(`Table ${trimmedNumber} created successfully`, 'success');
       setShowAddModal(false);
       setAddForm({ tableNumber: '', capacity: 4, status: 'AVAILABLE' });
-      fetchTables();
+      invalidateTables();
+      await fetchTables();
     } catch (err) {
       addToast(err.message || 'Failed to create table', 'error');
     } finally {
@@ -91,8 +105,21 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   const handleUpdateTable = async (e) => {
     e.preventDefault();
     if (!editingTable) return;
-    if (!editForm.tableNumber.trim()) {
+    const trimmedNumber = editForm.tableNumber.trim();
+    if (!trimmedNumber) {
       addToast('Table number is required', 'warning');
+      return;
+    }
+    const isDuplicate = tables.some(
+      (t) => t.id !== editingTable.id && t.tableNumber.trim().toLowerCase() === trimmedNumber.toLowerCase()
+    );
+    if (isDuplicate) {
+      addToast(`Table "${trimmedNumber}" already exists in this restaurant`, 'warning');
+      return;
+    }
+    const rawCap = String(editForm.capacity).trim();
+    if (/[eE]/.test(rawCap)) {
+      addToast('Scientific notation is not allowed for seating capacity', 'warning');
       return;
     }
     const cap = Number(editForm.capacity);
@@ -104,14 +131,15 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
     setSubmitting(true);
     try {
       await posService.tables.update(editingTable.id, {
-        tableNumber: editForm.tableNumber.trim(),
+        tableNumber: trimmedNumber,
         capacity: cap,
         status: editForm.status,
       });
-      addToast(`Table ${editForm.tableNumber} updated successfully`, 'success');
+      addToast(`Table ${trimmedNumber} updated successfully`, 'success');
       setShowEditModal(false);
       setEditingTable(null);
-      fetchTables();
+      invalidateTables();
+      await fetchTables();
     } catch (err) {
       addToast(err.message || 'Failed to update table', 'error');
     } finally {
@@ -192,16 +220,14 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
             Refresh
           </Button>
 
-          {!isReadOnly && (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setShowAddModal(true)}
-              icon={Plus}
-            >
-              Add Table
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setShowAddModal(true)}
+            icon={Plus}
+          >
+            Add Table
+          </Button>
         </div>
       </div>
 

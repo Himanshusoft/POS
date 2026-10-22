@@ -8,9 +8,24 @@ import { authorizeRoles, ROLES } from '../middleware/role.middleware.js';
 import { validateRequest } from '../middleware/validation.middleware.js';
 import { validateGenerateBill } from '../validations/billing.validation.js';
 import { validateBillUpdate } from '../validations/resource.validation.js';
+import { sendError } from '../utils/response.js';
 
 const router = Router();
 validateUuidParams(router);
+
+const authorizeBillGeneration = (req, res, next) => {
+  if (!req.user || !req.user.role) {
+    return sendError(res, 401, 'User unauthenticated', { code: 'UNAUTHENTICATED' });
+  }
+  if (![ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER].includes(req.user.role)) {
+    return sendError(res, 403, 'You are not authorized to generate bills.', {
+      code: 'FORBIDDEN',
+      userRole: req.user.role,
+      requiredRoles: [ROLES.RECEPTIONIST, ROLES.RESTAURANT_OWNER],
+    });
+  }
+  next();
+};
 
 router.use(authenticate);
 router.use(validateQuery);

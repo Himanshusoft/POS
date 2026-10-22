@@ -1,4 +1,5 @@
 import { prisma } from '../config/env.js';
+import { serializableTransaction } from '../utils/transaction.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { invalidateBillingCache, invalidateOrderCache, cachedQuery, buildCacheKey } from '../utils/cache.js';
 
@@ -23,15 +24,21 @@ export const generateBill = async (restaurantId, receptionistId, data) => {
       throw error;
     }
 
-    if (order.status === 'CANCELLED') {
-      const error = new Error('Cannot generate a bill for a cancelled order');
+    if (order.bill && order.bill.status !== 'VOID') {
+      const error = new Error('A bill has already been generated for this order.');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    if (order.status !== 'SERVED') {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!['SERVED', 'COMPLETED', 'READY'].includes(order.status) && !order.billRequested) {
-      const error = new Error('Order must be prepared and served, or have bill requested by waiter, before a bill can be generated');
-      error.statusCode = 422;
+    if (!order.items || order.items.length === 0 || order.items.some((item) => item.status !== 'SERVED')) {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
+      error.statusCode = 400;
       throw error;
     }
 

@@ -2,21 +2,25 @@ import { prisma } from '../config/env.js';
 import { hashPassword } from '../utils/password.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { cachedQuery, buildCacheKey, invalidateUserCache } from '../utils/cache.js';
+import { validatePhoneField } from '../utils/countryPhoneData.js';
 
 export const createStaff = async (restaurantId, data) => {
+  if (!restaurantId) {
+    const error = new Error('Organization context is required to create staff');
+    error.statusCode = 400;
+    throw error;
+  }
   const email = data.email.trim().toLowerCase();
 
   let phoneValue = null;
   if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
-    const raw = String(data.phone).trim();
-    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-    const digits = cleaned.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      const error = new Error('Enter a valid 10-digit mobile number');
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) {
+      const error = new Error(phoneCheck.error);
       error.statusCode = 400;
       throw error;
     }
-    phoneValue = digits;
+    phoneValue = phoneCheck.normalized;
   }
 
   const hashedPassword = await hashPassword(data.password);
@@ -96,7 +100,7 @@ export const createStaff = async (restaurantId, data) => {
   });
 
   await invalidateUserCache(restaurantId);
-  return newUser;
+  return { ...newUser, organizationId: newUser.restaurantId };
 };
 
 export const getStaffList = async (restaurantId, filters = {}) => {
@@ -151,15 +155,13 @@ export const updateStaff = async (restaurantId, id, data) => {
     if (data.phone === null || data.phone === '') {
       updateData.phone = null;
     } else {
-      const raw = String(data.phone).trim();
-      const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-      const digits = cleaned.replace(/\D/g, '');
-      if (digits.length !== 10) {
-        const error = new Error('Enter a valid 10-digit mobile number');
+      const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+      if (!phoneCheck.isValid) {
+        const error = new Error(phoneCheck.error);
         error.statusCode = 400;
         throw error;
       }
-      updateData.phone = digits;
+      updateData.phone = phoneCheck.normalized;
     }
   }
   if (data.isActive !== undefined) updateData.isActive = data.isActive;

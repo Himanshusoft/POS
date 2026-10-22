@@ -59,11 +59,13 @@ export default function WaiterOrdersView({ onSelectTableForOrder }) {
 
   const currency = restaurant?.currency || '₹';
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = (orders || []).filter((o) => {
+    if (!o) return false;
+    const q = (searchQuery || '').toLowerCase();
     const matchSearch =
-      o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.table?.tableNumber && String(o.table.tableNumber).toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (o.customerName && o.customerName.toLowerCase().includes(searchQuery.toLowerCase()));
+      String(o.orderNumber || '').toLowerCase().includes(q) ||
+      (o.table?.tableNumber && String(o.table.tableNumber).toLowerCase().includes(q)) ||
+      (o.customerName && String(o.customerName).toLowerCase().includes(q));
 
     if (!matchSearch) return false;
     if (statusFilter === 'ALL') return true;
@@ -211,9 +213,13 @@ export default function WaiterOrdersView({ onSelectTableForOrder }) {
                                 : 'text-[#173F36] dark:text-[#9FB29E]'
                             }`}
                           >
-                            {o.bill.status} ({currency}
+                            {o.bill.status === 'PAID' ? 'PAID' : 'Bill Ready'} ({currency}
                             {Number(o.bill.totalAmount).toFixed(2)})
                           </span>
+                        ) : isServed ? (
+                          <span className="text-amber-800 font-semibold text-[11px]">Waiting for Receptionist</span>
+                        ) : isCompleted ? (
+                          <span className="text-emerald-800 font-semibold text-[11px]">Settled</span>
                         ) : (
                           <span className="text-[#657168] dark:text-[#9FB29E] text-[11px]">Unbilled</span>
                         )}

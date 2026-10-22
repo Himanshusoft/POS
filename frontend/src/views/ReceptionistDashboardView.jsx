@@ -374,7 +374,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
           ))
         ) : (
           <>
-            {/* KPI 1: Generated Invoices */}
+            {/* KPI 1: Pending Billing */}
             <StatCard
               title="Generated Invoices"
               value={totalInvoices}
@@ -410,7 +410,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
             <StatCard
               title="Unbilled Orders"
               value={unbilledOrdersCount}
-              subtitle="Orders awaiting billing"
+              subtitle="SERVED orders without bills"
               icon={Clock}
               iconColor="text-[#173F36] dark:text-[#9FB29E]"
               iconBg="bg-[#173F36]/10 dark:bg-[#9FB29E]/10 border border-[#173F36]/20"
@@ -428,11 +428,11 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
               }
             />
 
-            {/* KPI 4: Paid / Unpaid Bills */}
+            {/* KPI 2: Bills Ready for Payment */}
             <StatCard
-              title="Unpaid Bills"
+              title="Bills Ready for Payment"
               value={unpaidBillsCount}
-              subtitle="Payments pending"
+              subtitle="Generated but unpaid bills"
               icon={AlertCircle}
               iconColor="text-rose-600 dark:text-rose-400"
               iconBg="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900"
@@ -447,6 +447,38 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                     All Settled
                   </span>
                 )
+              }
+            />
+
+            {/* KPI 3: Paid Bills */}
+            <StatCard
+              title="Paid Bills"
+              value={paidBillsCount}
+              subtitle="Successfully paid bills"
+              icon={Receipt}
+              iconColor="text-[#16A34A] dark:text-[#34D399]"
+              iconBg="bg-[#16A34A]/10 dark:bg-[#16A34A]/20 border border-[#16A34A]/20 dark:border-[#16A34A]/30"
+              onClick={() => navigateToBillingTab('bills')}
+              badge={
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  {totalInvoices} Total
+                </span>
+              }
+            />
+
+            {/* KPI 4: Payment Transactions */}
+            <StatCard
+              title="Payment Transactions"
+              value={totalPayments}
+              subtitle="Transactions processed"
+              icon={CreditCard}
+              iconColor="text-[#2563EB] dark:text-[#60A5FA]"
+              iconBg="bg-[#2563EB]/10 dark:bg-[#2563EB]/20 border border-[#2563EB]/20 dark:border-[#2563EB]/30"
+              onClick={() => navigateToBillingTab('payments')}
+              badge={
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Settled
+                </span>
               }
             />
           </>
@@ -505,6 +537,7 @@ export default function ReceptionistDashboardView({ setActiveTab }) {
                 centerLabel="Payments"
                 centerValue={paymentBreakdown.totalCount}
                 data={paymentBreakdown.items}
+                showLegend={false}
               />
 
               <div className="space-y-2.5 w-full sm:w-56 text-xs">

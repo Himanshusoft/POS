@@ -104,8 +104,14 @@ export const queryKeys = {
   // Super Admin Platform
   superAdmin: {
     overview: () => ['superAdmin', 'overview'],
+    analytics: (params = {}) => ['superAdmin', 'analytics', params],
     restaurants: (params = {}) => ['superAdmin', 'restaurants', params],
+    restaurantDetail: (id) => ['superAdmin', 'restaurant', id],
     plans: () => ['superAdmin', 'plans'],
+    planDetail: (id) => ['superAdmin', 'plan', id],
+    subscriptions: (params = {}) => ['superAdmin', 'subscriptions', params],
+    subscriptionsOverview: () => ['superAdmin', 'subscriptions', 'overview'],
+    subscriptionDetail: (restaurantId) => ['superAdmin', 'subscription', restaurantId],
   },
 };
 

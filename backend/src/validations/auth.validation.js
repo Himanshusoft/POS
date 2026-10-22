@@ -1,3 +1,5 @@
+import { validatePhoneField } from '../utils/countryPhoneData.js';
+
 export const validateRegisterOwner = (data) => {
   const errors = [];
   const restaurantName = data?.restaurantName || data?.restaurant_name;
@@ -17,6 +19,12 @@ export const validateRegisterOwner = (data) => {
     errors.push('Name fields exceed the allowed length');
   }
   if (data?.email?.length > 254) errors.push('email must be at most 254 characters');
+  if (data?.phone !== undefined && data?.phone !== null && data?.phone !== '') {
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) {
+      errors.push(phoneCheck.error);
+    }
+  }
   return { isValid: errors.length === 0, errors };
 };
 

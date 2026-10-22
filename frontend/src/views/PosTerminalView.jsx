@@ -422,7 +422,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                         </span>
                         {(item.dietary || item.isVeg !== undefined) && (
                           <span
-                            className={`w-3.5 h-3.5 rounded-xs border p-0.5 flex items-center justify-center shrink-0 ${
+                            className={`w-3.5 h-3.5 rounded-xs border p-0.5 flex items-center justify-center shrink-0 mt-0.5 ${
                               item.dietary === 'VEG' || item.dietary === 'JAIN' || (item.isVeg === true && !item.dietary)
                                 ? 'border-emerald-600'
                                 : item.dietary === 'EGG'
@@ -466,9 +466,9 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                         {currency}{Number(item.price).toFixed(2)}
                       </span>
                       {!isOrderable ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 shrink-0">
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${
+                            className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
                               !item.isAvailable
                                 ? 'text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'
                                 : 'text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700'
@@ -486,7 +486,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {availability.maxOrderableQuantity <= 5 && availability.maxOrderableQuantity > 0 && (
                             <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                               {availability.maxOrderableQuantity} left

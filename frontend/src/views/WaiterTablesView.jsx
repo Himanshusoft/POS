@@ -248,11 +248,11 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
             const isBillPaid = activeOrder?.bill?.status === 'PAID';
             const isBillReady = hasBill && !activeOrder.bill.isDelivered && !isBillPaid;
             const isBillDelivered = hasBill && activeOrder.bill.isDelivered && !isBillPaid;
-            const isBillRequested = Boolean(activeOrder?.billRequested) && !hasBill;
             const isReady = activeOrder?.status === 'READY';
             const isCooking = ['ACCEPTED', 'IN_PREPARATION'].includes(activeOrder?.status);
             const isPending = activeOrder?.status === 'PENDING';
             const isServed = activeOrder?.status === 'SERVED';
+            const isBillRequested = isServed && Boolean(activeOrder?.billRequested) && !hasBill;
             const isAvailable = t.status === 'AVAILABLE';
 
             const orderTotal = activeOrder?.items?.reduce((sum, it) => sum + Number(it.subtotal || 0), 0) || 0;
@@ -315,8 +315,6 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
                     >
                       {isBillReady
                         ? 'BILL READY'
-                        : isBillRequested
-                        ? 'BILL REQUESTED'
                         : isBillDelivered
                         ? 'BILL DELIVERED'
                         : activeOrder
@@ -366,8 +364,8 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
 
                       {/* Bill Requested Status Callout */}
                       {isBillRequested && (
-                        <div className="bg-amber-100/70 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-lg p-2 text-[11px] text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <div className="bg-amber-100/70 border border-amber-300 rounded-lg p-2 text-[11px] text-amber-900 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
                           <span>Bill requested from reception</span>
                         </div>
                       )}
@@ -377,7 +375,7 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
                         <div className="bg-blue-100/70 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-700 rounded-lg p-2 text-[11px] text-blue-900 dark:text-blue-300 flex items-center justify-between">
                           <span className="font-semibold flex items-center gap-1">
                             <Receipt className="w-3.5 h-3.5 text-blue-700" />
-                            Bill ready for customer!
+                            Bill Ready: #{activeOrder.bill.billNumber}
                           </span>
                           <span className="font-mono font-bold tabular-nums">
                             {currency}{Number(activeOrder.bill.totalAmount).toFixed(2)}
@@ -417,22 +415,22 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
                         ) : (
                           <Check className="w-4 h-4 stroke-[3]" />
                         )}
-                        <span>SERVE FOOD</span>
+                        <span>SERVE CUSTOMER</span>
                       </button>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => onSelectTableForOrder && onSelectTableForOrder(t)}
-                          className="min-h-[40px] py-2 bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] text-[#17251F] dark:text-[#F7EFE4] font-semibold rounded-lg text-[11px] border border-[#E4DCD0] dark:border-[#1E362E] flex items-center justify-center gap-1 transition cursor-pointer"
+                          className="min-h-[40px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-lg text-[11px] border border-[#E5D8C6] flex items-center justify-center gap-1 transition cursor-pointer"
                         >
-                          <PlusCircle className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
+                          <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
                           <span>+ Add Items</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleRequestBill(activeOrder.id, t.tableNumber)}
                           disabled={actionLoading === `bill-req-${activeOrder.id}`}
-                          className="min-h-[40px] py-2 bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] font-bold rounded-lg text-[11px] flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
+                          className="min-h-[40px] py-2 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-lg text-[11px] flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
                         >
                           {actionLoading === `bill-req-${activeOrder.id}` ? (
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -464,30 +462,37 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
                         ) : (
                           <Receipt className="w-4 h-4" />
                         )}
-                        <span>SERVE BILL</span>
+                        <span>DELIVER BILL</span>
                       </button>
                     </div>
-                  ) : isBillRequested ? (
-                    <div className="space-y-1.5">
+                  ) : isBillDelivered ? (
+                    <div className="space-y-2">
                       <button
                         type="button"
                         disabled
-                        className="w-full min-h-[44px] py-2.5 bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-95"
+                        className="w-full min-h-[44px] py-2.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-95"
                       >
-                        <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                        <Clock className="w-4 h-4 text-[#D97706] animate-spin" />
                         <span>BILL REQUESTED</span>
                       </button>
+                      <div className="text-center py-1.5 px-3 text-[11px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl">
+                        Bill delivered • Receptionist settling payment
+                      </div>
+                    </div>
+                  ) : isServed ? (
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => handleCancelBillRequest(activeOrder.id, t.tableNumber)}
                         disabled={actionLoading === `bill-cancel-${activeOrder.id}`}
-                        className="w-full py-1.5 text-[11px] text-[#657168] dark:text-[#9FB29E] hover:text-[#173F36] dark:hover:text-[#FFFDF9] font-medium transition cursor-pointer text-center underline"
+                        className="w-full py-1.5 text-[11px] text-[#5B6470] hover:text-[#92400E] font-medium transition cursor-pointer text-center underline"
                       >
-                        Reopen Order (Add More Items)
+                        <PlusCircle className="w-4 h-4 text-[#92400E]" />
+                        <span>ADD ITEMS</span>
                       </button>
                     </div>
                   ) : isBillDelivered ? (
-                    <div className="text-center min-h-[44px] flex items-center justify-center py-2 px-3 text-xs font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+                    <div className="text-center min-h-[44px] flex items-center justify-center py-2 px-3 text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl">
                       Bill delivered • Receptionist settling payment
                     </div>
                   ) : isAvailable ? (
@@ -504,16 +509,16 @@ export default function WaiterTablesView({ onSelectTableForOrder }) {
                       <button
                         type="button"
                         onClick={() => onSelectTableForOrder && onSelectTableForOrder(t)}
-                        className="min-h-[44px] py-2.5 bg-[#F7EFE4]/80 dark:bg-[#101A18] hover:bg-[#F7EFE4] text-[#17251F] dark:text-[#F7EFE4] font-semibold rounded-xl text-xs border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        className="min-h-[44px] py-2.5 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone flex items-center justify-center gap-1.5 transition cursor-pointer"
                       >
-                        <PlusCircle className="w-3.5 h-3.5 text-[#173F36] dark:text-[#9FB29E]" />
+                        <PlusCircle className="w-4 h-4 text-[#92400E]" />
                         <span>ADD ITEMS</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRequestBill(activeOrder.id, t.tableNumber)}
                         disabled={actionLoading === `bill-req-${activeOrder.id}`}
-                        className="min-h-[44px] py-2.5 bg-[#173F36] hover:bg-[#12332C] active:scale-95 text-[#FFFDF9] font-bold rounded-xl text-xs shadow-editorial flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                        className="min-h-[44px] py-2.5 bg-[#92400E] hover:bg-[#78350F] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                       >
                         {actionLoading === `bill-req-${activeOrder.id}` ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />

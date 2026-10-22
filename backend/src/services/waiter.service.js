@@ -133,15 +133,12 @@ export const getWaiterDashboard = async (restaurantId, waiterId) => {
     let action = 'NEW_ORDER';
 
     if (currentOrder) {
-      if (currentOrder.bill && !currentOrder.bill.isDelivered) {
+      if (currentOrder.status === 'SERVED' && currentOrder.bill && !currentOrder.bill.isDelivered) {
         operationalStatus = 'BILL_READY';
         action = 'DELIVER_BILL';
       } else if (currentOrder.bill && currentOrder.bill.status === 'PAID') {
         operationalStatus = 'COMPLETED';
         action = 'AVAILABLE';
-      } else if (currentOrder.billRequested) {
-        operationalStatus = 'BILL_REQUESTED';
-        action = 'WAIT_BILL';
       } else if (currentOrder.status === 'READY') {
         operationalStatus = 'READY';
         action = 'SERVE';
@@ -153,7 +150,7 @@ export const getWaiterDashboard = async (restaurantId, waiterId) => {
         action = 'ADD_ITEMS';
       } else if (currentOrder.status === 'SERVED') {
         operationalStatus = 'SERVED';
-        action = 'REQUEST_BILL';
+        action = 'WAIT_BILL';
       }
     } else {
       operationalStatus = t.status;
@@ -240,7 +237,7 @@ export const getWaiterDashboard = async (restaurantId, waiterId) => {
       newOrders,
       preparingOrders,
       readyOrders,
-      servedOrders: activeServedOrders + servedTodayCount,
+      servedOrders: activeServedOrders,
     },
     billOverview: {
       pendingBills,

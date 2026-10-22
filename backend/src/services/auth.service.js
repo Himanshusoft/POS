@@ -4,6 +4,7 @@ import { hashPassword, comparePassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetOtpEmail } from './email.service.js';
 import { revokeToken, invalidateUserAuthCache } from '../utils/cache.js';
+import { validatePhoneField } from '../utils/countryPhoneData.js';
 
 export const registerOwner = async (data) => {
   const email = data.email.trim().toLowerCase();
@@ -16,6 +17,17 @@ export const registerOwner = async (data) => {
     throw error;
   }
 
+  let phoneValue = null;
+  if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) {
+      const error = new Error(phoneCheck.error);
+      error.statusCode = 400;
+      throw error;
+    }
+    phoneValue = phoneCheck.normalized;
+  }
+
   const hashedPassword = await hashPassword(data.password);
 
   return await prisma.$transaction(async (tx) => {
@@ -23,7 +35,7 @@ export const registerOwner = async (data) => {
       data: {
         name: data.restaurantName || data.restaurant_name,
         address: data.address || null,
-        phone: data.phone || null,
+        phone: phoneValue,
         email,
         currency: data.currency || 'USD',
         taxRate: data.taxRate !== undefined ? Number(data.taxRate) : (data.tax_rate !== undefined ? Number(data.tax_rate) : 5.0),
@@ -37,7 +49,7 @@ export const registerOwner = async (data) => {
         email,
         password: hashedPassword,
         role: 'RESTAURANT_OWNER',
-        phone: data.phone || null,
+        phone: phoneValue,
       },
       select: {
         id: true,
@@ -55,9 +67,10 @@ export const registerOwner = async (data) => {
       userId: user.id,
       role: user.role,
       restaurantId: restaurant.id,
+      organizationId: restaurant.id,
     });
 
-    return { user, restaurant, token };
+    return { user: { ...user, organizationId: restaurant.id }, restaurant, token };
   });
 };
 
@@ -74,6 +87,12 @@ export const login = async ({ email, password }) => {
 
   if (!user.isActive) {
     const error = new Error('User account has been deactivated. Please contact your restaurant owner.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (user.role !== 'RESTAURANT_REGISTRATION_ADMIN' && !user.restaurantId) {
+    const error = new Error('Staff account is not assigned to any organization or restaurant');
     error.statusCode = 403;
     throw error;
   }
@@ -100,6 +119,7 @@ export const login = async ({ email, password }) => {
     userId: user.id,
     role: user.role,
     restaurantId: user.restaurantId,
+    organizationId: user.restaurantId,
   });
 
   const userWithoutPassword = {
@@ -108,6 +128,7 @@ export const login = async ({ email, password }) => {
     email: user.email,
     role: user.role,
     restaurantId: user.restaurantId,
+    organizationId: user.restaurantId,
   };
 
   return {
@@ -142,13 +163,25 @@ export const getProfile = async (userId) => {
     error.statusCode = 404;
     throw error;
   }
-  return user;
+  return { ...user, organizationId: user.restaurantId };
 };
 
 export const updateProfile = async (userId, data) => {
   const updateData = {};
   if (data.name) updateData.name = data.name.trim();
-  if (data.phone !== undefined) updateData.phone = data.phone?.trim() || null;
+  if (data.phone !== undefined) {
+    if (data.phone === null || data.phone === '') {
+      updateData.phone = null;
+    } else {
+      const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+      if (!phoneCheck.isValid) {
+        const error = new Error(phoneCheck.error);
+        error.statusCode = 400;
+        throw error;
+      }
+      updateData.phone = phoneCheck.normalized;
+    }
+  }
   if (data.email) {
     const nextEmail = data.email.trim().toLowerCase();
     const existing = await prisma.user.findFirst({

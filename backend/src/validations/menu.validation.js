@@ -28,7 +28,7 @@ export const validateCreateMenuItem = (data) => {
   if (!data?.name || typeof data.name !== 'string' || !data.name.trim()) {
     errors.push('Menu item name is required');
   }
-  if (data?.price === undefined || isNaN(Number(data.price)) || Number(data.price) < 0) {
+  if (data?.price === undefined || (typeof data.price === 'string' && /[eE]/.test(data.price)) || isNaN(Number(data.price)) || Number(data.price) < 0) {
     errors.push('Price must be a valid non-negative number');
   }
   if (data?.categoryId !== undefined && data.categoryId !== null && !isUuid(data.categoryId)) errors.push('categoryId must be a UUID');
@@ -41,7 +41,7 @@ export const validateCreateMenuItem = (data) => {
   }
   const prep = data?.preparationTime !== undefined ? data.preparationTime : data?.prepTime;
   if (prep !== undefined && prep !== null && prep !== '') {
-    if (!Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
+    if ((typeof prep === 'string' && /[eE]/.test(prep)) || !Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
       errors.push('preparationTime must be a valid non-negative integer in minutes');
     }
   }
@@ -53,8 +53,10 @@ export const validateUpdateMenuItem = (data) => {
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim())) {
     errors.push('Menu item name cannot be empty');
   }
-  if (data?.price !== undefined && (isNaN(Number(data.price)) || Number(data.price) < 0)) {
-    errors.push('Price must be a valid non-negative number');
+  if (data?.price !== undefined) {
+    if ((typeof data.price === 'string' && /[eE]/.test(data.price)) || isNaN(Number(data.price)) || Number(data.price) < 0) {
+      errors.push('Price must be a valid non-negative number');
+    }
   }
   if (data?.categoryId !== undefined && data.categoryId !== null && !isUuid(data.categoryId)) errors.push('categoryId must be a UUID');
   if (data?.isAvailable !== undefined && typeof data.isAvailable !== 'boolean') errors.push('isAvailable must be a boolean');
@@ -66,7 +68,7 @@ export const validateUpdateMenuItem = (data) => {
   }
   const prep = data?.preparationTime !== undefined ? data.preparationTime : data?.prepTime;
   if (prep !== undefined && prep !== null && prep !== '') {
-    if (!Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
+    if ((typeof prep === 'string' && /[eE]/.test(prep)) || !Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
       errors.push('preparationTime must be a valid non-negative integer in minutes');
     }
   }

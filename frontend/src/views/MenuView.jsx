@@ -118,7 +118,7 @@ export default function MenuView() {
     try {
       const nextState = !item.isAvailable;
       await posService.menu.toggleAvailability(item.id, nextState);
-      addToast(`${item.name} is now ${nextState ? 'Available' : 'Marked 86 (Out of Stock)'}`, 'info');
+      addToast(`${item.name} is now ${nextState ? 'In Stock' : 'Out of Stock'}`, 'info');
       refetchItems();
       invalidateMenu();
     } catch (err) {
@@ -333,26 +333,26 @@ export default function MenuView() {
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] p-5 sm:p-6 rounded-2xl shadow-editorial">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="w-12 h-12 rounded-2xl bg-[#173F36]/10 dark:bg-[#173F36]/30 border border-[#173F36]/20 flex items-center justify-center text-[#173F36] dark:text-[#9FB29E] shrink-0 shadow-sm">
             <BookOpen className="w-6 h-6" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] tracking-tight">
                 Menu & Recipe Engineering
               </h1>
-              <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/30 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20 tracking-wider">
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-[#173F36]/10 dark:bg-[#173F36]/30 text-[#173F36] dark:text-[#9FB29E] border border-[#173F36]/20 tracking-wider shrink-0">
                 Catalog Active
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans">
+            <p className="text-xs sm:text-sm text-[#657168] dark:text-[#9FB29E] mt-0.5 font-sans truncate sm:line-clamp-1">
               Configure dishes, categories, live availability switches, and automated inventory depletion recipes
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap self-end sm:self-auto">
           <Button
             variant="secondary"
             size="md"

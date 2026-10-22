@@ -381,14 +381,14 @@ export const requestBill = async (restaurantId, waiterId, orderId) => {
       throw error;
     }
 
-    if (['COMPLETED', 'CANCELLED'].includes(order.status)) {
-      const error = new Error(`Cannot request bill for order in '${order.status}' status`);
+    if (order.status !== 'SERVED') {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!order.items || order.items.length === 0) {
-      const error = new Error('Cannot request bill for an empty order');
+    if (!order.items || order.items.length === 0 || order.items.some((item) => item.status !== 'SERVED')) {
+      const error = new Error('Order is not eligible for billing. The order must be served first.');
       error.statusCode = 400;
       throw error;
     }
@@ -464,6 +464,11 @@ export const markServed = async (restaurantId, orderId, waiterId) => {
     }
     if (order.status !== 'READY') {
       const error = new Error(`Order can only be marked as SERVED when it is in 'READY' status. Current status: '${order.status}'`);
+      error.statusCode = 409;
+      throw error;
+    }
+    if (order.items && order.items.some((i) => !['READY', 'SERVED'].includes(i.status))) {
+      const error = new Error('All order items must be prepared and marked READY by the kitchen before serving.');
       error.statusCode = 409;
       throw error;
     }
@@ -548,6 +553,7 @@ export default {
   requestBill,
   cancelBillRequest,
   markServed,
+  sendToKitchen,
   updateOrderStatus,
   validateCartAvailability,
 };

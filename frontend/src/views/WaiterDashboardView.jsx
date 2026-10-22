@@ -136,6 +136,9 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
   const orderActivityTrend = useMemo(() => {
     const orders = [];
     (tableOrders || []).forEach((t) => {
+      if (t.currentOrder && t.currentOrder.createdAt) {
+        orders.push(t.currentOrder);
+      }
       (t.orders || []).forEach((o) => {
         if (o.createdAt) orders.push(o);
       });
@@ -427,6 +430,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
               thickness={24}
               centerLabel="Tables"
               centerValue={tableOverview.totalTables || 0}
+              showLegend={false}
               data={[
                 {
                   label: 'Available Tables',
@@ -689,13 +693,21 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                             {order.itemsSummary}
                           </p>
                         )}
-                        {order.bill && (
+                        {order.bill ? (
                           <div className="pt-2 border-t border-[#E4DCD0] dark:border-[#1E362E] flex justify-between text-[11px]">
                             <span className="text-[#657168] dark:text-[#9FB29E]">Bill: #{order.bill.billNumber}</span>
                             <span className="font-bold text-[#173F36] dark:text-[#9FB29E] font-mono tabular-nums">
                               {currency}
                               {Number(order.bill.totalAmount || 0).toFixed(2)}
                             </span>
+                          </div>
+                        ) : isServed ? (
+                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between items-center text-[11px]">
+                            <span className="font-semibold text-amber-800">Billing: Waiting for Receptionist</span>
+                          </div>
+                        ) : (
+                          <div className="pt-2 border-t border-[#E5D8C6] flex justify-between items-center text-[11px]">
+                            <span className="text-[#5B6470]">Billing: Locked until order is served.</span>
                           </div>
                         )}
                       </div>
@@ -720,9 +732,33 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         ) : (
                           <Check className="w-4 h-4 stroke-[3]" />
                         )}
-                        <span>SERVE FOOD</span>
+                        <span>SERVE CUSTOMER</span>
                       </button>
                     ) : order?.bill && !order.bill.isDelivered ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab && setActiveTab('orders')}
+                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-[#92400E]" />
+                          <span>VIEW BILL</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeliverBill(order.bill.id, t.tableNumber)}
+                          disabled={actionLoading === `deliver-${order.bill.id}`}
+                          className="min-h-[44px] py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:scale-95 text-white font-bold rounded-xl text-xs shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {actionLoading === `deliver-${order.bill.id}` ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>DELIVER BILL</span>
+                        </button>
+                      </div>
+                    ) : order?.bill && order.bill.isDelivered ? (
                       <button
                         type="button"
                         onClick={() => handleDeliverBill(order.bill.id, t.tableNumber)}
@@ -745,6 +781,27 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
                         <Clock className="w-4 h-4 text-amber-600 animate-spin" />
                         <span>BILL REQUESTED</span>
                       </button>
+                    ) : isServed ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onSelectTableForOrder) {
+                              onSelectTableForOrder(t);
+                            } else if (setActiveTab) {
+                              setActiveTab('tables');
+                            }
+                          }}
+                          className="min-h-[44px] py-2 bg-[#FAF7F2] hover:bg-[#F1E8DB] active:scale-95 text-[#1F2937] font-semibold rounded-xl text-xs border border-[#E5D8C6] shadow-sandstone hover:shadow-sandstone-md flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5 text-[#92400E]" />
+                          <span>ADD ITEMS</span>
+                        </button>
+                        <div className="min-h-[44px] py-2 px-2 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl text-[11px] flex items-center justify-center gap-1 text-center">
+                          <Clock className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+                          <span>WAITING BILL</span>
+                        </div>
+                      </div>
                     ) : isAvailable ? (
                       <button
                         type="button"

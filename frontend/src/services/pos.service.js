@@ -231,6 +231,10 @@ export const posService = {
   // Level 1: Platform Super Admin / Registration Administration
   registrationAdmin: {
     getOverview: () => api.get('/super-admin/overview'),
+    getAnalytics: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return api.get(`/super-admin/analytics${q ? `?${q}` : ''}`);
+    },
     getRestaurants: (params = {}) => {
       const q = new URLSearchParams(params).toString();
       return api.get(`/super-admin/restaurants${q ? `?${q}` : ''}`);
@@ -244,6 +248,12 @@ export const posService = {
     createPlan: (data) => api.post('/super-admin/plans', data),
     updatePlan: (id, data) => api.put(`/super-admin/plans/${id}`, data),
     updatePlanStatus: (id, isActive) => api.patch(`/super-admin/plans/${id}/status`, { isActive }),
+    getSubscriptions: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return api.get(`/super-admin/subscriptions${q ? `?${q}` : ''}`);
+    },
+    getSubscriptionsOverview: () => api.get('/super-admin/subscriptions/overview'),
+    getSubscriptionById: (restaurantId) => api.get(`/super-admin/subscriptions/${restaurantId}`),
   },
 };
 

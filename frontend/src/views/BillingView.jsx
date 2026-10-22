@@ -137,6 +137,10 @@ export default function BillingView({ preSelectedTable, initialTab }) {
   };
 
   const openGenerateModal = (order) => {
+    if (!order || order.status !== 'SERVED') {
+      addToast('Order is not eligible for billing. The order must be served first.', 'error');
+      return;
+    }
     setSelectedOrderForBill(order);
     setDiscountPercent(0);
     setDiscountAmount(0);
@@ -1032,16 +1036,17 @@ export default function BillingView({ preSelectedTable, initialTab }) {
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 z-10 bg-[#F7EFE4]/60 dark:bg-[#101A18]/60 text-[#657168] dark:text-[#9FB29E] uppercase text-[10px] font-bold border-b border-[#E4DCD0] dark:border-[#1E362E] tracking-wider font-sans">
                   <tr>
-                    <th className="px-5 py-4">Table / Ticket</th>
+                    <th className="px-5 py-4">Table / Order ID</th>
                     <th className="px-5 py-4">Items Ordered</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Elapsed</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
+                    <th className="px-5 py-4">Order Status</th>
+                    <th className="px-5 py-4">Amount</th>
+                    <th className="px-5 py-4 text-right">Billing Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4DCD0] dark:divide-[#1E362E] text-[#17251F] dark:text-[#F7EFE4]">
                   {pendingOrders.map((ord) => {
                     const ordTotal = ord.items?.reduce((sum, i) => sum + Number(i.subtotal || 0), 0) || 0;
+                    const isEligible = ord.status === 'SERVED' && !ord.bill;
                     return (
                       <tr
                         key={ord.id}
@@ -1096,13 +1101,17 @@ export default function BillingView({ preSelectedTable, initialTab }) {
                           {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <Button
-                            variant="primary"
-                            onClick={() => openGenerateModal(ord)}
-                          >
-                            <Receipt className="w-3.5 h-3.5 mr-1.5" />
-                            <span>Generate Bill</span>
-                          </Button>
+                          {isEligible ? (
+                            <Button
+                              variant="primary"
+                              onClick={() => openGenerateModal(ord)}
+                            >
+                              <Receipt className="w-3.5 h-3.5 mr-1.5" />
+                              <span>Generate Bill</span>
+                            </Button>
+                          ) : (
+                            <span className="text-[11px] text-[#5B6470]">Not eligible</span>
+                          )}
                         </td>
                       </tr>
                     );

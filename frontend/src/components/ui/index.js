@@ -5,6 +5,7 @@ export { Button } from './Button';
 export { EmptyState } from './EmptyState';
 export { Modal } from './Modal';
 export { Input } from './Input';
+export { PhoneInput } from './PhoneInput';
 export { Skeleton, SkeletonRow, SkeletonTable } from './Skeleton';
 export {
   ChartCard,

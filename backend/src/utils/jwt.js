@@ -12,7 +12,12 @@ const getJwtSecret = () => {
 };
 
 export const signToken = (payload, expiresIn = '1d') => {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn });
+  const orgId = payload.organizationId || payload.restaurantId;
+  const normalizedPayload = {
+    ...payload,
+    ...(orgId ? { restaurantId: orgId, organizationId: orgId } : {}),
+  };
+  return jwt.sign(normalizedPayload, getJwtSecret(), { expiresIn });
 };
 
 export const verifyToken = (token) => {

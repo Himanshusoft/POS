@@ -278,8 +278,8 @@ function PosDashboard() {
 
     // Platform Super Admin / Governance view
     if (role === ROLES.RESTAURANT_REGISTRATION_ADMIN) {
-      if (activeTab === 'registration' || activeTab === 'dashboard') {
-        return <RegistrationAdminDashboard />;
+      if (activeTab === 'registration' || activeTab === 'dashboard' || activeTab === 'subscriptions') {
+        return <RegistrationAdminDashboard setActiveTab={navigateTab} />;
       }
     }
 
