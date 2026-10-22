@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { useMenuCategories, useMenuItems, useInventory, usePosMutations } from '../hooks/usePosQueries';
+import { ROLES } from '../config/navigation';
 
 function DishThumbnail({ image, name }) {
   const [imgError, setImgError] = useState(false);
@@ -43,7 +44,13 @@ function DishThumbnail({ image, name }) {
 }
 
 export default function MenuView() {
-  const { restaurant, addToast, role } = useAuth();
+  const { restaurant, addToast, role, user } = useAuth();
+  const isRestaurantAdmin =
+    role === ROLES.RESTAURANT_OWNER ||
+    user?.role === 'RESTAURANT_OWNER' ||
+    user?.role === 'RESTAURANT_ADMIN' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'OWNER';
   const { invalidateMenu } = usePosMutations(restaurant?.id);
 
   const {
@@ -261,6 +268,7 @@ export default function MenuView() {
             inventoryItemId: ing.inventoryItemId,
             quantityRequired: ing.quantityRequired,
             unit: ing.unit,
+            inventoryItem: ing.inventoryItem,
           })) || []
         );
       } else {
@@ -272,6 +280,7 @@ export default function MenuView() {
   };
 
   const handleAddRecipeRow = () => {
+    if (isRestaurantAdmin) return;
     if (inventoryItems.length === 0) {
       addToast('No inventory ingredients found. Add inventory items first.', 'warning');
       return;
@@ -287,6 +296,10 @@ export default function MenuView() {
   };
 
   const handleSaveRecipe = async () => {
+    if (isRestaurantAdmin) {
+      addToast('Restaurant Admin has view-only access to recipes.', 'warning');
+      return;
+    }
     if (!selectedItemForRecipe) return;
     try {
       const payload = {
@@ -452,7 +465,7 @@ export default function MenuView() {
                   <th className="px-5 py-3.5">Dietary</th>
                   <th className="px-5 py-3.5">Price</th>
                   <th className="px-5 py-3.5">Prep Time</th>
-                  <th className="px-5 py-3.5">86 Availability</th>
+                  <th className="px-5 py-3.5">Availability</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -493,7 +506,7 @@ export default function MenuView() {
                   <th className="px-5 py-3.5">Dietary</th>
                   <th className="px-5 py-3.5">Price</th>
                   <th className="px-5 py-3.5">Prep Time</th>
-                  <th className="px-5 py-3.5">86 Availability</th>
+                  <th className="px-5 py-3.5">Availability</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -551,7 +564,7 @@ export default function MenuView() {
                           ) : (
                             <>
                               <ToggleLeft className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                              <span>86 Out</span>
+                              <span>Out of Stock</span>
                             </>
                           )}
                         </button>
@@ -825,12 +838,14 @@ export default function MenuView() {
             >
               Close
             </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveRecipe}
-            >
-              Save Recipe
-            </Button>
+            {!isRestaurantAdmin && (
+              <Button
+                variant="primary"
+                onClick={handleSaveRecipe}
+              >
+                Save Recipe
+              </Button>
+            )}
           </div>
         }
       >
@@ -840,77 +855,116 @@ export default function MenuView() {
           </p>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Ingredients Breakdown</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddRecipeRow}
-              icon={Plus}
-            >
-              Add Ingredient
-            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Ingredients Breakdown</span>
+              {isRestaurantAdmin && (
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#E8EFEA] dark:bg-[#1E362E] text-[#173F36] dark:text-[#9FB29E] border border-[#D5E2D9] dark:border-[#254238]">
+                  View Only
+                </span>
+              )}
+            </div>
+            {!isRestaurantAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddRecipeRow}
+                icon={Plus}
+              >
+                Add Ingredient
+              </Button>
+            )}
           </div>
 
           {recipeIngredients.length === 0 ? (
             <div className="text-center py-10 text-[#657168] dark:text-[#9FB29E] text-xs font-medium">
-              No recipe ingredients configured yet. Click "Add Ingredient" to link raw materials.
+              {isRestaurantAdmin
+                ? 'No recipe ingredients configured for this dish.'
+                : 'No recipe ingredients configured yet. Click "Add Ingredient" to link raw materials.'}
             </div>
           ) : (
-            <div className="space-y-3">
-              {recipeIngredients.map((ing, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex items-center gap-3"
-                >
-                  <select
-                    value={ing.inventoryItemId}
-                    onChange={(e) => {
-                      const item = inventoryItems.find((inv) => inv.id === e.target.value);
-                      setRecipeIngredients((prev) =>
-                        prev.map((r, i) =>
-                          i === idx
-                            ? { ...r, inventoryItemId: e.target.value, unit: item?.unit || r.unit }
-                            : r
-                        )
-                      );
-                    }}
-                    className="flex-1 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4]"
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+              {recipeIngredients.map((ing, idx) => {
+                const inv = inventoryItems.find((item) => item.id === ing.inventoryItemId) || ing.inventoryItem;
+                const stockText = inv ? `${inv.currentStock ?? 0} ${inv.unit || ing.unit || 'unit'}` : null;
+
+                return (
+                  <div
+                    key={idx}
+                    className="bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex items-center gap-3"
                   >
-                    {inventoryItems.map((inv) => (
-                      <option key={inv.id} value={inv.id}>
-                        {inv.name} (Stock: {inv.currentStock} {inv.unit})
-                      </option>
-                    ))}
-                  </select>
+                    {isRestaurantAdmin ? (
+                      <>
+                        <div className="flex-1 min-w-0 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] flex items-center justify-between shadow-2xs">
+                          <span className="font-medium truncate">{inv?.name || 'Unknown Ingredient'}</span>
+                          {stockText && (
+                            <span className="text-[11px] text-[#657168] dark:text-[#9FB29E] font-medium ml-2 shrink-0">
+                              (Stock: {stockText})
+                            </span>
+                          )}
+                        </div>
 
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0.001"
-                    placeholder="Qty"
-                    value={ing.quantityRequired}
-                    onChange={(e) =>
-                      setRecipeIngredients((prev) =>
-                        prev.map((r, i) => (i === idx ? { ...r, quantityRequired: e.target.value } : r))
-                      )
-                    }
-                    className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums"
-                  />
+                        <div className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums text-center font-semibold shadow-2xs shrink-0">
+                          {ing.quantityRequired}
+                        </div>
 
-                  <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12">{ing.unit || 'unit'}</span>
+                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12 font-medium shrink-0">
+                          {ing.unit || inv?.unit || 'unit'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <select
+                          value={ing.inventoryItemId}
+                          onChange={(e) => {
+                            const item = inventoryItems.find((invItem) => invItem.id === e.target.value);
+                            setRecipeIngredients((prev) =>
+                              prev.map((r, i) =>
+                                i === idx
+                                  ? { ...r, inventoryItemId: e.target.value, unit: item?.unit || r.unit }
+                                  : r
+                              )
+                            );
+                          }}
+                          className="flex-1 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4]"
+                        >
+                          {inventoryItems.map((invItem) => (
+                            <option key={invItem.id} value={invItem.id}>
+                              {invItem.name} (Stock: {invItem.currentStock} {invItem.unit})
+                            </option>
+                          ))}
+                        </select>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    aria-label="Remove ingredient"
-                    className="p-1.5 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          placeholder="Qty"
+                          value={ing.quantityRequired}
+                          onChange={(e) =>
+                            setRecipeIngredients((prev) =>
+                              prev.map((r, i) => (i === idx ? { ...r, quantityRequired: e.target.value } : r))
+                            )
+                          }
+                          className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums"
+                        />
+
+                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12">{ing.unit || 'unit'}</span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          aria-label="Remove ingredient"
+                          className="p-1.5 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
