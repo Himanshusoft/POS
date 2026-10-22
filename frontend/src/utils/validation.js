@@ -1,8 +1,32 @@
 /**
  * Centralized Validation Utilities for ApexPOS
- * Strictly enforces Indian mobile numbering plan, numeric ranges,
- * and eliminates non-numeric/scientific notation inputs.
+ * Supports country-aware international phone numbering plans,
+ * numeric ranges, and eliminates non-numeric/scientific notation inputs.
  */
+
+import {
+  COUNTRIES,
+  DEFAULT_COUNTRY,
+  getCountryByCode,
+  getCountryByDialCode,
+  guessCountryFromCurrency,
+  sanitizePhoneDigits,
+  parsePhoneNumber,
+  validatePhoneNumber,
+  normalizePhoneNumber,
+} from './countryPhoneData.js';
+
+export {
+  COUNTRIES,
+  DEFAULT_COUNTRY,
+  getCountryByCode,
+  getCountryByDialCode,
+  guessCountryFromCurrency,
+  sanitizePhoneDigits,
+  parsePhoneNumber,
+  validatePhoneNumber,
+  normalizePhoneNumber,
+};
 
 /**
  * Indian Mobile Number Regex:
@@ -34,23 +58,45 @@ export const sanitizePhoneInput = (val) => {
 };
 
 /**
- * Validates phone number and returns a user-friendly error message, or empty string if valid.
+ * Country-aware phone validation.
+ * Supports:
+ * - validatePhoneInput(val, required = false, countryCode = 'IN')
+ * - validatePhoneInput(val, { required: true, countryCode: 'US' })
+ * - validatePhoneInput(val, required = false) -> Auto-detects country if prefixed with '+', otherwise uses 'IN'
+ *
  * @param {string} val
- * @param {boolean} required
- * @returns {string}
+ * @param {boolean|Object} requiredOrOptions
+ * @param {string} [explicitCountryCode]
+ * @returns {string} Error message or empty string if valid
  */
-export const validatePhoneInput = (val, required = false) => {
-  if (!val || !String(val).trim()) {
-    return required ? 'Mobile number is required' : '';
+export const validatePhoneInput = (val, requiredOrOptions = false, explicitCountryCode) => {
+  let required = false;
+  let countryCode = explicitCountryCode;
+
+  if (typeof requiredOrOptions === 'object' && requiredOrOptions !== null) {
+    required = Boolean(requiredOrOptions.required);
+    if (requiredOrOptions.countryCode) {
+      countryCode = requiredOrOptions.countryCode;
+    }
+  } else {
+    required = Boolean(requiredOrOptions);
   }
+
+  if (!val || !String(val).trim()) {
+    return required ? 'Phone number is required' : '';
+  }
+
   const trimmed = String(val).trim();
   if (/[a-zA-Z]/.test(trimmed)) {
     return 'Phone number cannot contain alphabetic characters';
   }
-  if (!INDIAN_PHONE_REGEX.test(trimmed)) {
-    return 'Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)';
-  }
-  return '';
+
+  // Parse phone number to identify country and national digits
+  const parsed = parsePhoneNumber(trimmed, countryCode || DEFAULT_COUNTRY);
+  const effectiveCountry = countryCode || parsed.countryCode || DEFAULT_COUNTRY;
+
+  const result = validatePhoneNumber(parsed.nationalNumber, effectiveCountry, { required });
+  return result.isValid ? '' : result.error;
 };
 
 /**
@@ -98,6 +144,15 @@ export const validateNumericField = (val, { min = 0, max = Infinity, integer = f
 };
 
 export default {
+  COUNTRIES,
+  DEFAULT_COUNTRY,
+  getCountryByCode,
+  getCountryByDialCode,
+  guessCountryFromCurrency,
+  sanitizePhoneDigits,
+  parsePhoneNumber,
+  validatePhoneNumber,
+  normalizePhoneNumber,
   INDIAN_PHONE_REGEX,
   isValidIndianPhone,
   sanitizePhoneInput,

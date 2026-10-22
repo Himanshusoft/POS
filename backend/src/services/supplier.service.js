@@ -1,5 +1,6 @@
 import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
+import { normalizePhoneNumber } from '../utils/countryPhoneData.js';
 
 export const createSupplier = async (restaurantId, data) => {
   return await prisma.supplier.create({
@@ -7,7 +8,7 @@ export const createSupplier = async (restaurantId, data) => {
       restaurantId,
       name: data.name.trim(),
       contactPerson: data.contactPerson || null,
-      phone: data.phone || null,
+      phone: data.phone ? normalizePhoneNumber(data.phone) : (data.phone === '' ? null : data.phone || null),
       email: data.email || null,
       address: data.address || null,
     },
@@ -50,7 +51,7 @@ export const updateSupplier = async (restaurantId, id, data) => {
     data: {
       name: data.name ? data.name.trim() : undefined,
       contactPerson: data.contactPerson !== undefined ? data.contactPerson : undefined,
-      phone: data.phone !== undefined ? data.phone : undefined,
+      phone: data.phone !== undefined ? (data.phone ? normalizePhoneNumber(data.phone) : null) : undefined,
       email: data.email !== undefined ? data.email : undefined,
       address: data.address !== undefined ? data.address : undefined,
     },

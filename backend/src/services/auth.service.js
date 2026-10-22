@@ -4,6 +4,7 @@ import { hashPassword, comparePassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetOtpEmail } from './email.service.js';
 import { revokeToken, invalidateUserAuthCache } from '../utils/cache.js';
+import { validatePhoneField } from '../utils/countryPhoneData.js';
 
 export const registerOwner = async (data) => {
   const email = data.email.trim().toLowerCase();
@@ -16,6 +17,17 @@ export const registerOwner = async (data) => {
     throw error;
   }
 
+  let phoneValue = null;
+  if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) {
+      const error = new Error(phoneCheck.error);
+      error.statusCode = 400;
+      throw error;
+    }
+    phoneValue = phoneCheck.normalized;
+  }
+
   const hashedPassword = await hashPassword(data.password);
 
   return await prisma.$transaction(async (tx) => {
@@ -23,7 +35,7 @@ export const registerOwner = async (data) => {
       data: {
         name: data.restaurantName || data.restaurant_name,
         address: data.address || null,
-        phone: data.phone || null,
+        phone: phoneValue,
         email,
         currency: data.currency || 'USD',
         taxRate: data.taxRate !== undefined ? Number(data.taxRate) : (data.tax_rate !== undefined ? Number(data.tax_rate) : 5.0),
@@ -37,7 +49,7 @@ export const registerOwner = async (data) => {
         email,
         password: hashedPassword,
         role: 'RESTAURANT_OWNER',
-        phone: data.phone || null,
+        phone: phoneValue,
       },
       select: {
         id: true,
@@ -161,13 +173,13 @@ export const updateProfile = async (userId, data) => {
     if (data.phone === null || data.phone === '') {
       updateData.phone = null;
     } else {
-      const raw = String(data.phone).trim();
-      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
-        const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9');
+      const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+      if (!phoneCheck.isValid) {
+        const error = new Error(phoneCheck.error);
         error.statusCode = 400;
         throw error;
       }
-      updateData.phone = raw;
+      updateData.phone = phoneCheck.normalized;
     }
   }
   if (data.email) {

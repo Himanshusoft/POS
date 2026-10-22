@@ -1,5 +1,6 @@
 import { prisma } from '../config/env.js';
 import { normalizeCurrencyCode } from '../validations/resource.validation.js';
+import { normalizePhoneNumber } from '../utils/countryPhoneData.js';
 
 export const createRestaurant = async (ownerId, data) => {
   return await prisma.$transaction(async (tx) => {
@@ -18,7 +19,7 @@ export const createRestaurant = async (ownerId, data) => {
       data: {
         name: data.name,
         address: data.address || null,
-        phone: data.phone || null,
+        phone: data.phone ? normalizePhoneNumber(data.phone) : (data.phone === '' ? null : data.phone || null),
         email: data.email || null,
         currency: data.currency ? normalizeCurrencyCode(data.currency) : 'USD',
         taxRate: data.taxRate !== undefined ? Number(data.taxRate) : 5.0,
@@ -71,7 +72,7 @@ export const updateRestaurantProfile = async (restaurantId, data) => {
     data: {
       name: data.name || undefined,
       address: data.address !== undefined ? data.address : undefined,
-      phone: data.phone !== undefined ? data.phone : undefined,
+      phone: data.phone !== undefined ? (data.phone ? normalizePhoneNumber(data.phone) : null) : undefined,
       email: data.email !== undefined ? data.email : undefined,
       currency: data.currency ? normalizeCurrencyCode(data.currency) : undefined,
       taxRate: data.taxRate !== undefined ? Number(data.taxRate) : undefined,

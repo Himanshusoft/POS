@@ -1,3 +1,5 @@
+import { validatePhoneField } from '../utils/countryPhoneData.js';
+
 const units = ['KG', 'GRAM', 'LITER', 'MILLILITER', 'PIECE', 'PACKET', 'CAN', 'BOTTLE'];
 const tableStatuses = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE'];
 const result = (errors) => ({ isValid: errors.length === 0, errors });
@@ -28,7 +30,8 @@ export const validateSupplier = (data, partial = false) => {
     if (data?.[field] !== undefined && (typeof data[field] !== 'string' || data[field].length > 200 || (field === 'name' && !data[field].trim()))) errors.push(`${field} must be a string of at most 200 characters`);
   }
   if (data?.phone !== undefined && data.phone !== null && data.phone !== '') {
-    if (!validIndianPhone(data.phone)) errors.push('phone must be a valid 10-digit Indian mobile number (e.g. 9876543210 or +91 9876543210)');
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) errors.push(phoneCheck.error);
   }
   if (data?.email !== undefined && data.email !== null && (typeof data.email !== 'string' || !validEmail(data.email))) errors.push('email must be valid');
   if (partial && !Object.keys(data || {}).some((key) => ['name', 'contactPerson', 'phone', 'email', 'address'].includes(key))) errors.push('At least one supported field is required');
@@ -103,7 +106,8 @@ export const validateRestaurantProfile = (data, partial = false) => {
   if (data?.name !== undefined && (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 150)) errors.push('name must be a non-empty string of at most 150 characters');
   if (data?.email !== undefined && data.email !== null && (typeof data.email !== 'string' || !validEmail(data.email))) errors.push('email must be valid');
   if (data?.phone !== undefined && data.phone !== null && data.phone !== '') {
-    if (!validIndianPhone(data.phone)) errors.push('phone must be a valid 10-digit Indian mobile number (e.g. 9876543210 or +91 9876543210)');
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) errors.push(phoneCheck.error);
   }
   if (data?.taxRate !== undefined) {
     if ((typeof data.taxRate === 'string' && /[eE]/.test(data.taxRate)) || !Number.isFinite(Number(data.taxRate)) || Number(data.taxRate) < 0 || Number(data.taxRate) > 100) {

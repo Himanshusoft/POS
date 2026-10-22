@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
-import { Button, Badge, Modal, Input, SkeletonTable, EmptyState } from '../components/ui';
+import { Button, Badge, Modal, Input, PhoneInput, SkeletonTable, EmptyState } from '../components/ui';
 import {
   Users,
   UserPlus,
@@ -21,12 +21,13 @@ import {
 } from 'lucide-react';
 
 import { useUsers, usePosMutations } from '../hooks/usePosQueries';
-import { sanitizePhoneInput, validatePhoneInput } from '../utils/validation';
+import { sanitizePhoneInput, validatePhoneInput, guessCountryFromCurrency } from '../utils/validation';
 
 // Using centralized sanitizePhoneInput and validatePhoneInput from ../utils/validation
 
 export default function StaffView() {
   const { restaurant, user, addToast } = useAuth();
+  const defaultRestCountry = guessCountryFromCurrency(restaurant?.currency || 'INR');
   const currentOrgId = restaurant?.id || restaurant?.organizationId || user?.organizationId || user?.restaurantId;
   const { data: staffData = [], isLoading, isRefetching, refetch } = useUsers(currentOrgId);
   const { invalidateUsers } = usePosMutations(currentOrgId);
@@ -231,7 +232,7 @@ export default function StaffView() {
     setEditingStaff(usr);
     setEditForm({
       name: usr.name || '',
-      phone: sanitizePhoneInput(usr.phone || ''),
+      phone: usr.phone || '',
       role: usr.role || 'WAITER',
       password: '',
     });
@@ -714,16 +715,17 @@ export default function StaffView() {
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
+            <PhoneInput
               id="staff-phone"
               label="Phone Number"
-              placeholder="e.g. 9876543210"
               value={form.phone}
-              onChange={handlePhoneChange}
-              maxLength={10}
+              defaultCountry={defaultRestCountry}
+              onChange={(val, meta) => {
+                setForm((prev) => ({ ...prev, phone: val }));
+                setPhoneError(meta.error);
+              }}
               error={phoneError}
-              helperText={!phoneError ? '10-digit local mobile number' : undefined}
-              icon={Phone}
+              helperText={!phoneError ? 'Optional contact phone' : undefined}
             />
 
             <div className="flex flex-col gap-1.5">
@@ -808,16 +810,17 @@ export default function StaffView() {
             />
           </div>
 
-          <Input
+          <PhoneInput
             id="edit-staff-phone"
             label="Phone Number"
-            placeholder="e.g. 9876543210"
             value={editForm.phone}
-            onChange={handleEditPhoneChange}
-            maxLength={10}
+            defaultCountry={defaultRestCountry}
+            onChange={(val, meta) => {
+              setEditForm((prev) => ({ ...prev, phone: val }));
+              setEditPhoneError(meta.error);
+            }}
             error={editPhoneError}
-            helperText={!editPhoneError ? '10-digit local mobile number' : undefined}
-            icon={Phone}
+            helperText={!editPhoneError ? 'Optional contact phone' : undefined}
           />
 
           <div className="flex flex-col gap-1.5">

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import posService from '../services/pos.service';
-import { sanitizePhoneInput, validatePhoneInput, isScientificNotation } from '../utils/validation';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation, guessCountryFromCurrency } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { usePurchases, useSuppliers, useInventory, usePosMutations } from '../hooks/usePosQueries';
-import { Modal, Button } from '../components/ui';
+import { Modal, Button, PhoneInput } from '../components/ui';
 import {
   Truck,
   Plus,
@@ -38,6 +38,7 @@ export default function PurchasesView() {
     address: '',
     taxId: '',
   });
+  const [supplierPhoneError, setSupplierPhoneError] = useState('');
 
   // Purchase Form
   const [purchaseForm, setPurchaseForm] = useState({
@@ -62,10 +63,12 @@ export default function PurchasesView() {
     if (supplierForm.phone && supplierForm.phone.trim()) {
       const err = validatePhoneInput(supplierForm.phone);
       if (err) {
+        setSupplierPhoneError(err);
         addToast(err, 'warning');
         return;
       }
     }
+    setSupplierPhoneError('');
     try {
       await posService.suppliers.create(supplierForm);
       addToast('Supplier added successfully', 'success');
@@ -357,13 +360,17 @@ export default function PurchasesView() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Phone</label>
-              <input
-                type="text"
-                placeholder="+91 98765 00000"
+              <PhoneInput
+                id="supplier-phone"
+                label="Phone"
                 value={supplierForm.phone}
-                onChange={(e) => setSupplierForm({ ...supplierForm, phone: sanitizePhoneInput(e.target.value) })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] transition-colors"
+                defaultCountry={guessCountryFromCurrency(restaurant?.currency || 'INR')}
+                onChange={(val, meta) => {
+                  setSupplierForm({ ...supplierForm, phone: val });
+                  setSupplierPhoneError(meta.error);
+                }}
+                error={supplierPhoneError}
+                helperText={!supplierPhoneError ? 'Vendor contact number' : undefined}
               />
             </div>
           </div>

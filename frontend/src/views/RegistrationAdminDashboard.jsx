@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import posService from '../services/pos.service';
-import { sanitizePhoneInput, validatePhoneInput, isScientificNotation } from '../utils/validation';
+import { sanitizePhoneInput, validatePhoneInput, isScientificNotation, guessCountryFromCurrency } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
-import { StatCard, ChartCard, LineChart, DonutChart } from '../components/ui';
+import { StatCard, ChartCard, LineChart, DonutChart, PhoneInput } from '../components/ui';
 import PlatformPerformanceAnalytics from '../components/PlatformPerformanceAnalytics';
 import SubscriptionLicenseModal from '../components/SubscriptionLicenseModal';
 import {
@@ -73,6 +73,7 @@ export default function RegistrationAdminDashboard({ setActiveTab: setParentTab 
     password: '',
     phone: '',
   });
+  const [onboardPhoneError, setOnboardPhoneError] = useState('');
 
   // Manage Subscription Modal State
   const [selectedRestForSub, setSelectedRestForSub] = useState(null);
@@ -232,10 +233,12 @@ export default function RegistrationAdminDashboard({ setActiveTab: setParentTab 
     if (onboardForm.phone && onboardForm.phone.trim()) {
       const err = validatePhoneInput(onboardForm.phone);
       if (err) {
+        setOnboardPhoneError(err);
         addToast(err, 'warning');
         return;
       }
     }
+    setOnboardPhoneError('');
 
     setSubmittingOnboard(true);
     try {
@@ -1183,13 +1186,17 @@ export default function RegistrationAdminDashboard({ setActiveTab: setParentTab 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1">Phone Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. +91 9876543210"
+                    <PhoneInput
+                      id="onboard-phone"
+                      label="Phone Number"
                       value={onboardForm.phone}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, phone: sanitizePhoneInput(e.target.value) })}
-                      className="w-full bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#233630] rounded-xl px-3 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] placeholder-[#9FB29E]"
+                      defaultCountry={guessCountryFromCurrency(onboardForm.currency || 'INR')}
+                      onChange={(val, meta) => {
+                        setOnboardForm({ ...onboardForm, phone: val });
+                        setOnboardPhoneError(meta.error);
+                      }}
+                      error={onboardPhoneError}
+                      helperText={!onboardPhoneError ? 'Owner official mobile number' : undefined}
                     />
                   </div>
                 </div>

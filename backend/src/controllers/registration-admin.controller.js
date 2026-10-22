@@ -1,5 +1,6 @@
 import * as adminService from '../services/registration-admin.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
+import { validatePhoneField } from '../utils/countryPhoneData.js';
 
 export const onboardRestaurant = async (req, res, next) => {
   try {
@@ -14,15 +15,18 @@ export const onboardRestaurant = async (req, res, next) => {
     }
 
     const candidatePhone = req.body.ownerPhone || ownerObj.phone || req.body.phone;
+    let normalizedPhone = undefined;
     if (candidatePhone !== undefined && candidatePhone !== null && String(candidatePhone).trim() !== '') {
-      const rawPhone = String(candidatePhone).trim();
-      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(rawPhone)) {
+      const countryCode = req.body.countryCode || req.body.country || ownerObj.country || ownerObj.countryCode;
+      const phoneCheck = validatePhoneField(candidatePhone, countryCode);
+      if (!phoneCheck.isValid) {
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
-          errors: ['Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)'],
+          errors: [phoneCheck.error],
         });
       }
+      normalizedPhone = phoneCheck.normalized;
     }
 
     const normalizedData = {
@@ -31,7 +35,7 @@ export const onboardRestaurant = async (req, res, next) => {
       ownerName: oName,
       ownerEmail: oEmail,
       password: oPass,
-      ownerPhone: candidatePhone ? String(candidatePhone).trim() : undefined,
+      ownerPhone: normalizedPhone,
       planId: req.body.planId,
     };
 
@@ -84,6 +88,17 @@ export const updateRestaurantSubscription = async (req, res, next) => {
 
 export const resetOwnerCredentials = async (req, res, next) => {
   try {
+    if (req.body.phone !== undefined && req.body.phone !== null && String(req.body.phone).trim() !== '') {
+      const phoneCheck = validatePhoneField(req.body.phone, req.body.countryCode || req.body.country);
+      if (!phoneCheck.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: [phoneCheck.error],
+        });
+      }
+      req.body.phone = phoneCheck.normalized;
+    }
     const result = await adminService.resetOwnerCredentials(req.params.id, req.body);
     return sendSuccess(res, 200, 'Owner credentials updated successfully', result);
   } catch (error) {

@@ -2,6 +2,7 @@ import { prisma } from '../config/env.js';
 import { hashPassword } from '../utils/password.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { cachedQuery, buildCacheKey, invalidateUserCache } from '../utils/cache.js';
+import { validatePhoneField } from '../utils/countryPhoneData.js';
 
 export const createStaff = async (restaurantId, data) => {
   if (!restaurantId) {
@@ -13,14 +14,13 @@ export const createStaff = async (restaurantId, data) => {
 
   let phoneValue = null;
   if (data.phone !== undefined && data.phone !== null && data.phone !== '') {
-    const raw = String(data.phone).trim();
-    if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
-      const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
+    const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+    if (!phoneCheck.isValid) {
+      const error = new Error(phoneCheck.error);
       error.statusCode = 400;
       throw error;
     }
-    const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-    phoneValue = cleaned.replace(/\D/g, '');
+    phoneValue = phoneCheck.normalized;
   }
 
   const hashedPassword = await hashPassword(data.password);
@@ -155,14 +155,13 @@ export const updateStaff = async (restaurantId, id, data) => {
     if (data.phone === null || data.phone === '') {
       updateData.phone = null;
     } else {
-      const raw = String(data.phone).trim();
-      if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(raw)) {
-        const error = new Error('Enter a valid 10-digit Indian mobile number starting with 6-9 (e.g. 9876543210 or +91 9876543210)');
+      const phoneCheck = validatePhoneField(data.phone, data.countryCode || data.phoneCountry || data.country);
+      if (!phoneCheck.isValid) {
+        const error = new Error(phoneCheck.error);
         error.statusCode = 400;
         throw error;
       }
-      const cleaned = raw.startsWith('+91') ? raw.slice(3).trim() : raw;
-      updateData.phone = cleaned.replace(/\D/g, '');
+      updateData.phone = phoneCheck.normalized;
     }
   }
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
