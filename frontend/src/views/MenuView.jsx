@@ -405,11 +405,10 @@ export default function MenuView() {
           <button
             type="button"
             onClick={() => setSelectedCatId('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
-              selectedCatId === 'ALL'
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${selectedCatId === 'ALL'
                 ? 'bg-[#173F36] text-white shadow-editorial font-bold'
                 : 'bg-[#F7EFE4] dark:bg-[#1E362E] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] border border-[#E4DCD0] dark:border-[#254238]'
-            }`}
+              }`}
           >
             All Categories ({items.length})
           </button>
@@ -418,11 +417,10 @@ export default function MenuView() {
               <button
                 type="button"
                 onClick={() => setSelectedCatId(c.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
-                  selectedCatId === c.id
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${selectedCatId === c.id
                     ? 'bg-[#173F36] text-white shadow-editorial font-bold'
                     : 'bg-[#F7EFE4] dark:bg-[#1E362E] text-[#657168] dark:text-[#9FB29E] hover:text-[#17251F] dark:hover:text-[#F7EFE4] hover:bg-[#E4DCD0] dark:hover:bg-[#254238] border border-[#E4DCD0] dark:border-[#254238]'
-                }`}
+                  }`}
               >
                 {c.name}
               </button>
@@ -550,11 +548,10 @@ export default function MenuView() {
                           type="button"
                           onClick={() => handleToggleAvailability(itm)}
                           aria-label={`Toggle availability for ${itm.name}`}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${
-                            itm.isAvailable
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#173F36] ${itm.isAvailable
                               ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
                               : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40 hover:bg-rose-100 dark:hover:bg-rose-950/60'
-                          }`}
+                            }`}
                         >
                           {itm.isAvailable ? (
                             <>

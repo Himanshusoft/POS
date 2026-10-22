@@ -203,12 +203,12 @@ export const getMenuItems = async (restaurantId, filters = {}) => {
     }
 
     const result = await findManyPaginated(prisma.menuItem, {
-        where,
-        include: {
-          category: true,
-          recipe: { include: { ingredients: { include: { inventoryItem: true } } } },
-        },
-        orderBy: { name: 'asc' },
+      where,
+      include: {
+        category: true,
+        recipe: { include: { ingredients: { include: { inventoryItem: true } } } },
+      },
+      orderBy: { name: 'asc' },
     }, filters);
 
     result.items = result.items.map((item) => {
