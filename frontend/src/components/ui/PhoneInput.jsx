@@ -295,7 +295,7 @@ export function PhoneInput({
       {/* Main Composite Input Box */}
       <div
         className={`
-          relative flex items-center rounded-xl transition-all duration-150 border
+          relative flex items-center rounded-xl transition-all duration-150 border w-full min-w-0
           bg-[#FFFDF9] dark:bg-[#111D1A]
           ${
             displayError
@@ -355,9 +355,9 @@ export function PhoneInput({
           aria-invalid={displayError ? 'true' : 'false'}
           aria-describedby={displayError ? errorId : helperText ? helperId : undefined}
           className={`
-            flex-1 px-3 py-2.5 text-xs sm:text-sm font-mono tracking-wider tabular-nums
+            phone-composite-input flex-1 min-w-0 w-full px-3 py-2.5 text-xs sm:text-sm font-mono tracking-wider tabular-nums
             text-[#17251F] dark:text-[#F7EFE4] placeholder-[#8D9890] dark:placeholder-[#657168]
-            bg-transparent outline-none rounded-r-xl
+            bg-transparent !bg-transparent border-0 !border-none outline-none focus:outline-none focus:ring-0 rounded-r-xl
             disabled:cursor-not-allowed
           `}
         />

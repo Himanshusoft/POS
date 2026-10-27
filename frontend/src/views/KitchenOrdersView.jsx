@@ -269,7 +269,7 @@ export default function KitchenOrdersView() {
       <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl overflow-hidden shadow-editorial">
         {initialLoading && orders.length === 0 ? (
           <div className="p-4">
-            <SkeletonTable rows={5} columns={6} />
+            <SkeletonTable rows={5} columns={7} />
           </div>
         ) : filteredOrders.length === 0 ? (
           <EmptyState
@@ -287,6 +287,7 @@ export default function KitchenOrdersView() {
                   <th className="px-5 py-4">Table / Order</th>
                   <th className="px-5 py-4">Waiter</th>
                   <th className="px-5 py-4">Ordered Items</th>
+                  <th className="px-5 py-4">Kitchen Note</th>
                   <th className="px-5 py-4">Order Time</th>
                   <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4 text-right">Actions</th>
@@ -317,6 +318,30 @@ export default function KitchenOrdersView() {
                           </div>
                         ))}
                       </div>
+                    </td>
+
+                    <td className="px-5 py-4 max-w-[200px]">
+                      {ord.notes ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          <div
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs max-w-full"
+                            title={ord.notes}
+                          >
+                            <span className="truncate max-w-[140px] font-medium">{ord.notes}</span>
+                          </div>
+                          {ord.notes.length > 20 && (
+                            <button
+                              type="button"
+                              onClick={() => openOrderDetail(ord)}
+                              className="text-[10px] font-bold text-[#173F36] dark:text-[#4EBA87] hover:underline cursor-pointer"
+                            >
+                              View Note
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[#8D9890] dark:text-[#657168] font-mono text-xs">—</span>
+                      )}
                     </td>
 
                     <td className="px-5 py-4 font-mono text-[#657168] dark:text-[#9FB29E] tabular-nums">

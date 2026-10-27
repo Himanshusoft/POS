@@ -214,7 +214,7 @@ export default function WaiterMenuView() {
                       {!item.isAvailable ? (
                         <>
                           <XCircle className="w-3 h-3 text-rose-600" />
-                          86 Out
+                          Out of Stock
                         </>
                       ) : isOrderable ? (
                         <>

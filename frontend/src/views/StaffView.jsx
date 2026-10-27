@@ -683,6 +683,7 @@ export default function StaffView() {
         }}
         title="Add Staff Member"
         subtitle="Assign role and provision credentials within plan capacity limits"
+        maxWidth="max-w-lg"
       >
         <form onSubmit={handleCreateStaff} className="space-y-4">
           <Input
@@ -714,30 +715,32 @@ export default function StaffView() {
             icon={Lock}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <PhoneInput
-              id="staff-phone"
-              label="Phone Number"
-              value={form.phone}
-              defaultCountry={defaultRestCountry}
-              onChange={(val, meta) => {
-                setForm((prev) => ({ ...prev, phone: val }));
-                setPhoneError(meta.error);
-              }}
-              error={phoneError}
-              helperText={!phoneError ? 'Optional contact phone' : undefined}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="min-w-0">
+              <PhoneInput
+                id="staff-phone"
+                label="Phone Number"
+                value={form.phone}
+                defaultCountry={defaultRestCountry}
+                onChange={(val, meta) => {
+                  setForm((prev) => ({ ...prev, phone: val }));
+                  setPhoneError(meta.error);
+                }}
+                error={phoneError}
+                helperText={!phoneError ? 'Optional contact phone' : undefined}
+              />
+            </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="min-w-0 flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Role *</label>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
+                className="w-full bg-[#F7EFE4] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold transition-colors"
               >
-                <option value="WAITER">Waiter {getAddRoleSlotsLabel('WAITER')}</option>
-                <option value="KITCHEN_ADMIN">Kitchen Admin {getAddRoleSlotsLabel('KITCHEN_ADMIN')}</option>
-                <option value="RECEPTIONIST">Receptionist {getAddRoleSlotsLabel('RECEPTIONIST')}</option>
+                <option value="WAITER" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Waiter {getAddRoleSlotsLabel('WAITER')}</option>
+                <option value="KITCHEN_ADMIN" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Kitchen Admin {getAddRoleSlotsLabel('KITCHEN_ADMIN')}</option>
+                <option value="RECEPTIONIST" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Receptionist {getAddRoleSlotsLabel('RECEPTIONIST')}</option>
               </select>
               {(() => {
                 let count = 0;
@@ -828,11 +831,11 @@ export default function StaffView() {
             <select
               value={editForm.role}
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-              className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold"
+              className="w-full bg-[#F7EFE4] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] text-[#17251F] dark:text-[#F7EFE4] rounded-xl px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] font-semibold transition-colors"
             >
-              <option value="WAITER">Waiter {getEditRoleSlotsLabel('WAITER')}</option>
-              <option value="KITCHEN_ADMIN">Kitchen Admin {getEditRoleSlotsLabel('KITCHEN_ADMIN')}</option>
-              <option value="RECEPTIONIST">Receptionist {getEditRoleSlotsLabel('RECEPTIONIST')}</option>
+              <option value="WAITER" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Waiter {getEditRoleSlotsLabel('WAITER')}</option>
+              <option value="KITCHEN_ADMIN" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Kitchen Admin {getEditRoleSlotsLabel('KITCHEN_ADMIN')}</option>
+              <option value="RECEPTIONIST" className="bg-[#FFFDF9] dark:bg-[#152320] text-[#17251F] dark:text-[#F7EFE4]">Receptionist {getEditRoleSlotsLabel('RECEPTIONIST')}</option>
             </select>
             {editForm.role !== editingStaff?.role && (() => {
               const targetRole = editForm.role;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import posService from '../services/pos.service';
 import { useAuth } from '../context/AuthContext';
+import { normalizeRole } from '../config/navigation';
 import { getImageUrl } from '../services/api';
 import { Skeleton } from '../components/ui/Skeleton';
 import {
@@ -64,7 +65,8 @@ function MenuItemImage({ image, name, categoryName }) {
 }
 
 export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
-  const { restaurant, addToast } = useAuth();
+  const { restaurant, role, user, addToast } = useAuth();
+  const isWaiter = normalizeRole(role || user?.role) === 'WAITER';
   const { invalidateOrders } = usePosMutations(restaurant?.id);
 
   const { data: categories = [], isLoading: loadingCategories } = useMenuCategories(restaurant?.id);
@@ -366,12 +368,12 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
         </div>
 
         {/* Food Items Grid */}
-        <div className="flex-1 overflow-y-auto pr-1 mt-1">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1 mt-1">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 space-y-3 shadow-editorial">
-                  <Skeleton className="h-32 w-full rounded-xl" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-4 space-y-3 shadow-editorial min-w-0">
+                  <Skeleton className="h-32 sm:h-36 w-full rounded-xl" />
                   <Skeleton className="h-4 w-3/4 rounded-lg" />
                   <Skeleton className="h-3 w-1/2 rounded-lg" />
                   <div className="flex justify-between items-center pt-2">
@@ -388,7 +390,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
               <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-0.5">Try searching with a different keyword or category.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredItems.map((item) => {
                 const categoryObj = categories.find((c) => c.id === item.categoryId);
                 const categoryName = categoryObj?.name || 'General';
@@ -399,14 +401,14 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                   <div
                     key={item.id}
                     onClick={() => addToCart(item)}
-                    className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none group shadow-editorial ${
+                    className={`border rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 select-none group shadow-editorial min-w-0 w-full ${
                       !isOrderable
-                        ? 'opacity-80 border-[#E4DCD0] dark:border-[#1E362E] bg-slate-50/80 dark:bg-slate-900/40 cursor-not-allowed hover:border-amber-400/60'
+                        ? 'opacity-85 border-[#E4DCD0] dark:border-[#1E362E] bg-slate-50/80 dark:bg-slate-900/40 cursor-not-allowed hover:border-amber-400/60'
                         : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36] dark:hover:border-[#9FB29E] hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
                     }`}
                     title={!isOrderable ? availability.reasonMessage : undefined}
                   >
-                    <div>
+                    <div className="min-w-0">
                       {/* Image / Visual */}
                       <MenuItemImage
                         image={item.imageUrl || item.image}
@@ -414,10 +416,10 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                         categoryName={categoryName}
                       />
 
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className={`font-serif font-bold text-sm line-clamp-1 transition-colors ${
+                      <div className="flex items-start justify-between gap-2 mb-1.5 min-w-0">
+                        <span className={`font-serif font-bold text-sm leading-snug break-words line-clamp-2 transition-colors min-w-0 flex-1 ${
                           !isOrderable ? 'text-[#657168] dark:text-[#9FB29E]' : 'text-[#17251F] dark:text-[#F7EFE4] group-hover:text-[#173F36] dark:group-hover:text-[#9FB29E]'
-                        }`}>
+                        }`} title={item.name}>
                           {item.name}
                         </span>
                         {(item.dietary || item.isVeg !== undefined) && (
@@ -446,53 +448,55 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
 
                       {/* Prominent Warning Callout when not orderable */}
                       {!isOrderable && (
-                        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-1.5 mb-2 text-[11px] text-amber-900 dark:text-amber-300 leading-snug flex items-start gap-1">
+                        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-2 mb-2 text-[11px] text-amber-900 dark:text-amber-300 leading-snug flex items-start gap-1.5 min-w-0">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <span className="line-clamp-2 font-medium">
+                          <span className="line-clamp-2 font-medium break-words flex-1 min-w-0" title={availability.reasonMessage}>
                             {availability.reasonMessage}
                           </span>
                         </div>
                       )}
 
                       {item.description && (
-                        <p className="text-xs text-[#657168] dark:text-[#9FB29E] line-clamp-2 mb-3 leading-relaxed">
+                        <p className="text-xs text-[#657168] dark:text-[#9FB29E] line-clamp-2 mb-3 leading-relaxed break-words" title={item.description}>
                           {item.description}
                         </p>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-2">
-                      <span className="font-extrabold text-[#173F36] dark:text-[#9FB29E] text-sm font-mono tabular-nums">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#E4DCD0] dark:border-[#1E362E] mt-auto">
+                      <span className="font-extrabold text-[#173F36] dark:text-[#9FB29E] text-sm font-mono tabular-nums shrink-0">
                         {currency}{Number(item.price).toFixed(2)}
                       </span>
                       {!isOrderable ? (
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex flex-wrap items-center gap-1.5 justify-end min-w-0">
                           <span
-                            className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 shrink-0 ${
                               !item.isAvailable
                                 ? 'text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'
                                 : 'text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700'
                             }`}
                           >
-                            <AlertTriangle className="w-3 h-3 text-amber-600" />
-                            {!item.isAvailable
-                              ? '86 Out'
-                              : availability.reasonCode === 'NO_RECIPE'
-                              ? 'No Recipe'
-                              : 'Low Stock'}
+                            <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>
+                              {!item.isAvailable
+                                ? 'Out of Stock'
+                                : availability.reasonCode === 'NO_RECIPE'
+                                ? 'No Recipe'
+                                : 'Low Stock'}
+                            </span>
                           </span>
-                          <span className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] bg-[#F7EFE4] dark:bg-[#101A18] px-2 py-0.5 rounded-md border border-[#E4DCD0] dark:border-[#1E362E]">
+                          <span className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] bg-[#F7EFE4] dark:bg-[#101A18] px-1.5 py-0.5 rounded-md border border-[#E4DCD0] dark:border-[#1E362E] shrink-0">
                             Unavailable
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 shrink-0">
                           {availability.maxOrderableQuantity <= 5 && availability.maxOrderableQuantity > 0 && (
-                            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 shrink-0">
                               {availability.maxOrderableQuantity} left
                             </span>
                           )}
-                          <span className="w-8 h-8 rounded-xl bg-[#173F36]/10 group-hover:bg-[#173F36] text-[#173F36] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                          <span className="w-8 h-8 rounded-xl bg-[#173F36]/10 group-hover:bg-[#173F36] text-[#173F36] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs shrink-0">
                             <Plus className="w-4 h-4 stroke-[2.5]" />
                           </span>
                         </div>
@@ -527,7 +531,7 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
           </div>
 
           {/* Table & Order Type Selectors */}
-          <div className="grid grid-cols-2 gap-2">
+          {isWaiter ? (
             <div>
               <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
                 Table
@@ -545,22 +549,42 @@ export default function PosTerminalView({ preSelectedTable, onOrderPlaced }) {
                 ))}
               </select>
             </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
+                  Table
+                </label>
+                <select
+                  value={selectedTableId}
+                  onChange={(e) => setSelectedTableId(e.target.value)}
+                  className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] transition-all"
+                >
+                  <option value="">Select Table</option>
+                  {tables.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Table #{t.tableNumber} ({t.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
-                Type
-              </label>
-              <select
-                value={orderType}
-                onChange={(e) => setOrderType(e.target.value)}
-                className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] transition-all"
-              >
-                <option value="DINE_IN">Dine-In</option>
-                <option value="TAKEAWAY">Takeaway</option>
-                <option value="DELIVERY">Delivery</option>
-              </select>
+              <div>
+                <label className="text-[10px] font-bold text-[#657168] dark:text-[#9FB29E] uppercase tracking-wider block mb-1 font-sans">
+                  Type
+                </label>
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
+                  className="w-full bg-[#F7EFE4]/60 dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-2.5 py-1.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] transition-all"
+                >
+                  <option value="DINE_IN">Dine-In</option>
+                  <option value="TAKEAWAY">Takeaway</option>
+                  <option value="DELIVERY">Delivery</option>
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Active Table Session Banner */}
           {activeOrderOnTable && (

@@ -486,7 +486,6 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         { id: 'restaurant', label: 'Restaurant Brand & Info', icon: Building2 },
         { id: 'operations', label: 'Operations & Billing', icon: Receipt },
         { id: 'kitchen', label: 'Kitchen & KDS Rules', icon: ChefHat },
-        { id: 'inventory', label: 'Inventory Policies', icon: Boxes },
         { id: 'security', label: 'Security & Password', icon: Lock },
         { id: 'preferences', label: 'Station Preferences', icon: Sliders },
       ];
@@ -1087,99 +1086,7 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
         </div>
       )}
 
-      {/* TAB: INVENTORY & WASTAGE POLICIES (Owner Only) */}
-      {activeTab === 'inventory' && role === 'RESTAURANT_OWNER' && (
-        <div className="bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-2xl p-6 shadow-editorial space-y-6">
-          <div className="border-b border-[#E4DCD0] dark:border-[#1E362E] pb-4">
-            <h3 className="text-base font-serif font-bold text-[#17251F] dark:text-[#F7EFE4] flex items-center gap-2">
-              <Boxes className="w-5 h-5 text-[#173F36] dark:text-[#9FB29E]" />
-              <span>Inventory & Stock Depletion Policies</span>
-            </h3>
-            <p className="text-xs text-[#657168] dark:text-[#9FB29E] mt-1">
-              Control recipe Bill of Materials (BOM) inventory consumption and low-stock alert thresholds
-            </p>
-          </div>
 
-          <form onSubmit={handleSaveInventoryPolicy} className="space-y-4 max-w-xl">
-            <div>
-              <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">
-                Default Low-Stock Alert Threshold
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="1000"
-                value={inventoryPolicyForm.lowStockThresholdDefault}
-                onChange={(e) =>
-                  setInventoryPolicyForm({
-                    ...inventoryPolicyForm,
-                    lowStockThresholdDefault: e.target.value === '' ? '' : Number(e.target.value),
-                  })
-                }
-                className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-              />
-              <span className="text-[10px] text-[#657168] dark:text-[#9FB29E] mt-1 block">
-                Ingredients with stock below this level trigger amber badges on dashboard
-              </span>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={inventoryPolicyForm.autoDeductOnPreparation}
-                  onChange={(e) =>
-                    setInventoryPolicyForm({
-                      ...inventoryPolicyForm,
-                      autoDeductOnPreparation: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
-                />
-                <div>
-                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Auto-Deduct Ingredients via Recipe BOM</div>
-                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">
-                    Automatically subtracts inventory items as soon as a dish order is marked READY or SERVED
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={inventoryPolicyForm.notifyLowStockOnLogin}
-                  onChange={(e) =>
-                    setInventoryPolicyForm({
-                      ...inventoryPolicyForm,
-                      notifyLowStockOnLogin: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
-                />
-                <div>
-                  <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Display Low-Stock Warning Banner at Login</div>
-                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Alerts kitchen chefs and administrators upon signing in</div>
-                </div>
-              </label>
-            </div>
-
-            <div className="pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={savingSection === 'inventory'}
-              >
-                {savingSection === 'inventory' ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                <span>Save Stock Policies</span>
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* TAB: PLATFORM GOVERNANCE (Super Admin Only) */}
       {activeTab === 'platform' && role === 'RESTAURANT_REGISTRATION_ADMIN' && (

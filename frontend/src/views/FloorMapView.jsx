@@ -174,7 +174,7 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
       </div>
 
       {/* KPI Stats Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div
           onClick={() => setFilterStatus('ALL')}
           className={`cursor-pointer p-4 rounded-2xl border transition-all ${
@@ -215,21 +215,6 @@ export default function FloorMapView({ onSelectTableForOrder, onNavigateToBillin
             Occupied
           </div>
           <div className="text-2xl font-bold font-serif text-rose-800 dark:text-rose-200 mt-1">{summary.occupied}</div>
-        </div>
-
-        <div
-          onClick={() => setFilterStatus('RESERVED')}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all ${
-            filterStatus === 'RESERVED'
-              ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-500 ring-1 ring-amber-500 shadow-editorial-md'
-              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-amber-400 shadow-editorial'
-          }`}
-        >
-          <div className="text-xs font-semibold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            Reserved
-          </div>
-          <div className="text-2xl font-bold font-serif text-amber-900 dark:text-amber-200 mt-1">{summary.reserved}</div>
         </div>
       </div>
 

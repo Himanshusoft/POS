@@ -442,6 +442,24 @@ body {
   border-color: #382F26 !important;
 }
 
+.dark input.phone-composite-input,
+input.phone-composite-input {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.dark select option,
+select option {
+  background-color: #152320;
+  color: #F7EFE4;
+}
+
+html:not(.dark) select option {
+  background-color: #FFFDF9;
+  color: #17251F;
+}
+
 .dark input::placeholder,
 .dark textarea::placeholder {
   color: #73685C !important;

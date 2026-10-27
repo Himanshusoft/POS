@@ -829,7 +829,7 @@ export default function MenuView() {
         onClose={() => setShowRecipeModal(false)}
         title="Recipe Bill of Materials (BOM)"
         subtitle={`Linked to ${selectedItemForRecipe?.name}`}
-        maxWidth="max-w-xl"
+        maxWidth="max-w-2xl"
         footer={
           <div className="flex justify-end gap-3">
             <Button
@@ -882,7 +882,7 @@ export default function MenuView() {
                 : 'No recipe ingredients configured yet. Click "Add Ingredient" to link raw materials.'}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1">
               {recipeIngredients.map((ing, idx) => {
                 const inv = inventoryItems.find((item) => item.id === ing.inventoryItemId) || ing.inventoryItem;
                 const stockText = inv ? `${inv.currentStock ?? 0} ${inv.unit || ing.unit || 'unit'}` : null;
@@ -890,7 +890,7 @@ export default function MenuView() {
                 return (
                   <div
                     key={idx}
-                    className="bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex items-center gap-3"
+                    className="bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl p-3 flex items-center gap-3 min-w-0"
                   >
                     {isRestaurantAdmin ? (
                       <>
@@ -903,11 +903,11 @@ export default function MenuView() {
                           )}
                         </div>
 
-                        <div className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums text-center font-semibold shadow-2xs shrink-0">
+                        <div className="w-20 sm:w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums text-center font-semibold shadow-2xs shrink-0">
                           {ing.quantityRequired}
                         </div>
 
-                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12 font-medium shrink-0">
+                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums min-w-[5.5rem] w-24 shrink-0 font-medium whitespace-nowrap">
                           {ing.unit || inv?.unit || 'unit'}
                         </span>
                       </>
@@ -925,7 +925,7 @@ export default function MenuView() {
                               )
                             );
                           }}
-                          className="flex-1 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4]"
+                          className="flex-1 min-w-0 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4]"
                         >
                           {inventoryItems.map((invItem) => (
                             <option key={invItem.id} value={invItem.id}>
@@ -945,10 +945,10 @@ export default function MenuView() {
                               prev.map((r, i) => (i === idx ? { ...r, quantityRequired: e.target.value } : r))
                             )
                           }
-                          className="w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums"
+                          className="w-20 sm:w-24 bg-[#FFFDF9] dark:bg-[#152320] border border-[#E4DCD0] dark:border-[#1E362E] rounded-lg px-2.5 py-2 text-xs text-[#17251F] dark:text-[#F7EFE4] font-mono tabular-nums shrink-0"
                         />
 
-                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums w-12">{ing.unit || 'unit'}</span>
+                        <span className="text-xs text-[#657168] dark:text-[#9FB29E] font-mono tabular-nums min-w-[5.5rem] w-24 shrink-0 font-medium whitespace-nowrap">{ing.unit || 'unit'}</span>
 
                         <button
                           type="button"
@@ -956,7 +956,7 @@ export default function MenuView() {
                             setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx))
                           }
                           aria-label="Remove ingredient"
-                          className="p-1.5 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                          className="p-1.5 text-[#657168] dark:text-[#9FB29E] hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer shrink-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
