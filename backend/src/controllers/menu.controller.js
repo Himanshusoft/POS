@@ -1,5 +1,6 @@
 import * as menuService from '../services/menu.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinaryUpload.js';
 
 // Categories
 export const createCategory = async (req, res, next) => {
@@ -49,9 +50,12 @@ export const deleteCategory = async (req, res, next) => {
 
 // Menu Items
 export const createMenuItem = async (req, res, next) => {
+  let uploadedCloudinaryAsset = null;
   try {
     if (req.file) {
-      req.body.imageUrl = `/uploads/menu/${req.file.filename}`;
+      uploadedCloudinaryAsset = await uploadToCloudinary(req.file.buffer, 'apexpos/menu');
+      req.body.imageUrl = uploadedCloudinaryAsset.secure_url;
+      req.body.imagePublicId = uploadedCloudinaryAsset.public_id;
     }
     if (req.body.price !== undefined) {
       req.body.price = Number(req.body.price);
@@ -68,7 +72,18 @@ export const createMenuItem = async (req, res, next) => {
     if (req.body.prepTime !== undefined && req.body.prepTime !== null && req.body.prepTime !== '') {
       req.body.prepTime = Number(req.body.prepTime);
     }
-    const item = await menuService.createMenuItem(req.user.restaurantId, req.body);
+
+    let item;
+    try {
+      item = await menuService.createMenuItem(req.user.restaurantId, req.body);
+    } catch (dbError) {
+      // Failure safety: cleanup newly uploaded asset if database creation fails
+      if (uploadedCloudinaryAsset?.public_id) {
+        await deleteFromCloudinary(uploadedCloudinaryAsset.public_id);
+      }
+      throw dbError;
+    }
+
     return sendSuccess(res, 201, 'Menu item created successfully', item);
   } catch (error) {
     next(error);
@@ -83,10 +98,21 @@ export const uploadMenuItemImage = async (req, res, next) => {
         message: 'No image file uploaded. Please select an image.',
       });
     }
-    const imageUrl = `/uploads/menu/${req.file.filename}`;
-    return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
+
+    const uploadResult = await uploadToCloudinary(req.file.buffer, 'apexpos/menu');
+    return sendSuccess(res, 200, 'Image uploaded successfully', {
+      imageUrl: uploadResult.secure_url,
+      imagePublicId: uploadResult.public_id,
+      secure_url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+    });
   } catch (error) {
-    next(error);
+    console.error('Cloudinary upload error:', error.message || error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload image to storage service',
+      error: { code: 'UPLOAD_FAILED' },
+    });
   }
 };
 
@@ -109,9 +135,12 @@ export const getMenuItemById = async (req, res, next) => {
 };
 
 export const updateMenuItem = async (req, res, next) => {
+  let uploadedCloudinaryAsset = null;
   try {
     if (req.file) {
-      req.body.imageUrl = `/uploads/menu/${req.file.filename}`;
+      uploadedCloudinaryAsset = await uploadToCloudinary(req.file.buffer, 'apexpos/menu');
+      req.body.imageUrl = uploadedCloudinaryAsset.secure_url;
+      req.body.imagePublicId = uploadedCloudinaryAsset.public_id;
     }
     if (req.body.price !== undefined) {
       req.body.price = Number(req.body.price);
@@ -124,6 +153,7 @@ export const updateMenuItem = async (req, res, next) => {
     }
     if (req.body.removeImage === 'true' || req.body.removeImage === true) {
       req.body.imageUrl = null;
+      req.body.imagePublicId = null;
     }
     if (req.body.preparationTime !== undefined && req.body.preparationTime !== null && req.body.preparationTime !== '') {
       req.body.preparationTime = Number(req.body.preparationTime);
@@ -131,7 +161,18 @@ export const updateMenuItem = async (req, res, next) => {
     if (req.body.prepTime !== undefined && req.body.prepTime !== null && req.body.prepTime !== '') {
       req.body.prepTime = Number(req.body.prepTime);
     }
-    const item = await menuService.updateMenuItem(req.user.restaurantId, req.params.id, req.body);
+
+    let item;
+    try {
+      item = await menuService.updateMenuItem(req.user.restaurantId, req.params.id, req.body);
+    } catch (dbError) {
+      // Failure safety: cleanup newly uploaded asset if database update fails
+      if (uploadedCloudinaryAsset?.public_id) {
+        await deleteFromCloudinary(uploadedCloudinaryAsset.public_id);
+      }
+      throw dbError;
+    }
+
     return sendSuccess(res, 200, 'Menu item updated successfully', item);
   } catch (error) {
     next(error);

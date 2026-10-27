@@ -203,14 +203,17 @@ export default function MenuView() {
     setSavingItem(true);
     try {
       let finalImageUrl = editingItem?.imageUrl || null;
+      let finalImagePublicId = editingItem?.imagePublicId || undefined;
 
       if (itemForm.imageFile) {
         const uploadRes = await posService.menu.uploadImage(itemForm.imageFile);
         if (uploadRes?.success && uploadRes?.data?.imageUrl) {
           finalImageUrl = uploadRes.data.imageUrl;
+          finalImagePublicId = uploadRes.data.imagePublicId || undefined;
         }
       } else if (itemForm.removeImage) {
         finalImageUrl = null;
+        finalImagePublicId = null;
       }
 
       const payload = {
@@ -224,6 +227,7 @@ export default function MenuView() {
         preparationTime: itemForm.preparationTime !== '' && itemForm.preparationTime !== null && !isNaN(Number(itemForm.preparationTime)) ? Number(itemForm.preparationTime) : 15,
         prepTime: itemForm.preparationTime !== '' && itemForm.preparationTime !== null && !isNaN(Number(itemForm.preparationTime)) ? Number(itemForm.preparationTime) : 15,
         imageUrl: finalImageUrl,
+        imagePublicId: finalImagePublicId,
         removeImage: itemForm.removeImage || undefined,
       };
 

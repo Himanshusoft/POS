@@ -39,6 +39,9 @@ export const validateCreateMenuItem = (data) => {
   if (data?.imageUrl !== undefined && data.imageUrl !== null && typeof data.imageUrl !== 'string') {
     errors.push('imageUrl must be a string or null');
   }
+  if (data?.imagePublicId !== undefined && data.imagePublicId !== null && typeof data.imagePublicId !== 'string') {
+    errors.push('imagePublicId must be a string or null');
+  }
   const prep = data?.preparationTime !== undefined ? data.preparationTime : data?.prepTime;
   if (prep !== undefined && prep !== null && prep !== '') {
     if ((typeof prep === 'string' && /[eE]/.test(prep)) || !Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
@@ -66,13 +69,16 @@ export const validateUpdateMenuItem = (data) => {
   if (data?.imageUrl !== undefined && data.imageUrl !== null && typeof data.imageUrl !== 'string') {
     errors.push('imageUrl must be a string or null');
   }
+  if (data?.imagePublicId !== undefined && data.imagePublicId !== null && typeof data.imagePublicId !== 'string') {
+    errors.push('imagePublicId must be a string or null');
+  }
   const prep = data?.preparationTime !== undefined ? data.preparationTime : data?.prepTime;
   if (prep !== undefined && prep !== null && prep !== '') {
     if ((typeof prep === 'string' && /[eE]/.test(prep)) || !Number.isInteger(Number(prep)) || Number(prep) < 0 || Number(prep) > 1440) {
       errors.push('preparationTime must be a valid non-negative integer in minutes');
     }
   }
-  if (!Object.keys(data || {}).some((key) => ['name', 'description', 'price', 'categoryId', 'isAvailable', 'dietary', 'imageUrl', 'removeImage', 'preparationTime', 'prepTime'].includes(key))) errors.push('At least one supported field is required');
+  if (!Object.keys(data || {}).some((key) => ['name', 'description', 'price', 'categoryId', 'isAvailable', 'dietary', 'imageUrl', 'imagePublicId', 'removeImage', 'preparationTime', 'prepTime'].includes(key))) errors.push('At least one supported field is required');
   return { isValid: errors.length === 0, errors };
 };
 

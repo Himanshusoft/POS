@@ -5,6 +5,7 @@ import { prisma } from '../config/env.js';
 import { findManyPaginated } from '../utils/pagination.js';
 import { evaluateMenuItemAvailability } from './inventoryAvailability.service.js';
 import { cachedQuery, buildCacheKey, invalidateMenuCache } from '../utils/cache.js';
+import { deleteFromCloudinary, extractPublicIdFromUrl } from '../utils/cloudinaryUpload.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,36 +152,63 @@ export const createMenuItem = async (restaurantId, data) => {
 
   const rawPrep = data.preparationTime !== undefined ? data.preparationTime : data.prepTime;
   const prepTimeVal = rawPrep !== undefined && rawPrep !== null && rawPrep !== '' ? Number(rawPrep) : null;
+  const imagePublicId = data.imagePublicId !== undefined ? data.imagePublicId : (data.imageUrl ? extractPublicIdFromUrl(data.imageUrl) : null);
 
-  const result = await prisma.menuItem.create({
-    data: {
-      restaurantId,
-      categoryId: data.categoryId || null,
-      name,
-      description: data.description || null,
-      price: Number(data.price),
-      imageUrl: data.imageUrl || null,
-      isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
-      dietary: data.dietary || null,
-      ...(prepTimeVal !== null ? {
-        recipe: {
-          create: {
-            prepTime: prepTimeVal,
-          },
-        },
-      } : {}),
-    },
-    include: {
-      category: true,
+  const createData = {
+    restaurantId,
+    categoryId: data.categoryId || null,
+    name,
+    description: data.description || null,
+    price: Number(data.price),
+    imageUrl: data.imageUrl || null,
+    ...(imagePublicId ? { imagePublicId } : {}),
+    isAvailable: data.isAvailable !== undefined ? data.isAvailable : true,
+    dietary: data.dietary || null,
+    ...(prepTimeVal !== null ? {
       recipe: {
-        include: {
-          ingredients: {
-            include: { inventoryItem: true },
+        create: {
+          prepTime: prepTimeVal,
+        },
+      },
+    } : {}),
+  };
+
+  let result;
+  try {
+    result = await prisma.menuItem.create({
+      data: createData,
+      include: {
+        category: true,
+        recipe: {
+          include: {
+            ingredients: {
+              include: { inventoryItem: true },
+            },
           },
         },
       },
-    },
-  });
+    });
+  } catch (err) {
+    if (createData.imagePublicId && err.message && (err.message.includes('imagePublicId') || err.code === 'P2002' || err.code === 'P2009' || err.code === 'P2019')) {
+      delete createData.imagePublicId;
+      result = await prisma.menuItem.create({
+        data: createData,
+        include: {
+          category: true,
+          recipe: {
+            include: {
+              ingredients: {
+                include: { inventoryItem: true },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      throw err;
+    }
+  }
+
   await invalidateMenuCache(restaurantId);
   return {
     ...result,
@@ -273,56 +301,101 @@ export const updateMenuItem = async (restaurantId, id, data) => {
     }
   }
 
+  const oldPublicId = existingItem.imagePublicId || extractPublicIdFromUrl(existingItem.imageUrl);
+  const oldImageUrl = existingItem.imageUrl;
+
   let targetImageUrl = undefined;
+  let targetImagePublicId = undefined;
+  let imageChanged = false;
+
   if (data.removeImage === true || data.removeImage === 'true' || data.imageUrl === null) {
     targetImageUrl = null;
-    if (existingItem.imageUrl) {
-      removeLocalUploadFile(existingItem.imageUrl);
-    }
+    targetImagePublicId = null;
+    imageChanged = Boolean(existingItem.imageUrl || existingItem.imagePublicId);
   } else if (data.imageUrl !== undefined) {
     targetImageUrl = data.imageUrl;
-    if (existingItem.imageUrl && existingItem.imageUrl !== data.imageUrl) {
-      removeLocalUploadFile(existingItem.imageUrl);
-    }
+    targetImagePublicId = data.imagePublicId !== undefined ? data.imagePublicId : extractPublicIdFromUrl(data.imageUrl);
+    imageChanged = (existingItem.imageUrl !== targetImageUrl);
   }
 
   const rawPrep = data.preparationTime !== undefined ? data.preparationTime : data.prepTime;
   const prepTimeVal = rawPrep !== undefined && rawPrep !== null && rawPrep !== '' ? Number(rawPrep) : (rawPrep === null ? null : undefined);
 
-  const result = await prisma.menuItem.update({
-    where: { id },
-    data: {
-      name: data.name ? data.name.trim() : undefined,
-      description: data.description !== undefined ? data.description : undefined,
-      price: data.price !== undefined ? Number(data.price) : undefined,
-      categoryId: data.categoryId !== undefined ? data.categoryId : undefined,
-      imageUrl: targetImageUrl,
-      isAvailable: data.isAvailable !== undefined ? data.isAvailable : undefined,
-      dietary: data.dietary !== undefined ? (data.dietary || null) : undefined,
-      ...(prepTimeVal !== undefined ? {
-        recipe: {
-          upsert: {
-            create: {
-              prepTime: prepTimeVal,
-            },
-            update: {
-              prepTime: prepTimeVal,
-            },
-          },
-        },
-      } : {}),
-    },
-    include: {
-      category: true,
+  const updateData = {
+    name: data.name ? data.name.trim() : undefined,
+    description: data.description !== undefined ? data.description : undefined,
+    price: data.price !== undefined ? Number(data.price) : undefined,
+    categoryId: data.categoryId !== undefined ? data.categoryId : undefined,
+    imageUrl: targetImageUrl,
+    ...(targetImagePublicId !== undefined ? { imagePublicId: targetImagePublicId } : {}),
+    isAvailable: data.isAvailable !== undefined ? data.isAvailable : undefined,
+    dietary: data.dietary !== undefined ? (data.dietary || null) : undefined,
+    ...(prepTimeVal !== undefined ? {
       recipe: {
-        include: {
-          ingredients: {
-            include: { inventoryItem: true },
+        upsert: {
+          create: {
+            prepTime: prepTimeVal,
+          },
+          update: {
+            prepTime: prepTimeVal,
           },
         },
       },
-    },
-  });
+    } : {}),
+  };
+
+  let result;
+  try {
+    result = await prisma.menuItem.update({
+      where: { id },
+      data: updateData,
+      include: {
+        category: true,
+        recipe: {
+          include: {
+            ingredients: {
+              include: { inventoryItem: true },
+            },
+          },
+        },
+      },
+    });
+  } catch (err) {
+    if (updateData.imagePublicId !== undefined && err.message && (err.message.includes('imagePublicId') || err.code === 'P2009' || err.code === 'P2019')) {
+      delete updateData.imagePublicId;
+      result = await prisma.menuItem.update({
+        where: { id },
+        data: updateData,
+        include: {
+          category: true,
+          recipe: {
+            include: {
+              ingredients: {
+                include: { inventoryItem: true },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  // Section 10 replacement order: delete old image asset only AFTER DB update succeeds
+  if (imageChanged) {
+    if (oldPublicId && oldPublicId !== targetImagePublicId) {
+      try {
+        await deleteFromCloudinary(oldPublicId);
+      } catch (cleanupErr) {
+        console.error('Failed to cleanup old Cloudinary image:', cleanupErr.message || cleanupErr);
+      }
+    }
+    if (oldImageUrl && oldImageUrl !== targetImageUrl) {
+      removeLocalUploadFile(oldImageUrl);
+    }
+  }
+
   await invalidateMenuCache(restaurantId);
   return {
     ...result,
@@ -359,6 +432,17 @@ export const deleteMenuItem = async (restaurantId, id) => {
     throw error;
   }
 
+  // Delete Cloudinary asset if present
+  const publicId = item.imagePublicId || extractPublicIdFromUrl(item.imageUrl);
+  if (publicId) {
+    try {
+      await deleteFromCloudinary(publicId);
+    } catch (err) {
+      console.error('Failed to remove Cloudinary image on menu item delete:', err.message || err);
+    }
+  }
+
+  // Delete local file if it was a legacy local upload
   if (item.imageUrl) {
     removeLocalUploadFile(item.imageUrl);
   }
