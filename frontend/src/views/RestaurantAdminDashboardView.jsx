@@ -82,7 +82,7 @@ export default function RestaurantAdminDashboardView({ setActiveTab }) {
         refetchPayments(),
         refetchMenu(),
       ]);
-      addToast('Dashboard analytics refreshed', 'success');
+      addToast('Dashboard analytics refreshed', 'success', 5000, { silent: true });
     } catch (err) {
       addToast(err.message || 'Failed to refresh analytics', 'error');
     }

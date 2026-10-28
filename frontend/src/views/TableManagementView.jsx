@@ -48,6 +48,13 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
   const [editForm, setEditForm] = useState({ tableNumber: '', capacity: 4, status: 'AVAILABLE' });
   const [submitting, setSubmitting] = useState(false);
 
+  // Reset filter to ALL if RESERVED was previously selected
+  useEffect(() => {
+    if (filterStatus === 'RESERVED') {
+      setFilterStatus('ALL');
+    }
+  }, [filterStatus]);
+
   const handleCreateTable = async (e) => {
     e.preventDefault();
     const trimmedNumber = addForm.tableNumber.trim();
@@ -232,7 +239,7 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
       </div>
 
       {/* Real-time Status KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div
           onClick={() => setFilterStatus('ALL')}
           role="button"
@@ -298,35 +305,12 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-rose-800 dark:text-rose-300 font-mono tabular-nums mt-1">{summary.occupied}</div>
         </div>
-
-        <div
-          onClick={() => setFilterStatus('RESERVED')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setFilterStatus('RESERVED');
-            }
-          }}
-          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
-            filterStatus === 'RESERVED'
-              ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500 shadow-editorial'
-              : 'bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E] hover:border-amber-300 shadow-editorial'
-          }`}
-        >
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-1.5 font-sans">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            Reserved
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-amber-900 dark:text-amber-300 font-mono tabular-nums mt-1">{summary.reserved}</div>
-        </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5 bg-[#FFFDF9] dark:bg-[#152320] p-3.5 sm:p-4 rounded-2xl border border-[#E4DCD0] dark:border-[#1E362E] shadow-editorial">
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {['ALL', 'AVAILABLE', 'OCCUPIED', 'RESERVED', 'OUT_OF_SERVICE'].map((status) => (
+          {['ALL', 'AVAILABLE', 'OCCUPIED', 'OUT_OF_SERVICE'].map((status) => (
             <button
               key={status}
               type="button"
@@ -343,8 +327,6 @@ export default function TableManagementView({ onSelectTableForOrder, onNavigateT
                 ? `Available (${summary.available})`
                 : status === 'OCCUPIED'
                 ? `Occupied (${summary.occupied})`
-                : status === 'RESERVED'
-                ? `Reserved (${summary.reserved})`
                 : `Out of Service (${summary.outOfService})`}
             </button>
           ))}

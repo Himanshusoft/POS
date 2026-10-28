@@ -45,7 +45,7 @@ export default function ReportsView() {
   const loadReports = async () => {
     try {
       await Promise.all([refetchDash(), refetchSales(), refetchInv(), refetchWst(), refetchFin()]);
-      addToast('Analytical reports refreshed', 'success');
+      addToast('Analytical reports refreshed', 'success', 5000, { silent: true });
     } catch (err) {
       addToast(err.message || 'Failed to compile analytical reports', 'error');
     }

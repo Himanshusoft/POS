@@ -77,7 +77,7 @@ export default function WaiterDashboardView({ setActiveTab, onSelectTableForOrde
   const fetchDashboard = async (isManual = false) => {
     try {
       await refetch();
-      if (isManual) addToast('Waiter dashboard refreshed', 'success');
+      if (isManual) addToast('Waiter dashboard refreshed', 'success', 5000, { silent: true });
     } catch (err) {
       if (isManual) addToast(err.message || 'Failed to refresh dashboard', 'error');
     }

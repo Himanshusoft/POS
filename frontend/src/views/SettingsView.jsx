@@ -23,7 +23,17 @@ import {
 } from 'lucide-react';
 
 export default function SettingsView({ initialTab = 'profile', onTabChange }) {
-  const { restaurant, setRestaurant, user, setUser, addToast, role } = useAuth();
+  const {
+    restaurant,
+    setRestaurant,
+    user,
+    setUser,
+    addToast,
+    role,
+    stationPreferences,
+    updateStationPreferences,
+    persistStationPreferences,
+  } = useAuth();
 
   const normalizeCurrencyToCode = (val) => {
     if (!val) return 'INR';
@@ -121,14 +131,14 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
   const [supportPhoneError, setSupportPhoneError] = useState('');
   const defaultRestCountry = guessCountryFromCurrency(restForm.currency || restaurant?.currency || 'INR');
 
-  const [userPrefForm, setUserPrefForm] = useState({
+  const [userPrefForm, setUserPrefForm] = useState(() => ({
     theme: 'sandstone',
-    soundAlerts: true,
-    orderNotifications: true,
+    soundAlerts: stationPreferences?.soundAlerts ?? true,
+    orderNotifications: stationPreferences?.orderNotifications ?? true,
     defaultScreen: 'dashboard',
     density: 'comfortable',
     quickCash: false,
-  });
+  }));
 
   const {
     data: settingsData = null,
@@ -136,6 +146,17 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     refetch: refetchSettings,
   } = useSettings(restaurant?.id);
   const { invalidateSettings } = usePosMutations(restaurant?.id);
+
+  // Sync userPrefForm when auth stationPreferences changes
+  useEffect(() => {
+    if (stationPreferences) {
+      setUserPrefForm((prev) => ({
+        ...prev,
+        soundAlerts: stationPreferences.soundAlerts !== undefined ? stationPreferences.soundAlerts : prev.soundAlerts,
+        orderNotifications: stationPreferences.orderNotifications !== undefined ? stationPreferences.orderNotifications : prev.orderNotifications,
+      }));
+    }
+  }, [stationPreferences]);
 
   // Synchronize persisted settings whenever query data updates
   useEffect(() => {
@@ -458,12 +479,15 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
     e.preventDefault();
     setSavingSection('preferences');
     try {
-      await posService.settings.update('USER', 'user_preferences', userPrefForm);
-      localStorage.setItem('pos_preferences', JSON.stringify(userPrefForm));
+      if (persistStationPreferences) {
+        await persistStationPreferences(userPrefForm);
+      } else {
+        await posService.settings.update('USER', 'user_preferences', userPrefForm);
+      }
+      invalidateSettings();
       addToast('Your personal station preferences were persisted to the database!', 'success');
-    } catch {
-      localStorage.setItem('pos_preferences', JSON.stringify(userPrefForm));
-      addToast('Preferences saved locally to this station.', 'info');
+    } catch (err) {
+      addToast(err?.message || 'Failed to save station preferences', 'error');
     } finally {
       setSavingSection(null);
     }
@@ -1250,7 +1274,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, soundAlerts: nextVal }));
+                    updateStationPreferences?.({ soundAlerts: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
@@ -1263,7 +1291,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, orderNotifications: nextVal }));
+                    updateStationPreferences?.({ orderNotifications: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
@@ -1323,7 +1355,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, soundAlerts: nextVal }));
+                    updateStationPreferences?.({ soundAlerts: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
@@ -1336,7 +1372,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, orderNotifications: nextVal }));
+                    updateStationPreferences?.({ orderNotifications: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
@@ -1396,7 +1436,11 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, soundAlerts: nextVal }));
+                    updateStationPreferences?.({ soundAlerts: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
                 <div>
@@ -1437,57 +1481,39 @@ export default function SettingsView({ initialTab = 'profile', onTabChange }) {
             </p>
           </div>
 
-          <form onSubmit={handleSaveUserPreferences} className="space-y-4 max-w-xl">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Color Theme</label>
-                <select
-                  value={userPrefForm.theme}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, theme: e.target.value })}
-                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                >
-                  <option value="sandstone">Editorial Warm Ivory (Default)</option>
-                  <option value="dark">Editorial Deep Forest Dark</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4] mb-1.5">Layout Density</label>
-                <select
-                  value={userPrefForm.density}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, density: e.target.value })}
-                  className="w-full bg-[#F7EFE4] dark:bg-[#101A18] border border-[#E4DCD0] dark:border-[#1E362E] rounded-xl px-3.5 py-2.5 text-xs text-[#17251F] dark:text-[#F7EFE4] focus:outline-none focus:border-[#173F36] dark:focus:border-[#9FB29E] focus:ring-1 focus:ring-[#173F36] transition-all"
-                >
-                  <option value="comfortable">Comfortable Touch (Default)</option>
-                  <option value="compact">Compact High-Density</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
+          <form onSubmit={handleSaveUserPreferences} className="space-y-5 max-w-xl">
+            <div className="space-y-3.5">
+              <label className="flex items-center gap-3.5 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36]/40 dark:hover:border-[#9FB29E]/40 p-4 rounded-xl cursor-pointer transition-all duration-200">
                 <input
                   type="checkbox"
                   checked={userPrefForm.soundAlerts}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, soundAlerts: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, soundAlerts: nextVal }));
+                    updateStationPreferences?.({ soundAlerts: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
-                <div>
+                <div className="flex-1">
                   <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Audio Sound Cues</div>
-                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Play pleasant sound chimes on successful operations</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">Play pleasant sound chimes on successful operations</div>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] p-3 rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3.5 bg-[#F7EFE4]/60 dark:bg-[#1E362E]/40 border border-[#E4DCD0] dark:border-[#1E362E] hover:border-[#173F36]/40 dark:hover:border-[#9FB29E]/40 p-4 rounded-xl cursor-pointer transition-all duration-200">
                 <input
                   type="checkbox"
                   checked={userPrefForm.orderNotifications}
-                  onChange={(e) => setUserPrefForm({ ...userPrefForm, orderNotifications: e.target.checked })}
+                  onChange={(e) => {
+                    const nextVal = e.target.checked;
+                    setUserPrefForm((prev) => ({ ...prev, orderNotifications: nextVal }));
+                    updateStationPreferences?.({ orderNotifications: nextVal });
+                  }}
                   className="w-4 h-4 rounded text-[#173F36] focus:ring-[#173F36] bg-[#FFFDF9] dark:bg-[#152320] border-[#E4DCD0] dark:border-[#1E362E]"
                 />
-                <div>
+                <div className="flex-1">
                   <div className="text-xs font-semibold text-[#17251F] dark:text-[#F7EFE4]">Interactive Toast Notifications</div>
-                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E]">Display popup alerts when actions complete</div>
+                  <div className="text-[11px] text-[#657168] dark:text-[#9FB29E] mt-0.5">Display popup alerts when actions complete</div>
                 </div>
               </label>
             </div>

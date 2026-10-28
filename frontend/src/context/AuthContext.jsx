@@ -3,8 +3,33 @@ import { api, getAuthToken, setAuthToken, getActiveUser, setActiveUser, getActiv
 import posService from '../services/pos.service';
 import { normalizeRole, getDefaultPathForRole } from '../config/navigation';
 import { clearUserQueryCache } from '../config/queryClient';
+import { playSuccessSound } from '../utils/sound';
 
 const AuthContext = createContext();
+
+const getPrefStorageKey = (userId) => (userId ? `pos_station_preferences_${userId}` : 'pos_station_preferences_guest');
+
+const DEFAULT_STATION_PREFERENCES = {
+  soundAlerts: true,
+  orderNotifications: true,
+};
+
+const loadSavedStationPreferences = (userId) => {
+  try {
+    const key = getPrefStorageKey(userId);
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        soundAlerts: parsed.soundAlerts !== undefined ? Boolean(parsed.soundAlerts) : true,
+        orderNotifications: parsed.orderNotifications !== undefined ? Boolean(parsed.orderNotifications) : true,
+      };
+    }
+  } catch (e) {
+    console.warn('Could not read station preferences from localStorage', e);
+  }
+  return { ...DEFAULT_STATION_PREFERENCES };
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(getActiveUser());
@@ -13,14 +38,100 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [stationPreferences, setStationPreferences] = useState(() => {
+    const initialUser = getActiveUser();
+    return loadSavedStationPreferences(initialUser?.id);
+  });
 
-  // Toast notifier
-  const addToast = (message, type = 'info', duration = 5000) => {
+  // Sync user preferences with backend
+  const syncUserPreferences = async (userId) => {
+    if (!userId) return;
+    try {
+      const res = await posService.settings.get();
+      if (res?.success && res?.data?.settings?.user) {
+        const uPrefs = res.data.settings.user;
+        const synced = {
+          soundAlerts: uPrefs.soundAlerts !== undefined ? Boolean(uPrefs.soundAlerts) : true,
+          orderNotifications: uPrefs.orderNotifications !== undefined ? Boolean(uPrefs.orderNotifications) : true,
+        };
+        setStationPreferences(synced);
+        try {
+          localStorage.setItem(getPrefStorageKey(userId), JSON.stringify(synced));
+        } catch (e) {}
+      }
+    } catch {
+      // Keep local cached preferences if settings fetch encounters transient error
+    }
+  };
+
+  // Immediate runtime preference update
+  const updateStationPreferences = (partial) => {
+    setStationPreferences((prev) => {
+      const updated = {
+        ...prev,
+        ...(partial.soundAlerts !== undefined ? { soundAlerts: Boolean(partial.soundAlerts) } : {}),
+        ...(partial.orderNotifications !== undefined ? { orderNotifications: Boolean(partial.orderNotifications) } : {}),
+      };
+      const currentUserId = user?.id || getActiveUser()?.id;
+      if (currentUserId) {
+        try {
+          localStorage.setItem(getPrefStorageKey(currentUserId), JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+  };
+
+  // Persist preferences to database per authenticated user
+  const persistStationPreferences = async (customPrefs) => {
+    const toSave = {
+      soundAlerts: customPrefs?.soundAlerts !== undefined ? Boolean(customPrefs.soundAlerts) : stationPreferences.soundAlerts,
+      orderNotifications: customPrefs?.orderNotifications !== undefined ? Boolean(customPrefs.orderNotifications) : stationPreferences.orderNotifications,
+    };
+
+    const res = await posService.settings.update('USER', 'user_preferences', toSave);
+    const currentUserId = user?.id || getActiveUser()?.id;
+    if (currentUserId) {
+      try {
+        localStorage.setItem(getPrefStorageKey(currentUserId), JSON.stringify(toSave));
+      } catch (e) {}
+    }
+    setStationPreferences(toSave);
+    return res;
+  };
+
+  // Centralized toast notifier with preference and sound trigger enforcement
+  const addToast = (message, type = 'info', duration = 5000, options = {}) => {
+    const isErrorOrWarning = type === 'error' || type === 'warning';
+
+    // 1. Check whether a toast should be displayed:
+    // If Interactive Toast Notifications is disabled, suppress optional success and info toasts.
+    // Critical errors and warnings must ALWAYS remain accessible!
+    if (!stationPreferences.orderNotifications && !isErrorOrWarning) {
+      return; // Toast suppressed -> no popup displayed, and NO sound played!
+    }
+
+    // 2. Display the toast
     const id = Date.now() + Math.random().toString();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
+
+    // 3. Play its sound exactly once ONLY if:
+    // - Toast was actually displayed (guaranteed by passing check above)
+    // - Both settings are enabled (Interactive Toast Notifications: ON and Audio Sound Cues: ON)
+    // - Operational event (type === 'success')
+    // - Not an exempted silent notification (e.g. login, registration, background refresh)
+    const isSilent = options?.silent || options?.playSound === false;
+    if (
+      !isSilent &&
+      stationPreferences.orderNotifications &&
+      stationPreferences.soundAlerts &&
+      type === 'success'
+    ) {
+      playSuccessSound();
+    }
   };
 
   const removeToast = (id) => {
@@ -57,6 +168,8 @@ export const AuthProvider = ({ children }) => {
           setRestaurant(normalizedRestData);
           setActiveUser(normalizedUserData);
           setActiveRestaurant(normalizedRestData);
+          setStationPreferences(loadSavedStationPreferences(normalizedUserData.id));
+          syncUserPreferences(normalizedUserData.id);
         }
       } catch (err) {
         console.error('Session expired or invalid:', err.message);
@@ -133,7 +246,9 @@ export const AuthProvider = ({ children }) => {
         setActiveUser(finalUser);
         setRestaurant(finalRest);
         setActiveRestaurant(finalRest);
-        addToast(`Welcome back, ${finalUser.name || loggedUser.name}!`, 'success');
+        setStationPreferences(loadSavedStationPreferences(finalUser.id));
+        syncUserPreferences(finalUser.id);
+        addToast(`Welcome back, ${finalUser.name || loggedUser.name}!`, 'success', 5000, { silent: true });
         return {
           success: true,
           user: finalUser,
@@ -173,7 +288,7 @@ export const AuthProvider = ({ children }) => {
         setActiveUser(finalUser);
         setRestaurant(finalRest);
         setActiveRestaurant(finalRest);
-        addToast('Restaurant & Owner account registered successfully!', 'success');
+        addToast('Restaurant & Owner account registered successfully!', 'success', 5000, { silent: true });
         return {
           success: true,
           user: finalUser,
@@ -209,6 +324,7 @@ export const AuthProvider = ({ children }) => {
       setActiveUser(null);
       setRestaurant(null);
       setActiveRestaurant(null);
+      setStationPreferences({ ...DEFAULT_STATION_PREFERENCES });
       setLoggingOut(false);
 
       // 4. Safely transition route to /login
@@ -241,6 +357,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         loggingOut,
         toasts,
+        stationPreferences,
+        updateStationPreferences,
+        persistStationPreferences,
+        playSuccessSound,
         addToast,
         removeToast,
         login,
