@@ -1,33 +1,12 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ensure the upload directory exists
-const uploadDir = path.join(__dirname, '../../uploads/menu');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // Allowed MIME types and extensions
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
-// Configure disk storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = ALLOWED_EXTENSIONS.includes(ext) ? ext : '.jpg';
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `menu-${uniqueSuffix}${safeExt}`);
-  },
-});
+// Configure in-memory storage for streaming directly to Cloudinary
+const storage = multer.memoryStorage();
 
 // File filter for format validation
 const fileFilter = (req, file, cb) => {
